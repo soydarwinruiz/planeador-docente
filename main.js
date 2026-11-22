@@ -2,7 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { generarDocxPlaneacion } = require('./exportar-word');
+const { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula } = require('./exportar-word');
 const { sugerirConIA } = require('./ia');
 
 const DATA_DIR = () => app.getPath('userData');
@@ -160,6 +160,25 @@ ipcMain.handle('word:planeacion', async (_e, payload) => {
   if (canceled || !filePath) return { ok: false };
   try {
     const buffer = await generarDocxPlaneacion(payload);
+    fs.writeFileSync(filePath, buffer);
+    shell.openPath(filePath);
+    return { ok: true, ruta: filePath };
+  } catch (e) {
+    return { ok: false, error: e.message.includes('EBUSY') ? 'El archivo está abierto en Word. Ciérralo e inténtalo de nuevo.' : e.message };
+  }
+});
+
+const GENERADORES = { malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula };
+ipcMain.handle('word:curricular', async (_e, { tipo, nombreArchivo, payload }) => {
+  const nombre = (nombreArchivo || tipo).replace(/[\\/:*?"<>|]+/g, '-');
+  const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
+    title: 'Exportar a Word',
+    defaultPath: `${nombre}.docx`,
+    filters: [{ name: 'Documento de Word', extensions: ['docx'] }],
+  });
+  if (canceled || !filePath) return { ok: false };
+  try {
+    const buffer = await GENERADORES[tipo](payload);
     fs.writeFileSync(filePath, buffer);
     shell.openPath(filePath);
     return { ok: true, ruta: filePath };

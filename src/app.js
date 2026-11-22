@@ -43,6 +43,10 @@ function estadoInicial() {
     rubricas: [],
     eventos: [],
     cronograma: {},
+    planesArea: [],
+    mallas: [],
+    planesPeriodo: [],
+    planesAula: [],
   };
 }
 
@@ -176,7 +180,8 @@ function ordenGrupos(a, b) { return (a.grado - b.grado) || String(a.nombre).loca
 // ---------- Navegación ----------
 const VISTAS = [
   { id: 'inicio', ico: '🏠', nombre: 'Inicio' },
-  { id: 'planeaciones', ico: '📝', nombre: 'Planeaciones' },
+  { id: 'curricular', ico: '🧩', nombre: 'Planeación curricular' },
+  { id: 'planeaciones', ico: '📝', nombre: 'Planeaciones de clase' },
   { id: 'banco', ico: '🗂️', nombre: 'Banco de planeaciones' },
   { id: 'calendario', ico: '📅', nombre: 'Calendario' },
   { id: 'cronograma', ico: '🧭', nombre: 'Cronograma' },
@@ -235,7 +240,7 @@ RENDERS.inicio = () => {
   </div></div>
 
   ${!configurado ? `<div class="alerta info"><b>Primeros pasos:</b> 1) Completa los datos en <a href="#" onclick="ir('configuracion')">Configuración</a> (institución, docente, periodos).
-    2) Crea tus <a href="#" onclick="ir('grupos')">áreas, grupos y alumnos</a>. 3) ¡Empieza a planear!</div>` : ''}
+    2) Crea tus <a href="#" onclick="ir('grupos')">áreas, grupos y alumnos</a>. 3) Arma tu <a href="#" onclick="ir('curricular')">planeación curricular</a> (plan de área y malla). 4) ¡Planea tus clases!</div>` : ''}
 
   <div class="estadisticas">
     <div class="estadistica"><div class="num">${S.grupos.length}</div><div class="eti">Grupos</div></div>

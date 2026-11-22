@@ -157,6 +157,8 @@ RENDERS.editor = ({ id }) => {
     </div>
   </div>
 
+  ${tarjetaMallaEnEditor(p)}
+
   <div class="tarjeta"><h2>Referentes curriculares</h2>
     ${campoTexto(p, 'estandares', 'Estándares básicos de competencias', 'Copia el estándar del MEN que trabajarás…')}
     ${campoTexto(p, 'dba', 'Derechos Básicos de Aprendizaje (DBA)', 'Ej.: DBA 2 – …')}

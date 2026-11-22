@@ -15,7 +15,38 @@ function extraerJSON(texto) {
   return JSON.parse(texto.slice(inicio, fin + 1));
 }
 
-async function sugerirConIA({ apiKey, contexto, campos, numSesiones }) {
+function promptMalla(contexto, numItems) {
+  return `Datos para la malla curricular:
+${contexto}
+
+Propón ${numItems} ejes temáticos / unidades para este periodo, coherentes con los referentes del MEN para el área y grado.
+Devuelve un JSON con:
+- "pregunta": una pregunta problematizadora para el periodo.
+- "items": arreglo de ${numItems} objetos, cada uno con las claves (todas texto, usa viñetas "• " cuando ayude):
+  "eje" (nombre corto del eje temático o unidad), "contenidos", "estandares", "dba", "competencias",
+  "desempenoSaber", "desempenoHacer", "desempenoSer", "evidencias", y "horas" (número entero de horas sugeridas).`;
+}
+
+function promptPlanArea(contexto, campos) {
+  return `Datos del plan de área:
+${contexto}
+
+Redacta un borrador para estas secciones del plan de área institucional: ${campos.join(', ')}.
+Devuelve un JSON con solo esas claves (cada valor es texto de uno a tres párrafos o viñetas "• "):
+- "diagnostico": diagnóstico del área (resultados, fortalezas y dificultades típicas; deja marcadores [completar] donde se requieran datos reales de la institución).
+- "justificacion": justificación e importancia del área.
+- "objetivoGeneral": objetivo general del área.
+- "referentes": marco legal y referentes (Ley 115 de 1994, lineamientos, estándares, DBA, Decreto 1290, Decreto 1421, etc.).
+- "enfoque": enfoque pedagógico y didáctico.
+- "metodologia": metodología y estrategias.
+- "evaluacion": criterios y estrategias de evaluación según el Decreto 1290.
+- "recursos": recursos.
+- "inclusion": estrategias de inclusión (DUA, PIAR, ajustes razonables).
+- "transversales": articulación con proyectos transversales.
+- "bibliografia": bibliografía y webgrafía sugerida (solo documentos que existan con certeza).`;
+}
+
+async function sugerirConIA({ apiKey, contexto, campos = [], numSesiones = 0, tarea = 'clase', numItems = 3 }) {
   if (!apiKey) return { ok: false, error: 'Configura tu clave de API en Configuración > Inteligencia artificial.' };
 
   const client = new Anthropic({ apiKey, maxRetries: 2, timeout: 180000 });
@@ -23,7 +54,7 @@ async function sugerirConIA({ apiKey, contexto, campos, numSesiones }) {
     ? `"sesiones": un arreglo de exactamente ${numSesiones} objetos, cada uno con "titulo", "exploracion", "estructuracion", "practica", "valoracion" (cada momento con actividades concretas, tiempos aproximados y preguntas orientadoras).`
     : '';
 
-  const prompt = `Datos de la planeación:
+  const prompt = tarea === 'malla' ? promptMalla(contexto, numItems) : tarea === 'planArea' ? promptPlanArea(contexto, campos) : `Datos de la planeación:
 ${contexto}
 
 Genera un borrador para estos campos: ${campos.join(', ')}.

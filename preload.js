@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   listarRespaldosAuto: () => ipcRenderer.invoke('respaldo:listarAuto'),
   restaurarRespaldoAuto: (nombre) => ipcRenderer.invoke('respaldo:restaurarAuto', nombre),
   exportarWord: (payload) => ipcRenderer.invoke('word:planeacion', payload),
+  exportarWordCurricular: (tipo, nombreArchivo, payload) => ipcRenderer.invoke('word:curricular', { tipo, nombreArchivo, payload }),
   guardarCSV: (nombre, contenido) => ipcRenderer.invoke('csv:guardar', { nombre, contenido }),
   sugerirIA: (payload) => ipcRenderer.invoke('ia:sugerir', payload),
 });

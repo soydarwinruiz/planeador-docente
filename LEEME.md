@@ -5,7 +5,7 @@ Funciona **sin internet**: todos los datos quedan guardados en tu computador.
 
 ## Cómo abrirla
 
-- **Versión portable** (`PlaneadorDocente-portable-1.0.0.exe`): haz doble clic y listo. No necesita instalación.
+- **Versión portable** (`PlaneadorDocente-portable-1.1.0.exe`): haz doble clic y listo. No necesita instalación.
   Puedes llevarla en una memoria USB.
 - La primera vez, Windows puede mostrar *"Windows protegió su PC"* (el programa no tiene firma digital comercial).
   Haz clic en **Más información → Ejecutar de todas formas**.
@@ -19,7 +19,9 @@ Tus datos se guardan en `%APPDATA%\Planeador Docente\datos.json` (los puedes ver
 2. **Grupos y alumnos**: crea tus áreas (hay un botón para agregar las áreas obligatorias), luego tus grupos (601, 702…)
    indicando qué áreas dictas en cada uno. Pega la lista de estudiantes desde Excel o el SIMAT y marca quiénes tienen PIAR.
 3. **Calendario**: agrega los festivos de Colombia con un clic y los eventos institucionales.
-4. **Planeaciones**: crea planeaciones por sesión, semanales o por secuencia didáctica, con estándares, DBA, competencias,
+4. **Planeación curricular**: arma el plan de área y la malla curricular de cada grado (por periodo), organiza
+   cada periodo en unidades y revisa el plan de aula de cada grupo.
+5. **Planeaciones de clase**: crea planeaciones por sesión, semanales o por secuencia didáctica, con estándares, DBA, competencias,
    desempeños (saber, hacer, ser), momentos de la clase (exploración, estructuración, práctica, valoración), recursos,
    evaluación, evidencias y ajustes razonables. Expórtalas a **Word** con un clic.
 
@@ -27,7 +29,8 @@ Tus datos se guardan en `%APPDATA%\Planeador Docente\datos.json` (los puedes ver
 
 | Módulo | Qué hace |
 |---|---|
-| Planeaciones | Crear, buscar, filtrar, duplicar y exportar a Word |
+| Planeación curricular | **Plan de área** (diagnóstico, justificación, objetivos por grado, enfoque, metodología, evaluación, inclusión…), **malla curricular** por grado y periodo (ejes, contenidos, estándares, DBA, competencias, desempeños, evidencias, horas), **plan de periodo** por unidades o proyectos y **plan de aula** por grupo con el avance de cada eje. Todo exportable a Word en hoja horizontal |
+| Planeaciones de clase | Crear, buscar, filtrar, duplicar y exportar a Word. Se vinculan a la malla: al elegir un eje se copian sus estándares, DBA, competencias y desempeños |
 | Banco de planeaciones | Reutilizar planeaciones en otro grupo o en el siguiente año (las fechas se ajustan solas) |
 | Calendario | Vista mensual con clases planeadas, periodos, festivos y eventos |
 | Cronograma | Temas previstos semana a semana por área, grado y periodo |
@@ -49,6 +52,7 @@ Las listas, la asistencia, las planillas y el cronograma se pueden **exportar a 
 En el editor de una planeación, el botón **✨ Sugerir con IA** genera un borrador de los campos vacíos
 (desempeños, momentos de la clase, evaluación, ajustes, etc.) usando Claude, de Anthropic.
 Requiere internet y una clave de API de console.anthropic.com (tiene costo según el uso), que se pega en Configuración.
+También puede proponer ejes temáticos para la malla y redactar un borrador del plan de área.
 Se envían el tema, el área, el grado y lo escrito en la planeación; **no se envían nombres de estudiantes**.
 
 ## Para desarrolladores
