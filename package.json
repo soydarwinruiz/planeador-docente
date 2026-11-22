@@ -8,8 +8,8 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win nsis portable --x64",
-    "dist:portable": "electron-builder --win portable --x64"
+    "dist:win": "electron-builder --win nsis portable --x64 --publish never",
+    "dist:portable": "electron-builder --win portable --x64 --publish never"
   },
   "build": {
     "appId": "co.planeador.docente",
