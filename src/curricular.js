@@ -185,7 +185,7 @@ function vistaMalla(c) {
           ${abierto ? `<div class="rejilla" style="grid-template-columns: 3fr 1fr">
               <div class="campo"><label>Eje temático / unidad</label><input value="${esc(it.eje)}" oninput="cambiarItem('${it.id}','eje',this.value)"></div>
               <div class="campo"><label>Horas</label><input type="number" min="0" value="${esc(it.horas)}" oninput="cambiarItem('${it.id}','horas',this.value)"></div></div>
-            <div class="rejilla r2">${CAMPOS_ITEM.map((f) => `<div class="campo"><label>${f.t}${f.k === 'estandares' || f.k === 'dba' ? botonReferentes(`ta-it-${it.id}-${f.k}`, m.areaId, m.grado, f.k === 'dba' ? 'dba' : 'estandar') : ''}</label><textarea id="ta-it-${it.id}-${f.k}" placeholder="${esc(f.ph)}" oninput="cambiarItem('${it.id}','${f.k}',this.value)">${esc(it[f.k])}</textarea></div>`).join('')}</div>` : ''}
+            <div class="rejilla r2">${CAMPOS_ITEM.map((f) => `<div class="campo"><label>${f.t}${f.k === 'estandares' || f.k === 'dba' || f.k === 'evidencias' || f.k === 'competencias' ? botonReferentes(`ta-it-${it.id}-${f.k}`, m.areaId, m.grado, f.k === 'dba' || f.k === 'evidencias' ? 'dba' : f.k === 'competencias' ? 'orientacion' : 'estandar') : ''}</label><textarea id="ta-it-${it.id}-${f.k}" placeholder="${esc(f.ph)}" oninput="cambiarItem('${it.id}','${f.k}',this.value)">${esc(it[f.k])}</textarea></div>`).join('')}</div>` : ''}
         </div>`;
       }).join('') : '<p class="ayuda">Aún no hay ejes temáticos en este periodo.</p>'}
     </div>`;
@@ -480,7 +480,7 @@ async function ejecutarIAMalla(mId, perId) {
   const contexto = [`Área: ${nombreArea(m.areaId)}`, `Grado: ${m.grado}° (Colombia)`, `Periodo: ${per.nombre} (${idx + 1} de ${S.config.periodos.length})`,
     `Intensidad: ${intensidadDe(m.areaId, m.grado) || 'no indicada'} horas semanales`, `Ejes ya definidos en la malla del año:\n${otros}`,
     extra ? `Indicaciones del docente: ${extra}` : '',
-    textoReferentes(areaReferenteDe(m.areaId), bandaDeGrado(m.grado)) ? `Referentes oficiales del MEN para este grado (en "estandares" copia textualmente los pertinentes; no inventes estándares):\n${textoReferentes(areaReferenteDe(m.areaId), bandaDeGrado(m.grado))}` : ''].filter(Boolean).join('\n');
+    textoReferentes(areaReferenteDe(m.areaId), bandaDeGrado(m.grado)) ? `Referentes oficiales del MEN para este grado (en "estandares", "dba", "competencias" y "evidencias" copia textualmente los pertinentes; no inventes referentes):\n${textoReferentes(areaReferenteDe(m.areaId), bandaDeGrado(m.grado))}` : ''].filter(Boolean).join('\n');
   const btn = document.getElementById('m-ia-btn');
   btn.disabled = true; btn.innerHTML = '<span class="cargando"></span> Generando…';
   const r = await api.sugerirIA({ ia: S.config.ia, contexto, tarea: 'malla', numItems: Math.min(8, Math.max(1, +document.getElementById('m-n').value || 3)) });

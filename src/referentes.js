@@ -18,16 +18,20 @@ function areaReferenteDe(areaId) {
   if (/etica|ciudadan|paz|democr|valores/.test(n)) return busca(/ciudadan/);
   return '';
 }
-function bandaDeGrado(grado) {
-  const g = +grado;
-  const bandas = [...new Set(REFERENTES.items.map((x) => x.grados))];
-  return bandas.find((b) => { const [a, z] = b.split('-').map(Number); return g >= a && g <= (z || a); }) || '';
+// Grado(s) de la app: los estándares vienen por pares (6-7) y los DBA por grado (6)
+function bandaDeGrado(grado) { const g = +grado; return g >= 6 && g <= 9 ? String(g) : ''; }
+function aplicaAGrado(x, grado) {
+  if (!grado) return true;
+  const g = +grado; const [a, z] = x.grados.split('-').map(Number);
+  return g >= a && g <= (z || a);
 }
-function referentesDe(area, banda, tipo) {
-  return REFERENTES.items.filter((x) => (!area || x.area === area) && (!banda || x.grados === banda) && (!tipo || x.tipo === tipo));
+const ORDEN_TIPO = { dba: 0, estandar: 1, orientacion: 2 };
+function referentesDe(area, grado, tipo) {
+  return REFERENTES.items.filter((x) => (!area || x.area === area) && aplicaAGrado(x, grado) && (!tipo || x.tipo === tipo))
+    .sort((a, b) => ORDEN_TIPO[a.tipo] - ORDEN_TIPO[b.tipo]);
 }
-function textoReferentes(area, banda, tipo = 'estandar') {
-  return referentesDe(area, banda, tipo).map((r) => `${r.factor}:${r.enunciado ? '\n• ' + r.enunciado : ''}${r.items.map((i) => '\n  – ' + i).join('')}`).join('\n');
+function textoReferentes(area, banda, tipo = '') {
+  return referentesDe(area, banda, tipo).map((r) => ({ ...r, factor: `[${TIPOS_REFERENTE[r.tipo]}] ${r.factor}` })).map((r) => `${r.factor}:${r.enunciado ? '\n• ' + r.enunciado : ''}${r.items.map((i) => '\n  – ' + i).join('')}`).join('\n');
 }
 
 // ---------- Selector para insertar ----------
@@ -36,9 +40,11 @@ function botonReferentes(textareaId, areaId, grado, tipo = 'estandar') {
   return `<button type="button" class="btn pequeno" style="padding:1px 7px;margin-left:6px;font-weight:normal" title="Elegir de los referentes oficiales del MEN" onclick="abrirSelectorReferentes('${textareaId}','${areaId || ''}','${grado || ''}','${tipo}')">📘 Referentes</button>`;
 }
 function abrirSelectorReferentes(textareaId, areaId, grado, tipo) {
-  selectorRef = { textareaId, area: areaId ? areaReferenteDe(areaId) : '', banda: grado ? bandaDeGrado(grado) : '', tipo, texto: '', sel: new Set() };
+  selectorRef = { textareaId, area: areaId ? areaReferenteDe(areaId) : '', banda: grado ? bandaDeGrado(grado) : '', tipo: '', texto: '', sel: new Set() };
   if (!selectorRef.area) selectorRef.area = areasReferente()[0];
-  if (!selectorRef.banda) selectorRef.banda = REFERENTES.items[0]?.grados || '';
+  if (!selectorRef.banda) selectorRef.banda = '6';
+  // si el área no tiene el tipo pedido (p. ej. Tecnología no tiene DBA), mostrar todo
+  if (tipo && referentesDe(selectorRef.area, selectorRef.banda, tipo).length) selectorRef.tipo = tipo;
   dibujarSelectorReferentes();
 }
 function listaReferentesHTML(lista, { seleccionable, texto }) {
@@ -50,7 +56,7 @@ function listaReferentesHTML(lista, { seleccionable, texto }) {
     if (!enunciadoVisible && !items.length) return '';
     const cb = (clave) => seleccionable ? `<input type="checkbox" ${selectorRef.sel.has(clave) ? 'checked' : ''} onchange="alternarRef('${clave}',this.checked)" style="margin-right:6px;flex:0 0 auto">` : '';
     return `<div class="sesion-caja" style="padding:10px 12px">
-      <div style="font-weight:600;color:var(--azul);margin-bottom:4px">${esc(r.factor)} ${seleccionable && r.items.length > 1 ? `<button class="btn pequeno" style="padding:0 6px;font-weight:normal" onclick="marcarGrupoRef('${r.id}')">marcar todo</button>` : ''}</div>
+      <div style="font-weight:600;color:var(--azul);margin-bottom:4px"><span class="chip ${r.tipo === 'dba' ? 'sesion' : r.tipo === 'orientacion' ? 'secuencia' : 'semanal'}">${r.tipo === 'dba' ? 'DBA' : r.tipo === 'orientacion' ? 'Orientaciones' : 'Estándar ' + r.grados.replace('-', '° a ') + '°'}</span> ${esc(r.factor)} ${seleccionable && r.items.length > 1 ? `<button class="btn pequeno" style="padding:0 6px;font-weight:normal" onclick="marcarGrupoRef('${r.id}')">marcar todo</button>` : ''}</div>
       ${r.enunciado ? `<label style="display:flex;font-weight:600;color:inherit;font-size:13px;margin:4px 0">${cb(r.id + '|e')}${esc(r.enunciado)}</label>` : ''}
       ${items.map(({ t, i }) => `<label style="display:flex;font-weight:normal;color:inherit;font-size:13px;margin:3px 0 3px ${r.enunciado ? 18 : 0}px">${cb(r.id + '|' + i)}${seleccionable ? '' : '• '}${esc(t)}</label>`).join('')}
     </div>`;
@@ -58,10 +64,10 @@ function listaReferentesHTML(lista, { seleccionable, texto }) {
 }
 function filtrosReferentesHTML(s, prefijo) {
   const tipos = [...new Set(REFERENTES.items.map((x) => x.tipo))];
-  const bandas = [...new Set(REFERENTES.items.filter((x) => !s.area || x.area === s.area).map((x) => x.grados))];
+  const bandas = ['6', '7', '8', '9'];
   return `<div class="filtros" style="margin-bottom:8px">
     <div><label>Área</label><select onchange="${prefijo}.area=this.value;${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'}">${areasReferente().map((a) => `<option ${a === s.area ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></div>
-    <div><label>Grados</label><select onchange="${prefijo}.banda=this.value;${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'}">${bandas.map((b) => `<option value="${b}" ${b === s.banda ? 'selected' : ''}>${b.replace('-', '° a ')}°</option>`).join('')}</select></div>
+    <div><label>Grado</label><select onchange="${prefijo}.banda=this.value;${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'}">${bandas.map((b) => `<option value="${b}" ${b === s.banda ? 'selected' : ''}>${b}°</option>`).join('')}</select></div>
     ${tipos.length > 1 ? `<div><label>Documento</label><select onchange="${prefijo}.tipo=this.value;${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'}"><option value="">Todos</option>${tipos.map((t) => `<option value="${t}" ${t === s.tipo ? 'selected' : ''}>${TIPOS_REFERENTE[t]}</option>`).join('')}</select></div>` : ''}
     <div style="flex:1;min-width:180px"><label>Buscar</label><input id="${prefijo}-q" value="${esc(s.texto)}" placeholder="Palabra clave…" oninput="${prefijo}.texto=this.value;clearTimeout(window._rq);window._rq=setTimeout(()=>{${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'};const i=document.getElementById('${prefijo}-q');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>
   </div>`;
@@ -105,7 +111,7 @@ function insertarReferentes() {
 // ---------- Consulta (pestaña en Planeación curricular) ----------
 function vistaReferentes() {
   const s = ui.refs || (ui.refs = { area: areasReferente()[0], banda: '', tipo: '', texto: '' });
-  if (!s.banda || !referentesDe(s.area, s.banda).length) s.banda = referentesDe(s.area)[0]?.grados || '';
+  if (!s.banda) s.banda = '6';
   const lista = referentesDe(s.area, s.banda, s.tipo);
   const fuentes = [...new Set(lista.map((x) => x.tipo))].map((t) => REFERENTES.fuentes[t]).filter(Boolean);
   return `<p class="ayuda">Consulta los referentes oficiales. Para usarlos, haz clic en <b>📘 Referentes</b> junto a los campos de estándares, DBA o competencias en la malla y en la planeación.</p>
