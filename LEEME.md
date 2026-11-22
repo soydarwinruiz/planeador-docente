@@ -5,7 +5,7 @@ Funciona **sin internet**: todos los datos quedan guardados en tu computador.
 
 ## Cómo abrirla
 
-- **Versión portable** (`PlaneadorDocente-portable-1.1.0.exe`): haz doble clic y listo. No necesita instalación.
+- **Versión portable** (`PlaneadorDocente-portable-1.2.0.exe`): haz doble clic y listo. No necesita instalación.
   Puedes llevarla en una memoria USB.
 - La primera vez, Windows puede mostrar *"Windows protegió su PC"* (el programa no tiene firma digital comercial).
   Haz clic en **Más información → Ejecutar de todas formas**.
@@ -31,6 +31,7 @@ Tus datos se guardan en `%APPDATA%\Planeador Docente\datos.json` (los puedes ver
 |---|---|
 | Planeación curricular | **Plan de área** (diagnóstico, justificación, objetivos por grado, enfoque, metodología, evaluación, inclusión…), **malla curricular** por grado y periodo (ejes, contenidos, estándares, DBA, competencias, desempeños, evidencias, horas), **plan de periodo** por unidades o proyectos y **plan de aula** por grupo con el avance de cada eje. Todo exportable a Word en hoja horizontal |
 | Planeaciones de clase | Crear, buscar, filtrar, duplicar y exportar a Word. Se vinculan a la malla: al elegir un eje se copian sus estándares, DBA, competencias y desempeños |
+| Banco pedagógico | Estrategias, metodologías y técnicas con clasificación, momentos de la clase, descripción y pasos. Se agregan a mano o se importan desde Excel, y se insertan con el botón **📚 Banco** en la planeación de clase, el plan de periodo, el plan de aula y el plan de área |
 | Banco de planeaciones | Reutilizar planeaciones en otro grupo o en el siguiente año (las fechas se ajustan solas) |
 | Calendario | Vista mensual con clases planeadas, periodos, festivos y eventos |
 | Cronograma | Temas previstos semana a semana por área, grado y periodo |
@@ -49,11 +50,20 @@ Las listas, la asistencia, las planillas y el cronograma se pueden **exportar a 
 
 ## Sugerencias con IA (opcional)
 
-En el editor de una planeación, el botón **✨ Sugerir con IA** genera un borrador de los campos vacíos
-(desempeños, momentos de la clase, evaluación, ajustes, etc.) usando Claude, de Anthropic.
-Requiere internet y una clave de API de console.anthropic.com (tiene costo según el uso), que se pega en Configuración.
-También puede proponer ejes temáticos para la malla y redactar un borrador del plan de área.
-Se envían el tema, el área, el grado y lo escrito en la planeación; **no se envían nombres de estudiantes**.
+En **Configuración → Inteligencia artificial** eliges el proveedor y pegas tu clave de API:
+
+| Proveedor | Dónde se obtiene la clave | Modelo por defecto |
+|---|---|---|
+| Claude (Anthropic) | console.anthropic.com | claude-opus-5-5 |
+| ChatGPT (OpenAI) | platform.openai.com | gpt-5-mini |
+| Gemini (Google) | aistudio.google.com | gemini-2.5-flash |
+| Otro compatible con OpenAI | DeepSeek, Groq, OpenRouter, Ollama o LM Studio (locales)… | el que indiques |
+
+Puedes escribir cualquier otro modelo de tu proveedor. Usa **Probar conexión** para verificar la configuración.
+Con Ollama o LM Studio la IA corre en tu propio computador, sin costo y sin internet (requiere un equipo potente).
+
+La IA genera borradores de la planeación de clase, propone ejes para la malla y redacta el plan de área.
+Se envían el tema, el área, el grado y lo escrito; **no se envían nombres de estudiantes**.
 
 ## Para desarrolladores
 

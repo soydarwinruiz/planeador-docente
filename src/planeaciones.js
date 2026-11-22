@@ -122,8 +122,9 @@ async function eliminarPlaneacion(id) {
 }
 
 // ---------- Editor ----------
-function campoTexto(p, k, t, ph = '') {
-  return `<div class="campo"><label>${esc(t)}</label><textarea data-campo="${k}" placeholder="${esc(ph)}" oninput="cambiarPlan('${p.id}','${k}',this.value)">${esc(p[k] || '')}</textarea></div>`;
+function campoTexto(p, k, t, ph = '', banco = false) {
+  const id = `ta-${p.id}-${k}`;
+  return `<div class="campo"><label>${esc(t)}${banco ? botonBanco(id, k === 'evaluacion' ? 'valoracion' : '') : ''}</label><textarea id="${id}" data-campo="${k}" placeholder="${esc(ph)}" oninput="cambiarPlan('${p.id}','${k}',this.value)">${esc(p[k] || '')}</textarea></div>`;
 }
 
 RENDERS.editor = ({ id }) => {
@@ -187,7 +188,7 @@ RENDERS.editor = ({ id }) => {
         <div class="campo"><label>Duración (min)</label><input type="number" min="0" value="${esc(s.duracion)}" oninput="cambiarSesion('${p.id}',${i},'duracion',+this.value)"></div>
       </div>
       <div class="rejilla r2">
-        ${MOMENTOS.map((m) => `<div class="campo"><label>${m.t}</label><textarea placeholder="${esc(m.ph)}" oninput="cambiarSesion('${p.id}',${i},'${m.k}',this.value)">${esc(s[m.k])}</textarea></div>`).join('')}
+        ${MOMENTOS.map((m) => `<div class="campo"><label>${m.t}${botonBanco(`ta-${s.id}-${m.k}`, m.k)}</label><textarea id="ta-${s.id}-${m.k}" placeholder="${esc(m.ph)}" oninput="cambiarSesion('${p.id}',${i},'${m.k}',this.value)">${esc(s[m.k])}</textarea></div>`).join('')}
       </div>
     </div>`).join('')}
   </div>
@@ -196,8 +197,8 @@ RENDERS.editor = ({ id }) => {
     <div class="rejilla r2">
       ${campoTexto(p, 'recursos', 'Recursos y materiales', 'Guías, tablero, video, material concreto…')}
       ${campoTexto(p, 'evidencias', 'Evidencias de aprendizaje', 'Taller resuelto, mapa conceptual, exposición…')}
-      ${campoTexto(p, 'evaluacion', 'Evaluación (criterios e instrumentos)', 'Rúbrica, lista de chequeo, autoevaluación, coevaluación…')}
-      <div>${campoTexto(p, 'ajustes', 'Ajustes razonables / PIAR / inclusión', 'Apoyos visuales, tiempos flexibles, tutoría entre pares…')}
+      ${campoTexto(p, 'evaluacion', 'Evaluación (criterios e instrumentos)', 'Rúbrica, lista de chequeo, autoevaluación, coevaluación…', true)}
+      <div>${campoTexto(p, 'ajustes', 'Ajustes razonables / PIAR / inclusión', 'Apoyos visuales, tiempos flexibles, tutoría entre pares…', true)}
         ${piar.length ? `<div class="alerta info" style="margin-top:-6px">Estudiantes con PIAR en este grupo: ${piar.map((a) => esc(nombreAlumno(a)) + (a.observaciones ? ` <span class="ayuda">(${esc(a.observaciones)})</span>` : '')).join(', ')}</div>` : ''}</div>
     </div>
     ${campoTexto(p, 'observaciones', 'Observaciones / reflexión posterior a la clase', '¿Qué funcionó? ¿Qué ajustar la próxima vez?')}
@@ -328,16 +329,9 @@ RENDERS.banco = () => {
 // ---------- IA ----------
 function dialogoIA(id) {
   const p = porId(S.planeaciones, id);
-  if (!S.config.apiKey) {
-    abrirModal(`<h2>✨ Sugerencias con IA</h2>
-      <p>Para usar las sugerencias con inteligencia artificial necesitas:</p>
-      <ol><li>Conexión a internet.</li><li>Una clave de API de Anthropic (Claude), que se obtiene en <b>console.anthropic.com</b>. El uso tiene un costo según el consumo.</li></ol>
-      <p>Pégala en <b>Configuración → Inteligencia artificial</b>. El resto de la aplicación funciona sin internet.</p>
-      <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="cerrarModal();ir('configuracion')">Ir a Configuración</button></div>`);
-    return;
-  }
+  if (sinIA()) return;
   const sesionesVacias = p.sesiones.every((s) => MOMENTOS.every((m) => !s[m.k]));
-  abrirModal(`<h2>✨ Generar borrador con IA</h2>
+  abrirModal(`<h2>✨ Generar borrador con IA</h2><p class="ayuda" style="margin-top:-6px">Proveedor: ${esc(nombreIA())}</p>
     <p class="ayuda">La IA usará el tema, área, grado y lo que ya hayas escrito. Revisa y ajusta siempre las sugerencias: tú eres quien conoce a tus estudiantes.</p>
     ${!p.titulo ? '<p class="alerta">Escribe primero el <b>tema / título</b> para obtener mejores sugerencias.</p>' : ''}
     <div class="campo"><label>Campos a generar</label>
@@ -372,7 +366,7 @@ async function ejecutarIA(id) {
   const btn = document.getElementById('m-ia-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="cargando"></span> Generando… (puede tardar un minuto)';
-  const r = await api.sugerirIA({ apiKey: S.config.apiKey, contexto, campos, numSesiones: conSesiones ? p.sesiones.length : 0 });
+  const r = await api.sugerirIA({ ia: S.config.ia, contexto, campos, numSesiones: conSesiones ? p.sesiones.length : 0 });
   if (!document.getElementById('m-ia-btn')) return; // el modal se cerró
   if (!r.ok) {
     btn.disabled = false; btn.textContent = '✨ Reintentar';

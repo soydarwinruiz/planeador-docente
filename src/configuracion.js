@@ -60,15 +60,7 @@ RENDERS.configuracion = () => {
     </tbody></table>
   </div>
 
-  <div class="tarjeta"><h2>✨ Inteligencia artificial (opcional)</h2>
-    <p class="ayuda">Las sugerencias con IA usan Claude, de Anthropic, y requieren internet. Crea una clave de API en <b>console.anthropic.com</b> (tiene costo según el uso).
-    La clave se guarda solo en este equipo. El tema, el área, el grado y lo que hayas escrito en la planeación se envían al servicio para generar la sugerencia; no se envían nombres de estudiantes.</p>
-    <div class="fila" style="max-width:640px;flex-wrap:nowrap">
-      <input type="password" id="cfg-key" value="${esc(c.apiKey)}" placeholder="sk-ant-..." style="flex:1" onchange="S.config.apiKey=this.value.trim();guardar();aviso('Clave guardada','ok')">
-      <button class="btn" onclick="const i=document.getElementById('cfg-key');i.type=i.type==='password'?'text':'password'">👁️</button>
-      ${c.apiKey ? `<button class="btn peligro" onclick="S.config.apiKey='';guardar();render()">Quitar</button>` : ''}
-    </div>
-  </div>
+  ${tarjetaIA()}
 
   <div class="tarjeta"><h2>💾 Respaldo de datos</h2>
     <p class="ayuda">Todos tus datos se guardan en este equipo. Haz respaldos frecuentes en una memoria USB o en una carpeta sincronizada (OneDrive, Google Drive).
@@ -118,6 +110,7 @@ async function restaurarRespaldo() {
   if (!r.ok) { if (r.error) aviso(r.error, 'error'); return; }
   if (!(await confirmar('Se reemplazarán TODOS los datos actuales por los del respaldo. (Los datos actuales quedan en los respaldos automáticos.) ¿Continuar?', { boton: 'Restaurar' }))) return;
   S = migrar(r.datos);
+  sembrarBanco();
   guardar(); ir('inicio');
   aviso('Respaldo restaurado', 'ok');
 }
@@ -131,6 +124,7 @@ async function restaurarAuto(nombre) {
   cerrarModal();
   if (!(await confirmar('Se reemplazarán los datos actuales por este respaldo. ¿Continuar?', { boton: 'Restaurar' }))) return;
   S = migrar(await api.restaurarRespaldoAuto(nombre));
+  sembrarBanco();
   guardar(); ir('inicio');
   aviso('Respaldo restaurado', 'ok');
 }
@@ -148,4 +142,40 @@ async function nuevoAnio() {
   });
   guardar(); ir('inicio');
   aviso(`Año lectivo ${anio} listo. Revisa las fechas de los periodos en Configuración.`, 'ok');
+}
+
+// ---------- Configuración de IA ----------
+function tarjetaIA() {
+  const ia = S.config.ia;
+  const p = ia.proveedor || 'anthropic';
+  const info = PROVEEDORES_IA[p];
+  return `<div class="tarjeta"><h2>✨ Inteligencia artificial (opcional)</h2>
+    <p class="ayuda">Puedes usar el proveedor que prefieras. Las claves se guardan solo en este equipo. Para generar sugerencias se envían el tema, el área, el grado
+    y lo escrito en la planeación; <b>no se envían nombres de estudiantes</b>. El costo depende del proveedor y del modelo.</p>
+    <div class="rejilla r4" style="align-items:end">
+      <div class="campo"><label>Proveedor</label><select onchange="S.config.ia.proveedor=this.value;guardar();render()">
+        ${Object.entries(PROVEEDORES_IA).map(([k, v]) => `<option value="${k}" ${p === k ? 'selected' : ''}>${v.nombre}${(k === 'compatible' ? ia.url : ia.claves?.[k]) ? ' ✔' : ''}</option>`).join('')}</select></div>
+      <div class="campo" style="grid-column: span 2"><label>Clave de API ${p === 'compatible' ? '(opcional)' : ''} <span style="font-weight:normal">· se obtiene en ${esc(info.donde)}</span></label>
+        <div class="fila" style="flex-wrap:nowrap"><input type="password" id="cfg-key" style="flex:1" value="${esc(ia.claves?.[p] || '')}" placeholder="${esc(info.ph)}"
+          onchange="(S.config.ia.claves ||= {})['${p}']=this.value.trim();guardar();aviso('Clave guardada','ok')">
+        <button class="btn" title="Mostrar u ocultar" onclick="const i=document.getElementById('cfg-key');i.type=i.type==='password'?'text':'password'">👁️</button></div></div>
+      <div class="campo"><label>Modelo</label><input value="${esc(ia.modelos?.[p] || '')}" placeholder="${esc(info.modelo || 'ej.: llama3.1, deepseek-chat')}"
+        onchange="(S.config.ia.modelos ||= {})['${p}']=this.value.trim();guardar()"></div>
+    </div>
+    ${p === 'compatible' ? `<div class="campo"><label>Dirección (URL base) del servicio</label><input value="${esc(ia.url || '')}" placeholder="https://api.deepseek.com/v1   ·   http://localhost:11434/v1 (Ollama)"
+        onchange="S.config.ia.url=this.value.trim();guardar()">
+      <div class="ayuda">Cualquier servicio que use el formato de OpenAI (<i>/chat/completions</i>). Con <b>Ollama</b> o <b>LM Studio</b> la IA corre en tu propio computador, sin costo y sin enviar datos a internet (requiere un equipo potente).</div></div>`
+      : `<div class="ayuda" style="margin-top:-4px">Si dejas el modelo vacío se usa <b>${esc(info.modelo)}</b>. Puedes escribir cualquier otro modelo que ofrezca tu proveedor.</div>`}
+    <div class="fila" style="margin-top:10px"><button class="btn" id="btn-probar-ia" onclick="probarIA()">🔌 Probar conexión</button>
+      ${ia.claves?.[p] ? `<button class="btn peligro" onclick="delete S.config.ia.claves['${p}'];guardar();render()">Quitar clave</button>` : ''}
+      <span id="res-probar-ia" class="ayuda"></span></div>
+  </div>`;
+}
+async function probarIA() {
+  const btn = document.getElementById('btn-probar-ia');
+  const res = document.getElementById('res-probar-ia');
+  btn.disabled = true; res.textContent = 'Probando…';
+  const r = await api.sugerirIA({ ia: S.config.ia, tarea: 'prueba', contexto: '' });
+  btn.disabled = false;
+  res.innerHTML = r.ok ? '<b style="color:var(--verde)">✔ Conexión correcta con ' + esc(nombreIA()) + '</b>' : '<b style="color:var(--rojo)">✖ ' + esc(r.error) + '</b>';
 }

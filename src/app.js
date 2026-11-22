@@ -30,7 +30,7 @@ function estadoInicial() {
         { nombre: 'Hacer (procedimental)', peso: 40 },
         { nombre: 'Ser (actitudinal)', peso: 20 },
       ],
-      apiKey: '',
+      ia: { proveedor: 'anthropic', claves: {}, modelos: {}, url: '' },
     },
     areas: [],
     grupos: [],
@@ -47,6 +47,9 @@ function estadoInicial() {
     mallas: [],
     planesPeriodo: [],
     planesAula: [],
+    bancoPedagogico: [],
+    bancoSemilla: 0,
+    bancoEliminados: [],
   };
 }
 
@@ -128,6 +131,8 @@ function migrar(d) {
   const base = estadoInicial();
   const r = { ...base, ...d, config: { ...base.config, ...(d.config || {}) } };
   for (const k of Object.keys(base)) if (r[k] == null) r[k] = base[k];
+  if (!d.config?.ia) r.config.ia = { proveedor: 'anthropic', claves: { anthropic: d.config?.apiKey || '' }, modelos: {}, url: '' };
+  delete r.config.apiKey;
   r.version = VERSION_DATOS;
   return r;
 }
@@ -163,6 +168,29 @@ function confirmar(texto, { boton = 'Eliminar', peligro = true } = {}) {
 }
 function responderConfirmacion(v) { cerrarModal(); if (resolverConfirmacion) resolverConfirmacion(v); resolverConfirmacion = null; }
 
+// ---------- IA ----------
+const PROVEEDORES_IA = {
+  anthropic: { nombre: 'Claude (Anthropic)', modelo: 'claude-opus-5-5', donde: 'console.anthropic.com', ph: 'sk-ant-...' },
+  openai: { nombre: 'ChatGPT (OpenAI)', modelo: 'gpt-5-mini', donde: 'platform.openai.com', ph: 'sk-...' },
+  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-2.5-flash', donde: 'aistudio.google.com', ph: 'AIza...' },
+  compatible: { nombre: 'Otro compatible con OpenAI', modelo: '', donde: 'DeepSeek, Groq, OpenRouter, Ollama (local), LM Studio…', ph: '(opcional en servicios locales)' },
+};
+function iaLista() {
+  const ia = S.config.ia || {};
+  const p = ia.proveedor || 'anthropic';
+  return p === 'compatible' ? !!(ia.url && ia.modelos?.compatible) : !!ia.claves?.[p];
+}
+function nombreIA() { return PROVEEDORES_IA[S.config.ia?.proveedor || 'anthropic'].nombre; }
+function sinIA() {
+  if (iaLista()) return false;
+  abrirModal(`<h2>✨ Sugerencias con IA</h2>
+    <p>Para usar las sugerencias con inteligencia artificial elige un proveedor (Claude, ChatGPT, Gemini u otro compatible) y pega tu clave de API en
+    <b>Configuración → Inteligencia artificial</b>. Normalmente requiere internet y tiene un costo según el uso del proveedor.</p>
+    <p class="ayuda">El resto de la aplicación funciona sin internet.</p>
+    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="cerrarModal();ir('configuracion')">Ir a Configuración</button></div>`);
+  return true;
+}
+
 // ---------- Opciones de selects ----------
 function opciones(lista, seleccionado, { vacio = null, valor = (x) => x.id, texto = (x) => x.nombre } = {}) {
   let html = vacio != null ? `<option value="">${esc(vacio)}</option>` : '';
@@ -183,6 +211,7 @@ const VISTAS = [
   { id: 'curricular', ico: '🧩', nombre: 'Planeación curricular' },
   { id: 'planeaciones', ico: '📝', nombre: 'Planeaciones de clase' },
   { id: 'banco', ico: '🗂️', nombre: 'Banco de planeaciones' },
+  { id: 'bancoPedagogico', ico: '📚', nombre: 'Banco pedagógico' },
   { id: 'calendario', ico: '📅', nombre: 'Calendario' },
   { id: 'cronograma', ico: '🧭', nombre: 'Cronograma' },
   { id: 'grupos', ico: '👥', nombre: 'Grupos y alumnos' },
@@ -276,6 +305,8 @@ async function iniciar() {
     return;
   }
   S = datos ? migrar(datos) : estadoInicial();
-  if (!datos) guardar();
+  const semillaAntes = S.bancoSemilla;
+  sembrarBanco();
+  if (!datos || S.bancoSemilla !== semillaAntes) guardar();
   render();
 }

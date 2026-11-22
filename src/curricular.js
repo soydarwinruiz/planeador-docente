@@ -116,7 +116,7 @@ function filtrosCur(c, { grado = false, periodo = false, grupo = false } = {}) {
 function vistaPlanArea(c) {
   const p = obtenerPlanArea(c.areaId);
   const grados = gradosDeArea(c.areaId);
-  const campo = (k, t, ph = '') => `<div class="campo"><label>${esc(t)}</label><textarea style="min-height:90px" placeholder="${esc(ph)}" oninput="porId(S.planesArea,'${p.id}')['${k}']=this.value;guardar()">${esc(p[k] || '')}</textarea></div>`;
+  const campo = (k, t, ph = '') => `<div class="campo"><label>${esc(t)}${['enfoque', 'metodologia', 'evaluacion', 'inclusion'].includes(k) ? botonBanco('ta-area-' + k) : ''}</label><textarea id="ta-area-${k}" style="min-height:90px" placeholder="${esc(ph)}" oninput="porId(S.planesArea,'${p.id}')['${k}']=this.value;guardar()">${esc(p[k] || '')}</textarea></div>`;
   return `${filtrosCur(c)}
   <div class="fila" style="justify-content:flex-end;margin-bottom:12px">
     <button class="btn ia" onclick="iaPlanArea('${p.id}')">✨ Sugerir con IA</button>
@@ -272,7 +272,7 @@ function vistaPlanPeriodo(c) {
     <div class="campo"><label>Ejes de la malla que aborda</label>
       ${items.length ? items.map((it) => `<label style="font-weight:normal;color:inherit;font-size:13px;display:inline-flex;gap:4px;margin-right:14px"><input type="checkbox" ${(u.itemIds || []).includes(it.id) ? 'checked' : ''} onchange="alternarItemUnidad('${pp.id}',${i},'${it.id}',this.checked)"> ${esc(it.eje || 'sin nombre')}</label>`).join('') : '<span class="ayuda">—</span>'}</div>
     <div class="rejilla r3">
-      <div class="campo"><label>Estrategias metodológicas</label><textarea oninput="cambiarUnidad('${pp.id}',${i},'estrategias',this.value)">${esc(u.estrategias)}</textarea></div>
+      <div class="campo"><label>Estrategias metodológicas${botonBanco('ta-u-' + u.id)}</label><textarea id="ta-u-${u.id}" oninput="cambiarUnidad('${pp.id}',${i},'estrategias',this.value)">${esc(u.estrategias)}</textarea></div>
       <div class="campo"><label>Producto / evidencia final</label><textarea oninput="cambiarUnidad('${pp.id}',${i},'producto',this.value)">${esc(u.producto)}</textarea></div>
       <div class="campo"><label>Evaluación</label><textarea oninput="cambiarUnidad('${pp.id}',${i},'evaluacion',this.value)">${esc(u.evaluacion)}</textarea></div>
     </div></div>`).join('')}
@@ -346,7 +346,7 @@ function vistaPlanAula(c) {
   const piar = alumnosDe(c.grupoId).filter((a) => a.piar);
   const desarrollados = ruta.filter((r) => r.estado.t === 'Desarrollado').length;
   const pregunta = obtenerMalla(c.areaId, g.grado, false)?.periodos[c.periodoId]?.pregunta || '';
-  const campo = (k, t, ph = '') => `<div class="campo"><label>${esc(t)}</label><textarea placeholder="${esc(ph)}" oninput="porId(S.planesAula,'${pa.id}')['${k}']=this.value;guardar()">${esc(pa[k] || '')}</textarea></div>`;
+  const campo = (k, t, ph = '') => `<div class="campo"><label>${esc(t)}${['estrategias', 'evaluacion', 'ajustes'].includes(k) ? botonBanco('ta-aula-' + k) : ''}</label><textarea id="ta-aula-${k}" placeholder="${esc(ph)}" oninput="porId(S.planesAula,'${pa.id}')['${k}']=this.value;guardar()">${esc(pa[k] || '')}</textarea></div>`;
   return `${filtrosCur(c, { grupo: true, periodo: true })}
   <div class="fila" style="justify-content:space-between;margin-bottom:12px">
     <span class="ayuda">${esc(nombreGrupo(g))} · ${alumnosDe(c.grupoId).length} estudiantes · ${esc(intensidadDe(c.areaId, g.grado) || '—')} h/semana · Avance: <b>${desarrollados} de ${ruta.length}</b> ejes desarrollados</span>
@@ -455,13 +455,7 @@ function aplicarMalla(planId) {
 }
 
 // ---------- IA curricular ----------
-function sinClaveIA() {
-  if (S.config.apiKey) return false;
-  abrirModal(`<h2>✨ Sugerencias con IA</h2><p>Para usar la IA necesitas internet y una clave de API de Anthropic (console.anthropic.com).
-    Pégala en <b>Configuración → Inteligencia artificial</b>.</p>
-    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="cerrarModal();ir('configuracion')">Ir a Configuración</button></div>`);
-  return true;
-}
+function sinClaveIA() { return sinIA(); }
 function iaMalla(mId, perId) {
   if (sinClaveIA()) return;
   const m = porId(S.mallas, mId);
@@ -484,7 +478,7 @@ async function ejecutarIAMalla(mId, perId) {
     extra ? `Indicaciones del docente: ${extra}` : ''].filter(Boolean).join('\n');
   const btn = document.getElementById('m-ia-btn');
   btn.disabled = true; btn.innerHTML = '<span class="cargando"></span> Generando…';
-  const r = await api.sugerirIA({ apiKey: S.config.apiKey, contexto, tarea: 'malla', numItems: Math.min(8, Math.max(1, +document.getElementById('m-n').value || 3)) });
+  const r = await api.sugerirIA({ ia: S.config.ia, contexto, tarea: 'malla', numItems: Math.min(8, Math.max(1, +document.getElementById('m-n').value || 3)) });
   if (!document.getElementById('m-ia-btn')) return;
   if (!r.ok || !Array.isArray(r.datos?.items)) {
     btn.disabled = false; btn.textContent = '✨ Reintentar';
@@ -522,7 +516,7 @@ async function ejecutarIAPlanArea(id) {
     S.config.municipio ? `Municipio: ${S.config.municipio}` : '', extra ? `Contexto: ${extra}` : ''].filter(Boolean).join('\n');
   const btn = document.getElementById('m-ia-btn');
   btn.disabled = true; btn.innerHTML = '<span class="cargando"></span> Generando… (puede tardar un minuto)';
-  const r = await api.sugerirIA({ apiKey: S.config.apiKey, contexto, tarea: 'planArea', campos });
+  const r = await api.sugerirIA({ ia: S.config.ia, contexto, tarea: 'planArea', campos });
   if (!document.getElementById('m-ia-btn')) return;
   if (!r.ok) {
     btn.disabled = false; btn.textContent = '✨ Reintentar';

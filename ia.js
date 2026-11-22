@@ -1,4 +1,5 @@
-// Sugerencias con IA (Claude). Solo funciona con internet y una clave de API configurada.
+// Sugerencias con IA. Proveedores: Claude (Anthropic), OpenAI, Google Gemini o cualquier API compatible con OpenAI.
+// Solo funciona con internet (salvo un servidor local como Ollama) y una clave de API configurada.
 const Anthropic = require('@anthropic-ai/sdk');
 
 const SISTEMA = `Eres un asesor pedagógico experto en educación básica secundaria en Colombia (grados 6° a 9°).
@@ -46,15 +47,106 @@ Devuelve un JSON con solo esas claves (cada valor es texto de uno a tres párraf
 - "bibliografia": bibliografía y webgrafía sugerida (solo documentos que existan con certeza).`;
 }
 
-async function sugerirConIA({ apiKey, contexto, campos = [], numSesiones = 0, tarea = 'clase', numItems = 3 }) {
-  if (!apiKey) return { ok: false, error: 'Configura tu clave de API en Configuración > Inteligencia artificial.' };
+const PROVEEDORES = {
+  anthropic: { nombre: 'Claude (Anthropic)', modelo: 'claude-opus-5-5' },
+  openai: { nombre: 'ChatGPT (OpenAI)', modelo: 'gpt-5-mini' },
+  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-2.5-flash' },
+  compatible: { nombre: 'Compatible con OpenAI', modelo: '' },
+};
 
-  const client = new Anthropic({ apiKey, maxRetries: 2, timeout: 180000 });
+class ErrorIA extends Error {}
+
+async function llamarAnthropic({ clave, modelo }, sistema, prompt) {
+  const client = new Anthropic({ apiKey: clave, maxRetries: 2, timeout: 180000 });
+  try {
+    const r = await client.beta.messages.create({
+      model: modelo || PROVEEDORES.anthropic.modelo,
+      max_tokens: 16000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      output_config: { effort: 'medium' },
+      system: sistema,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    if (r.stop_reason === 'refusal') throw new ErrorIA('La IA no pudo generar esta sugerencia. Ajusta el tema e inténtalo de nuevo.');
+    return r.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
+  } catch (e) {
+    if (e instanceof ErrorIA) throw e;
+    if (e instanceof Anthropic.AuthenticationError) throw new ErrorIA('La clave de API de Claude no es válida.');
+    if (e instanceof Anthropic.NotFoundError) throw new ErrorIA(`El modelo "${modelo}" no existe o tu cuenta no tiene acceso.`);
+    if (e instanceof Anthropic.RateLimitError) throw new ErrorIA('Se alcanzó el límite de uso de la API. Espera un momento.');
+    if (e instanceof Anthropic.APIConnectionError) throw new ErrorIA('No hay conexión a internet o el servicio no responde.');
+    if (e instanceof Anthropic.APIError) throw new ErrorIA(`Error del servicio de IA (${e.status}): ${e.message}`);
+    throw e;
+  }
+}
+
+async function pedirJSON(url, opciones) {
+  let r;
+  try {
+    r = await fetch(url, { ...opciones, signal: AbortSignal.timeout(180000) });
+  } catch (e) {
+    throw new ErrorIA(e.name === 'TimeoutError' ? 'El servicio tardó demasiado en responder.' : 'No hay conexión a internet o no se pudo contactar el servicio (' + (e.cause?.code || e.message) + ').');
+  }
+  const texto = await r.text();
+  let datos = null;
+  try { datos = JSON.parse(texto); } catch { /* respuesta no JSON */ }
+  if (!r.ok) {
+    const msg = datos?.error?.message || datos?.message || texto.slice(0, 300);
+    if (r.status === 401 || r.status === 403) throw new ErrorIA('La clave de API no es válida o no tiene permisos. ' + msg);
+    if (r.status === 404) throw new ErrorIA('No se encontró el modelo o la dirección del servicio. ' + msg);
+    if (r.status === 429) throw new ErrorIA('Se alcanzó el límite de uso o no hay saldo en la cuenta. ' + msg);
+    throw new ErrorIA(`Error del servicio de IA (${r.status}): ${msg}`);
+  }
+  return datos;
+}
+
+async function llamarCompatibleOpenAI({ clave, modelo, url }, sistema, prompt) {
+  const base = (url || 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const headers = { 'Content-Type': 'application/json' };
+  if (clave) headers.Authorization = `Bearer ${clave}`;
+  const datos = await pedirJSON(`${base}/chat/completions`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ model: modelo, messages: [{ role: 'system', content: sistema }, { role: 'user', content: prompt }] }),
+  });
+  const texto = datos?.choices?.[0]?.message?.content;
+  if (!texto) throw new ErrorIA('El servicio respondió sin contenido.');
+  return texto;
+}
+
+async function llamarGemini({ clave, modelo }, sistema, prompt) {
+  const m = encodeURIComponent(modelo || PROVEEDORES.gemini.modelo);
+  const datos = await pedirJSON(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: sistema }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    }),
+  });
+  const cand = datos?.candidates?.[0];
+  const texto = (cand?.content?.parts || []).map((p) => p.text || '').join('');
+  if (!texto) throw new ErrorIA(cand?.finishReason === 'SAFETY' ? 'Gemini bloqueó la respuesta por sus filtros de seguridad.' : 'Gemini respondió sin contenido.');
+  return texto;
+}
+
+async function llamarModelo(ia, sistema, prompt) {
+  const p = ia.proveedor || 'anthropic';
+  const cfg = { clave: (ia.claves?.[p] || '').trim(), modelo: (ia.modelos?.[p] || PROVEEDORES[p]?.modelo || '').trim(), url: (ia.url || '').trim() };
+  if (p !== 'compatible' && !cfg.clave) throw new ErrorIA(`Falta la clave de API de ${PROVEEDORES[p]?.nombre || p}. Configúrala en Configuración > Inteligencia artificial.`);
+  if (p === 'compatible' && (!cfg.url || !cfg.modelo)) throw new ErrorIA('Para un servicio compatible con OpenAI indica la dirección (URL) y el nombre del modelo.');
+  if (p === 'anthropic') return llamarAnthropic(cfg, sistema, prompt);
+  if (p === 'gemini') return llamarGemini(cfg, sistema, prompt);
+  if (p === 'openai') return llamarCompatibleOpenAI({ ...cfg, url: 'https://api.openai.com/v1' }, sistema, prompt);
+  return llamarCompatibleOpenAI(cfg, sistema, prompt);
+}
+
+function promptClase(contexto, campos, numSesiones) {
   const sesionesTxt = numSesiones > 0
     ? `"sesiones": un arreglo de exactamente ${numSesiones} objetos, cada uno con "titulo", "exploracion", "estructuracion", "practica", "valoracion" (cada momento con actividades concretas, tiempos aproximados y preguntas orientadoras).`
     : '';
-
-  const prompt = tarea === 'malla' ? promptMalla(contexto, numItems) : tarea === 'planArea' ? promptPlanArea(contexto, campos) : `Datos de la planeación:
+  return `Datos de la planeación:
 ${contexto}
 
 Genera un borrador para estos campos: ${campos.join(', ')}.
@@ -68,27 +160,22 @@ Devuelve un JSON con solo esas claves (cada valor es texto; usa saltos de línea
 - "evidencias": evidencias de aprendizaje.
 - "ajustes": ajustes razonables y estrategias de inclusión (DUA, PIAR) aplicables.
 ${sesionesTxt}`;
+}
 
+async function sugerirConIA({ ia, contexto, campos = [], numSesiones = 0, tarea = 'clase', numItems = 3 }) {
+  if (!ia) return { ok: false, error: 'Configura la inteligencia artificial en Configuración.' };
+  const prompt = tarea === 'malla' ? promptMalla(contexto, numItems)
+    : tarea === 'planArea' ? promptPlanArea(contexto, campos)
+    : tarea === 'prueba' ? 'Responde exactamente con este JSON: {"ok": true}'
+    : promptClase(contexto, campos, numSesiones);
   try {
-    const respuesta = await client.beta.messages.create({
-      model: 'claude-opus-5-5',
-      max_tokens: 16000,
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      output_config: { effort: 'medium' },
-      system: SISTEMA,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    if (respuesta.stop_reason === 'refusal') return { ok: false, error: 'La IA no pudo generar esta sugerencia. Ajusta el tema e inténtalo de nuevo.' };
-    const texto = respuesta.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
+    const texto = await llamarModelo(ia, SISTEMA, prompt);
     return { ok: true, datos: extraerJSON(texto) };
   } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) return { ok: false, error: 'La clave de API no es válida.' };
-    if (e instanceof Anthropic.RateLimitError) return { ok: false, error: 'Se alcanzó el límite de uso de la API. Espera un momento.' };
-    if (e instanceof Anthropic.APIConnectionError) return { ok: false, error: 'No hay conexión a internet o el servicio no responde.' };
-    if (e instanceof Anthropic.APIError) return { ok: false, error: `Error del servicio de IA (${e.status}): ${e.message}` };
+    if (e instanceof ErrorIA) return { ok: false, error: e.message };
+    if (e instanceof SyntaxError) return { ok: false, error: 'La respuesta de la IA no tuvo el formato esperado. Inténtalo de nuevo o prueba otro modelo.' };
     return { ok: false, error: e.message };
   }
 }
 
-module.exports = { sugerirConIA };
+module.exports = { sugerirConIA, PROVEEDORES };
