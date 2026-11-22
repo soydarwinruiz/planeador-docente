@@ -19,11 +19,16 @@ jobs:
         with:
           name: planeador-docente-windows
           path: dist/*.exe
+      - name: Leer versión
+        id: version
+        shell: bash
+        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - name: Publicar descarga
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          name: Planeador Docente ${{ github.ref_name }}
+          tag_name: v${{ steps.version.outputs.v }}
+          target_commitish: ${{ github.sha }}
+          name: Planeador Docente ${{ steps.version.outputs.v }}
           files: dist/*.exe
           body: |
             **Cómo instalar**
