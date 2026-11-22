@@ -5,7 +5,7 @@ Funciona **sin internet**: todos los datos quedan guardados en tu computador.
 
 ## Cómo abrirla
 
-- **Versión portable** (`PlaneadorDocente-portable-1.3.0.exe`): haz doble clic y listo. No necesita instalación.
+- **Versión portable** (`PlaneadorDocente-portable-1.4.0.exe`): haz doble clic y listo. No necesita instalación.
   Puedes llevarla en una memoria USB.
 - La primera vez, Windows puede mostrar *"Windows protegió su PC"* (el programa no tiene firma digital comercial).
   Haz clic en **Más información → Ejecutar de todas formas**.
@@ -32,6 +32,7 @@ Al abrir la app por primera vez aparece el **asistente de configuración** (inst
 
 | Módulo | Qué hace |
 |---|---|
+| Referentes MEN | **Estándares Básicos de Competencias** (MEN, 2006) de Lenguaje, Matemáticas, Ciencias Naturales, Ciencias Sociales y Competencias Ciudadanas para 6.° a 9.°. Se consultan en *Planeación curricular → Referentes MEN* y se insertan con el botón **📘 Referentes** en la malla y la planeación. La IA los usa para no inventar estándares |
 | Planeación curricular | **Plan de área** (diagnóstico, justificación, objetivos por grado, enfoque, metodología, evaluación, inclusión…), **malla curricular** por grado y periodo (ejes, contenidos, estándares, DBA, competencias, desempeños, evidencias, horas), **plan de periodo** por unidades o proyectos y **plan de aula** por grupo con el avance de cada eje. Todo exportable a Word en hoja horizontal |
 | Planeaciones de clase | Estructura de orientaciones didácticas: identificación, diversidad del aula (desde el perfil del grupo), fundamentación, criterios de evaluación por niveles y acciones metodológicas (exploración, estructuración, práctica, transferencia y valoración, con mediaciones). Crear, buscar, filtrar, duplicar y exportar a Word. Se vinculan a la malla: al elegir un eje se copian sus estándares, DBA, competencias y desempeños |
 | Banco pedagógico | Incluye de fábrica **52 estrategias** (Radar 360°: generales y específicas de sesión), **60 técnicas** (búsqueda, comprensión, representación y comunicación) y los **9 métodos universales**, con código, clasificación y pasos. Estrategias, metodologías y técnicas con clasificación, momentos de la clase, descripción y pasos. Se agregan a mano o se importan desde Excel, y se insertan con el botón **📚 Banco** en la planeación de clase, el plan de periodo, el plan de aula y el plan de área |

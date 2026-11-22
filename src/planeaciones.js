@@ -210,7 +210,7 @@ RENDERS.editor = ({ id }) => {
     <div class="rejilla r2">
       ${campoTexto(p, 'componentes', 'Componentes', 'Ej.: Naturaleza y evolución de la tecnología; Uso y apropiación…')}
       ${campoTexto(p, 'competencias', 'Competencias', 'Competencias a desarrollar…')}
-      ${campoTexto(p, 'estandares', 'Estándares básicos de competencias', 'Estándar(es) del MEN…')}
+      ${campoTexto(p, 'estandares', 'Estándares básicos de competencias', 'Estándar(es) del MEN…').replace('</label>', botonReferentes(`ta-${p.id}-estandares`, p.areaId, g?.grado || p.gradoOrigen) + '</label>')}
       ${campoTexto(p, 'dba', 'Derechos Básicos de Aprendizaje (DBA)', 'Si el área los tiene…')}
       ${campoTexto(p, 'evidencias', 'Evidencias de aprendizaje', 'Comparo…, Establezco…, Reflexiono…')}
       <div>${campoLinea(p, 'unidad', 'Unidad', 'Ej.: Inventos que ayudan a vivir mejor en la ciudad')}
@@ -437,6 +437,7 @@ async function ejecutarIA(id) {
     ...CAMPOS_TEXTO.filter((c) => p[c.k] && !campos.includes(c.k)).map((c) => `${c.t} (ya definido): ${p[c.k]}`),
     ...CAMPOS_DIVERSIDAD.filter((c) => p[c.k]).map((c) => `Diversidad del aula – ${c.t}: ${p[c.k]}`),
     piar.length ? `Necesidades registradas en PIAR del grupo: ${piar.join('; ')}` : '',
+    campos.includes('estandares') && textoReferentes(areaReferenteDe(p.areaId), bandaDeGrado(g?.grado || p.gradoOrigen)) ? `Referentes oficiales del MEN para este grado (en "estandares" copia textualmente solo los pertinentes al tema; no inventes estándares):\n${textoReferentes(areaReferenteDe(p.areaId), bandaDeGrado(g?.grado || p.gradoOrigen))}` : '',
     document.getElementById('m-ia-extra').value.trim() ? `Indicaciones del docente: ${document.getElementById('m-ia-extra').value.trim()}` : '',
   ].filter(Boolean).join('\n');
 
