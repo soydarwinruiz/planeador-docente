@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     tags: ['v*']
+permissions:
+  contents: write
 jobs:
   windows:
     runs-on: windows-latest
@@ -17,3 +19,15 @@ jobs:
         with:
           name: planeador-docente-windows
           path: dist/*.exe
+      - name: Publicar descarga
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Planeador Docente ${{ github.ref_name }}
+          files: dist/*.exe
+          body: |
+            **Cómo instalar**
+            - `Planeador Docente Setup ...exe`: instalador (crea acceso directo en el escritorio).
+            - `PlaneadorDocente-portable-...exe`: versión portable, se abre con doble clic sin instalar.
+
+            Si Windows muestra "Windows protegió su PC", haz clic en **Más información → Ejecutar de todas formas**.
