@@ -1,0 +1,49 @@
+{
+  "name": "planeador-docente",
+  "productName": "Planeador Docente",
+  "version": "1.0.0",
+  "description": "Sistema de planeación docente para básica secundaria (Colombia)",
+  "main": "main.js",
+  "author": "Planeador Docente",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis portable --x64",
+    "dist:portable": "electron-builder --win portable --x64"
+  },
+  "build": {
+    "appId": "co.planeador.docente",
+    "productName": "Planeador Docente",
+    "files": [
+      "main.js",
+      "preload.js",
+      "exportar-word.js",
+      "ia.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Planeador Docente"
+    },
+    "portable": {
+      "artifactName": "PlaneadorDocente-portable-${version}.exe"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.12.0",
+    "docx": "^9.16.0"
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  }
+}

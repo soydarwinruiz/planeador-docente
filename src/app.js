@@ -1,0 +1,276 @@
+// ================= Núcleo de la aplicación =================
+/* global api */
+
+let S = null; // estado persistente
+const ui = { vista: 'inicio', params: {} }; // estado de la interfaz (no se guarda)
+
+const VERSION_DATOS = 1;
+
+function estadoInicial() {
+  const anio = new Date().getFullYear();
+  return {
+    version: VERSION_DATOS,
+    config: {
+      institucion: '', sede: '', municipio: '', docente: '', coordinador: '', anio,
+      escalaMin: 1, escalaMax: 5, notaAprobacion: 3, decimales: 1, faltanteComoMinima: false,
+      desempenos: [
+        { nombre: 'Bajo', desde: 1.0, hasta: 2.9 },
+        { nombre: 'Básico', desde: 3.0, hasta: 3.9 },
+        { nombre: 'Alto', desde: 4.0, hasta: 4.5 },
+        { nombre: 'Superior', desde: 4.6, hasta: 5.0 },
+      ],
+      periodos: [
+        { id: uid(), nombre: 'Primer periodo', inicio: `${anio}-01-26`, fin: `${anio}-04-03`, peso: 25 },
+        { id: uid(), nombre: 'Segundo periodo', inicio: `${anio}-04-13`, fin: `${anio}-06-19`, peso: 25 },
+        { id: uid(), nombre: 'Tercer periodo', inicio: `${anio}-07-06`, fin: `${anio}-09-11`, peso: 25 },
+        { id: uid(), nombre: 'Cuarto periodo', inicio: `${anio}-09-14`, fin: `${anio}-11-27`, peso: 25 },
+      ],
+      criteriosPorDefecto: [
+        { nombre: 'Saber (cognitivo)', peso: 40 },
+        { nombre: 'Hacer (procedimental)', peso: 40 },
+        { nombre: 'Ser (actitudinal)', peso: 20 },
+      ],
+      apiKey: '',
+    },
+    areas: [],
+    grupos: [],
+    alumnos: [],
+    planeaciones: [],
+    asistencia: {},
+    planillas: [],
+    notas: {},
+    notasRubrica: {},
+    rubricas: [],
+    eventos: [],
+    cronograma: {},
+  };
+}
+
+// ---------- Utilidades ----------
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function isoLocal(d) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function hoyISO() { return isoLocal(new Date()); }
+function deISO(iso) { const [a, m, d] = iso.split('-').map(Number); return new Date(a, m - 1, d); }
+function sumarDias(iso, n) { const d = deISO(iso); d.setDate(d.getDate() + n); return isoLocal(d); }
+function difDias(a, b) { return Math.round((deISO(b) - deISO(a)) / 86400000); }
+function lunesDe(iso) { const d = deISO(iso); const dia = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dia); return isoLocal(d); }
+function fechaCorta(iso) {
+  if (!iso) return '';
+  return deISO(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function fechaLarga(iso) {
+  if (!iso) return '';
+  return deISO(iso).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+function porId(lista, id) { return lista.find((x) => x.id === id); }
+function normalizar(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function csvCelda(v) { const s = String(v ?? ''); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
+function aCSV(filas) { return filas.map((f) => f.map(csvCelda).join(';')).join('\r\n'); }
+
+// ---------- Nombres ----------
+function nombreGrupo(g) { return g ? `${g.grado}° – ${g.nombre}` : '(sin grupo)'; }
+function nombreGrupoId(id) { return nombreGrupo(porId(S.grupos, id)); }
+function nombreArea(id) { const a = porId(S.areas, id); return a ? a.nombre : '(sin área)'; }
+function nombrePeriodo(id) { const p = porId(S.config.periodos, id); return p ? p.nombre : ''; }
+function nombreAlumno(a) { return `${a.apellidos} ${a.nombres}`.trim(); }
+function alumnosDe(grupoId) {
+  return S.alumnos.filter((a) => a.grupoId === grupoId && a.activo !== false)
+    .sort((x, y) => nombreAlumno(x).localeCompare(nombreAlumno(y), 'es'));
+}
+function areasDeGrupo(grupoId) {
+  const g = porId(S.grupos, grupoId);
+  if (!g) return [];
+  return (g.areas || []).map((x) => porId(S.areas, x.areaId)).filter(Boolean);
+}
+function periodoDeFecha(iso) {
+  return S.config.periodos.find((p) => p.inicio && p.fin && iso >= p.inicio && iso <= p.fin);
+}
+
+// ---------- Notas ----------
+function redondear(n) { const f = 10 ** (S.config.decimales ?? 1); return Math.round(n * f) / f; }
+function fmtNota(n) { return n == null || isNaN(n) ? '—' : redondear(n).toFixed(S.config.decimales ?? 1); }
+function desempeno(n) {
+  if (n == null || isNaN(n)) return null;
+  const r = redondear(n);
+  const d = S.config.desempenos.find((x) => r >= x.desde && r <= x.hasta);
+  if (d) return d.nombre;
+  return r < S.config.desempenos[0].desde ? S.config.desempenos[0].nombre : S.config.desempenos[S.config.desempenos.length - 1].nombre;
+}
+function chipDesempeno(n) { const d = desempeno(n); return d ? `<span class="chip ${esc(d)}">${esc(d)}</span>` : ''; }
+
+// ---------- Guardado ----------
+let temporizadorGuardado = null;
+function guardar() {
+  clearTimeout(temporizadorGuardado);
+  document.getElementById('estado-guardado').textContent = 'Guardando…';
+  temporizadorGuardado = setTimeout(async () => {
+    try {
+      await api.guardar(S);
+      document.getElementById('estado-guardado').textContent = 'Guardado ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      document.getElementById('estado-guardado').textContent = 'Error al guardar';
+      aviso('No se pudo guardar: ' + e.message, 'error');
+    }
+  }, 400);
+}
+
+function migrar(d) {
+  const base = estadoInicial();
+  const r = { ...base, ...d, config: { ...base.config, ...(d.config || {}) } };
+  for (const k of Object.keys(base)) if (r[k] == null) r[k] = base[k];
+  r.version = VERSION_DATOS;
+  return r;
+}
+
+// ---------- Avisos y modales ----------
+function aviso(texto, tipo = '') {
+  const el = document.createElement('div');
+  el.className = 'aviso ' + tipo;
+  el.textContent = texto;
+  document.getElementById('avisos').appendChild(el);
+  setTimeout(() => el.remove(), tipo === 'error' ? 6000 : 3200);
+}
+
+function abrirModal(html, { ancho = false } = {}) {
+  const m = document.getElementById('modal');
+  m.className = ancho ? 'ancho' : '';
+  m.innerHTML = html;
+  document.getElementById('modal-fondo').classList.remove('oculto');
+  const primero = m.querySelector('input, select, textarea');
+  if (primero) setTimeout(() => primero.focus(), 30);
+}
+function cerrarModal() { document.getElementById('modal-fondo').classList.add('oculto'); document.getElementById('modal').innerHTML = ''; }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModal(); });
+
+let resolverConfirmacion = null;
+function confirmar(texto, { boton = 'Eliminar', peligro = true } = {}) {
+  return new Promise((res) => {
+    resolverConfirmacion = res;
+    abrirModal(`<h2>Confirmar</h2><p>${esc(texto)}</p>
+      <div class="botones"><button class="btn" onclick="responderConfirmacion(false)">Cancelar</button>
+      <button class="btn ${peligro ? 'peligro' : 'primario'}" onclick="responderConfirmacion(true)">${esc(boton)}</button></div>`);
+  });
+}
+function responderConfirmacion(v) { cerrarModal(); if (resolverConfirmacion) resolverConfirmacion(v); resolverConfirmacion = null; }
+
+// ---------- Opciones de selects ----------
+function opciones(lista, seleccionado, { vacio = null, valor = (x) => x.id, texto = (x) => x.nombre } = {}) {
+  let html = vacio != null ? `<option value="">${esc(vacio)}</option>` : '';
+  for (const x of lista) {
+    const v = valor(x);
+    html += `<option value="${esc(v)}" ${v === seleccionado ? 'selected' : ''}>${esc(texto(x))}</option>`;
+  }
+  return html;
+}
+function opcionesGrupos(sel, vacio) { return opciones([...S.grupos].sort(ordenGrupos), sel, { vacio, texto: nombreGrupo }); }
+function opcionesAreas(sel, vacio, lista = S.areas) { return opciones(lista, sel, { vacio }); }
+function opcionesPeriodos(sel, vacio) { return opciones(S.config.periodos, sel, { vacio }); }
+function ordenGrupos(a, b) { return (a.grado - b.grado) || String(a.nombre).localeCompare(String(b.nombre), 'es', { numeric: true }); }
+
+// ---------- Navegación ----------
+const VISTAS = [
+  { id: 'inicio', ico: '🏠', nombre: 'Inicio' },
+  { id: 'planeaciones', ico: '📝', nombre: 'Planeaciones' },
+  { id: 'banco', ico: '🗂️', nombre: 'Banco de planeaciones' },
+  { id: 'calendario', ico: '📅', nombre: 'Calendario' },
+  { id: 'cronograma', ico: '🧭', nombre: 'Cronograma' },
+  { id: 'grupos', ico: '👥', nombre: 'Grupos y alumnos' },
+  { id: 'asistencia', ico: '✅', nombre: 'Asistencia' },
+  { id: 'calificaciones', ico: '📊', nombre: 'Calificaciones' },
+  { id: 'configuracion', ico: '⚙️', nombre: 'Configuración' },
+];
+
+function ir(vista, params = {}) {
+  ui.vista = vista;
+  ui.params = params;
+  render();
+  document.getElementById('contenido').scrollTop = 0;
+}
+
+function renderNav() {
+  document.getElementById('nav').innerHTML = VISTAS.map((v) =>
+    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || (ui.vista === 'alumnos' && v.id === 'grupos') ? 'activo' : ''}" onclick="ir('${v.id}')"><span class="ico">${v.ico}</span>${v.nombre}</button>`
+  ).join('');
+  document.getElementById('marca-sub').textContent = S.config.institucion || 'Básica secundaria';
+}
+
+const RENDERS = {};
+function render() {
+  renderNav();
+  const fn = RENDERS[ui.vista] || RENDERS.inicio;
+  document.getElementById('contenido').innerHTML = fn(ui.params);
+  if (RENDERS[ui.vista + '_despues']) RENDERS[ui.vista + '_despues'](ui.params);
+}
+
+// ---------- Inicio ----------
+RENDERS.inicio = () => {
+  const c = S.config;
+  const hoy = hoyISO();
+  const limite = sumarDias(hoy, 7);
+  const proximas = [];
+  for (const p of S.planeaciones) {
+    for (const s of p.sesiones || []) {
+      if (s.fecha && s.fecha >= hoy && s.fecha <= limite) proximas.push({ p, s });
+    }
+  }
+  proximas.sort((a, b) => a.s.fecha.localeCompare(b.s.fecha));
+  const eventos = S.eventos.filter((e) => (e.fechaFin || e.fecha) >= hoy && e.fecha <= sumarDias(hoy, 30)).sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const periodo = periodoDeFecha(hoy);
+  const borradores = S.planeaciones.filter((p) => p.estado !== 'terminada').length;
+  const configurado = c.institucion && c.docente;
+
+  return `
+  <div class="cabecera"><div>
+    <h1>${c.docente ? '¡Hola, ' + esc(c.docente.split(' ')[0]) + '!' : 'Bienvenido(a) al Planeador Docente'}</h1>
+    <p class="sub">${esc(fechaLarga(hoy))}${periodo ? ' · ' + esc(periodo.nombre) : ''}${c.institucion ? ' · ' + esc(c.institucion) : ''}</p>
+  </div><div class="acciones">
+    <button class="btn primario" onclick="nuevaPlaneacion()">＋ Nueva planeación</button>
+    <button class="btn" onclick="ir('asistencia')">✅ Tomar asistencia</button>
+  </div></div>
+
+  ${!configurado ? `<div class="alerta info"><b>Primeros pasos:</b> 1) Completa los datos en <a href="#" onclick="ir('configuracion')">Configuración</a> (institución, docente, periodos).
+    2) Crea tus <a href="#" onclick="ir('grupos')">áreas, grupos y alumnos</a>. 3) ¡Empieza a planear!</div>` : ''}
+
+  <div class="estadisticas">
+    <div class="estadistica"><div class="num">${S.grupos.length}</div><div class="eti">Grupos</div></div>
+    <div class="estadistica"><div class="num">${S.alumnos.filter((a) => a.activo !== false).length}</div><div class="eti">Estudiantes</div></div>
+    <div class="estadistica"><div class="num">${S.planeaciones.length}</div><div class="eti">Planeaciones</div></div>
+    <div class="estadistica"><div class="num">${borradores}</div><div class="eti">En borrador</div></div>
+    <div class="estadistica"><div class="num">${S.planeaciones.filter((p) => p.enBanco).length}</div><div class="eti">En el banco</div></div>
+  </div>
+
+  <div class="rejilla r2">
+    <div class="tarjeta"><h2>Clases de los próximos 7 días</h2>
+      ${proximas.length ? `<ul class="lista-simple">${proximas.slice(0, 12).map(({ p, s }) => `
+        <li><div><b>${esc(fechaLarga(s.fecha))}</b> · ${esc(nombreGrupoId(p.grupoId))} · ${esc(nombreArea(p.areaId))}<br>
+        <span class="ayuda">${esc(s.titulo || p.titulo || 'Sin título')}</span></div>
+        <button class="btn pequeno" onclick="editarPlaneacion('${p.id}')">Abrir</button></li>`).join('')}</ul>`
+        : '<p class="ayuda">No hay clases planeadas para esta semana.</p>'}
+    </div>
+    <div class="tarjeta"><h2>Próximos eventos (30 días)</h2>
+      ${eventos.length ? `<ul class="lista-simple">${eventos.map((e) => `<li><div><span class="item ${esc(e.tipo)}" style="display:inline-block">${esc(TIPOS_EVENTO[e.tipo] || e.tipo)}</span> <b>${esc(e.titulo)}</b></div><span class="ayuda">${esc(fechaCorta(e.fecha))}${e.fechaFin && e.fechaFin !== e.fecha ? ' – ' + esc(fechaCorta(e.fechaFin)) : ''}</span></li>`).join('')}</ul>`
+        : '<p class="ayuda">Sin eventos. Agrégalos desde el <a href="#" onclick="ir(\'calendario\')">Calendario</a>.</p>'}
+    </div>
+  </div>`;
+};
+
+// ---------- Arranque ----------
+async function iniciar() {
+  const datos = await api.cargar();
+  if (datos && datos.__error) {
+    S = estadoInicial();
+    render();
+    aviso(datos.__error + ' Puedes restaurar un respaldo desde Configuración.', 'error');
+    ir('configuracion');
+    return;
+  }
+  S = datos ? migrar(datos) : estadoInicial();
+  if (!datos) guardar();
+  render();
+}

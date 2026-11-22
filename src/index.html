@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Planeador Docente</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside id="menu">
+    <div class="marca">
+      <div class="logo">📘</div>
+      <div>
+        <div class="marca-titulo">Planeador Docente</div>
+        <div class="marca-sub" id="marca-sub">Básica secundaria</div>
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="menu-pie" id="estado-guardado">Datos guardados en este equipo</div>
+  </aside>
+  <main id="contenido"></main>
+  <div id="modal-fondo" class="oculto"><div id="modal"></div></div>
+  <div id="avisos"></div>
+
+  <script src="app.js"></script>
+  <script src="grupos.js"></script>
+  <script src="planeaciones.js"></script>
+  <script src="evaluacion.js"></script>
+  <script src="calendario.js"></script>
+  <script src="configuracion.js"></script>
+  <script>iniciar();</script>
+</body>
+</html>
