@@ -3,11 +3,11 @@
 
 const TIPOS_BANCO = {
   estrategia: { uno: 'Estrategia', varios: 'Estrategias', ico: '🎯' },
-  metodologia: { uno: 'Metodología', varios: 'Metodologías', ico: '🧭' },
+  metodologia: { uno: 'Metodología', varios: 'Metodologías (métodos)', ico: '🧭' },
   tecnica: { uno: 'Técnica', varios: 'Técnicas', ico: '🛠️' },
 };
 const MOMENTOS_BANCO = [
-  ['exploracion', 'Exploración'], ['estructuracion', 'Estructuración'], ['practica', 'Práctica'], ['valoracion', 'Valoración / evaluación'],
+  ['exploracion', 'Exploración'], ['estructuracion', 'Estructuración'], ['practica', 'Práctica'], ['transferencia', 'Transferencia'], ['valoracion', 'Valoración / cierre'],
 ];
 const CAMPOS_BANCO = [
   { k: 'descripcion', t: 'Descripción', ph: '¿En qué consiste?' },
@@ -36,8 +36,8 @@ function filtrarBanco({ tipo, texto, clasificacion, momento, favoritos }) {
   const q = normalizar(texto);
   return S.bancoPedagogico.filter((x) => (!tipo || x.tipo === tipo) && (!clasificacion || x.clasificacion === clasificacion) &&
     (!momento || (x.momentos || []).includes(momento)) && (!favoritos || x.favorito) &&
-    (!q || normalizar([x.nombre, x.clasificacion, x.descripcion, x.pasos, x.areas].join(' ')).includes(q)))
-    .sort((a, b) => (b.favorito ? 1 : 0) - (a.favorito ? 1 : 0) || a.nombre.localeCompare(b.nombre, 'es'));
+    (!q || normalizar([x.codigo, x.nombre, x.clasificacion, x.descripcion, x.pasos, x.areas].join(' ')).includes(q)))
+    .sort((a, b) => (b.favorito ? 1 : 0) - (a.favorito ? 1 : 0) || String(a.codigo || '~').localeCompare(String(b.codigo || '~'), 'es', { numeric: true }) || a.nombre.localeCompare(b.nombre, 'es'));
 }
 
 // ---------- Vista ----------
@@ -62,7 +62,7 @@ RENDERS.bancoPedagogico = () => {
     <div class="tarjeta">
       <div class="fila" style="justify-content:space-between"><span>${x.clasificacion ? `<span class="chip">${esc(x.clasificacion)}</span>` : ''}</span>
         <button class="icono" title="${x.favorito ? 'Quitar de favoritas' : 'Marcar como favorita'}" onclick="alternarFavorito('${x.id}')" style="color:${x.favorito ? '#f5a623' : '#b0b8c4'}">${x.favorito ? '★' : '☆'}</button></div>
-      <div class="tit">${esc(x.nombre)}</div>
+      <div class="tit">${x.codigo ? `<span class="ayuda">${esc(x.codigo)}</span> ` : ''}${esc(x.nombre)}</div>
       <div class="ayuda">${esc((x.descripcion || '').slice(0, 180))}${(x.descripcion || '').length > 180 ? '…' : ''}</div>
       ${(x.momentos || []).length ? `<div>${x.momentos.map((m) => `<span class="item plan" style="display:inline-block;margin-right:3px">${esc((MOMENTOS_BANCO.find((z) => z[0] === m) || [m, m])[1])}</span>`).join('')}</div>` : ''}
       <div class="pie">
@@ -77,7 +77,7 @@ RENDERS.bancoPedagogico = () => {
 
 function verEntradaBanco(id) {
   const x = porId(S.bancoPedagogico, id);
-  abrirModal(`<h2>${TIPOS_BANCO[x.tipo].ico} ${esc(x.nombre)}</h2>
+  abrirModal(`<h2>${TIPOS_BANCO[x.tipo].ico} ${x.codigo ? esc(x.codigo) + ' · ' : ''}${esc(x.nombre)}</h2>
     <p>${x.clasificacion ? `<span class="chip">${esc(x.clasificacion)}</span> ` : ''}<span class="chip">${TIPOS_BANCO[x.tipo].uno}</span>
     ${(x.momentos || []).map((m) => `<span class="chip sesion">${esc((MOMENTOS_BANCO.find((z) => z[0] === m) || [m, m])[1])}</span>`).join(' ')}</p>
     ${CAMPOS_BANCO.filter((c) => x[c.k]).map((c) => `<h3>${c.t}</h3><p style="white-space:pre-wrap;margin-top:0">${esc(x[c.k])}</p>`).join('')}
@@ -87,8 +87,9 @@ function verEntradaBanco(id) {
 function editarEntradaBanco(id) {
   const x = id ? porId(S.bancoPedagogico, id) : { tipo: ui.bp?.tipo || 'estrategia', nombre: '', clasificacion: ui.bp?.clasificacion || '', momentos: [] };
   abrirModal(`<h2>${id ? 'Editar' : 'Nueva entrada'}</h2>
-    <div class="rejilla r3">
+    <div class="rejilla" style="grid-template-columns: 1fr 110px 2fr 1.5fr">
       <div class="campo"><label>Tipo</label><select id="b-tipo">${Object.entries(TIPOS_BANCO).map(([k, v]) => `<option value="${k}" ${x.tipo === k ? 'selected' : ''}>${v.uno}</option>`).join('')}</select></div>
+      <div class="campo"><label>Código</label><input id="b-codigo" value="${esc(x.codigo || '')}"></div>
       <div class="campo"><label>Nombre</label><input id="b-nombre" value="${esc(x.nombre)}"></div>
       <div class="campo"><label>Clasificación</label><input id="b-clas" list="b-clas-l" value="${esc(x.clasificacion || '')}" placeholder="Ej.: Aprendizaje activo">
         <datalist id="b-clas-l">${[...new Set(S.bancoPedagogico.map((z) => z.clasificacion).filter(Boolean))].map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
@@ -102,7 +103,7 @@ function guardarEntradaBanco(id) {
   const nombre = document.getElementById('b-nombre').value.trim();
   if (!nombre) return aviso('Escribe el nombre', 'error');
   const datos = {
-    tipo: document.getElementById('b-tipo').value, nombre, clasificacion: document.getElementById('b-clas').value.trim(),
+    tipo: document.getElementById('b-tipo').value, nombre, codigo: document.getElementById('b-codigo').value.trim(), clasificacion: document.getElementById('b-clas').value.trim(),
     momentos: [...document.querySelectorAll('.b-mom:checked')].map((c) => c.value),
   };
   CAMPOS_BANCO.forEach((c) => { datos[c.k] = document.getElementById('b-' + c.k).value.trim(); });
@@ -127,7 +128,7 @@ function alternarFavorito(id) { const x = porId(S.bancoPedagogico, id); x.favori
 
 // ---------- Importar / exportar ----------
 const COLUMNAS_BANCO = [
-  ['tipo', ['tipo']], ['nombre', ['nombre', 'estrategia', 'metodologia', 'tecnica', 'titulo']], ['clasificacion', ['clasificacion', 'categoria', 'clase', 'grupo']],
+  ['tipo', ['tipo']], ['codigo', ['codigo', 'cod', 'n.°', 'no']], ['nombre', ['nombre', 'estrategia', 'metodologia', 'tecnica', 'titulo']], ['clasificacion', ['clasificacion', 'categoria', 'clase', 'grupo']],
   ['descripcion', ['descripcion', 'definicion', 'en que consiste']], ['pasos', ['pasos', 'como aplicarla', 'aplicacion', 'procedimiento', 'desarrollo']],
   ['momentos', ['momentos', 'momento']], ['recursos', ['recursos', 'materiales']], ['areas', ['areas', 'area', 'grados']], ['fuente', ['fuente', 'referencia', 'autor']],
 ];
@@ -184,7 +185,7 @@ function importarBanco() {
     const v = (k) => (mapa[k] != null ? (f[mapa[k]] || '').trim() : '');
     if (!v('nombre')) continue;
     S.bancoPedagogico.push({
-      id: uid(), tipo: tipoDesdeTexto(v('tipo'), porDefecto), nombre: v('nombre'), clasificacion: v('clasificacion'),
+      id: uid(), tipo: tipoDesdeTexto(v('tipo'), porDefecto), codigo: v('codigo'), nombre: v('nombre'), clasificacion: v('clasificacion'),
       momentos: momentosDesdeTexto(v('momentos')), descripcion: v('descripcion'), pasos: v('pasos'), recursos: v('recursos'), areas: v('areas'), fuente: v('fuente'),
     });
     n++;
@@ -193,9 +194,9 @@ function importarBanco() {
   aviso(`Se importaron ${n} entrada(s)`, 'ok');
 }
 function exportarBanco() {
-  const filas = [['Tipo', 'Nombre', 'Clasificación', 'Momentos', 'Descripción', 'Pasos', 'Recursos', 'Áreas', 'Fuente']];
+  const filas = [['Tipo', 'Código', 'Nombre', 'Clasificación', 'Momentos', 'Descripción', 'Pasos', 'Recursos', 'Áreas', 'Fuente']];
   for (const x of [...S.bancoPedagogico].sort((a, b) => a.tipo.localeCompare(b.tipo) || a.nombre.localeCompare(b.nombre, 'es'))) {
-    filas.push([TIPOS_BANCO[x.tipo].uno, x.nombre, x.clasificacion, (x.momentos || []).map((m) => (MOMENTOS_BANCO.find((z) => z[0] === m) || [m, m])[1]).join(', '),
+    filas.push([TIPOS_BANCO[x.tipo].uno, x.codigo || '', x.nombre, x.clasificacion, (x.momentos || []).map((m) => (MOMENTOS_BANCO.find((z) => z[0] === m) || [m, m])[1]).join(', '),
       x.descripcion, x.pasos, x.recursos, x.areas, x.fuente]);
   }
   api.guardarCSV('Banco pedagógico', aCSV(filas));
@@ -226,7 +227,7 @@ function dibujarSelectorBanco() {
       <div><label><input type="checkbox" ${s.conPasos ? 'checked' : ''} onchange="selectorBanco.conPasos=this.checked"> Incluir los pasos</label></div>
     </div>
     <div style="max-height:52vh;overflow-y:auto">
-    ${lista.length ? `<ul class="lista-simple">${lista.map((x) => `<li><div><b>${x.favorito ? '★ ' : ''}${esc(x.nombre)}</b> <span class="chip">${TIPOS_BANCO[x.tipo].uno}</span> ${x.clasificacion ? `<span class="chip">${esc(x.clasificacion)}</span>` : ''}
+    ${lista.length ? `<ul class="lista-simple">${lista.slice(0, 150).map((x) => `<li><div><b>${x.favorito ? '★ ' : ''}${x.codigo ? esc(x.codigo) + ' · ' : ''}${esc(x.nombre)}</b> <span class="chip">${TIPOS_BANCO[x.tipo].uno}</span> ${x.clasificacion ? `<span class="chip">${esc(x.clasificacion)}</span>` : ''}
       <br><span class="ayuda">${esc((x.descripcion || '').slice(0, 160))}</span></div>
       <button class="btn pequeno primario" onclick="insertarDelBanco('${x.id}')">Insertar</button></li>`).join('')}</ul>`
       : '<p class="ayuda">Nada coincide con la búsqueda.' + (s.momento ? ' Prueba con "Momento: Cualquiera".' : '') + '</p>'}
@@ -237,7 +238,7 @@ function insertarDelBanco(id) {
   const x = porId(S.bancoPedagogico, id);
   const ta = document.getElementById(selectorBanco.textareaId);
   if (!ta) return cerrarModal();
-  let texto = `• ${TIPOS_BANCO[x.tipo].uno} – ${x.nombre}${x.descripcion ? ': ' + x.descripcion : ''}`;
+  let texto = `• ${TIPOS_BANCO[x.tipo].uno}${x.codigo ? ' ' + x.codigo : ''} – ${x.nombre}${x.descripcion ? ': ' + x.descripcion.split('\n')[0] : ''}`;
   if (selectorBanco.conPasos && x.pasos) texto += '\n' + x.pasos;
   ta.value = ta.value.trim() ? ta.value.replace(/\s+$/, '') + '\n' + texto : texto;
   ta.dispatchEvent(new Event('input', { bubbles: true }));

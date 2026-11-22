@@ -4,6 +4,11 @@ const TIPOS_EVENTO = { festivo: 'Festivo', receso: 'Receso / vacaciones', instit
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 function eventosDelDia(iso) { return S.eventos.filter((e) => iso >= e.fecha && iso <= (e.fechaFin || e.fecha)); }
+function evaluacionesDelDia(iso) {
+  const r = [];
+  for (const pl of S.planillas) for (const c of pl.criterios) for (const a of c.actividades) if (a.fecha === iso) r.push({ pl, c, a });
+  return r;
+}
 function sesionesDelDia(iso) {
   const r = [];
   for (const p of S.planeaciones) (p.sesiones || []).forEach((s, i) => { if (s.fecha === iso) r.push({ p, s, i }); });
@@ -25,6 +30,7 @@ RENDERS.calendario = () => {
     const finde = d.getDay() === 0 || d.getDay() === 6;
     const evs = eventosDelDia(iso);
     const ses = sesionesDelDia(iso).filter(({ p }) => !c.grupoId || p.grupoId === c.grupoId);
+    const evals = evaluacionesDelDia(iso).filter(({ pl }) => !c.grupoId || pl.grupoId === c.grupoId);
     const perIni = S.config.periodos.filter((p) => p.inicio === iso);
     const perFin = S.config.periodos.filter((p) => p.fin === iso);
     celdas += `<div class="dia ${d.getMonth() !== c.mes ? 'fuera' : ''} ${iso === hoy ? 'hoy' : ''} ${finde ? 'finde' : ''}" onclick="dialogoDia('${iso}')">
@@ -34,6 +40,7 @@ RENDERS.calendario = () => {
       ${evs.map((e) => `<div class="item ${esc(e.tipo)}" title="${esc(e.titulo)}">${esc(e.titulo)}</div>`).join('')}
       ${ses.slice(0, 4).map(({ p, s }) => `<div class="item plan" title="${esc(nombreGrupoId(p.grupoId))} · ${esc(nombreArea(p.areaId))}: ${esc(s.titulo || p.titulo)}" onclick="event.stopPropagation();editarPlaneacion('${p.id}')">${esc(porId(S.grupos, p.grupoId)?.nombre || '')} ${esc(s.titulo || p.titulo || 'Clase')}</div>`).join('')}
       ${ses.length > 4 ? `<div class="ayuda">+${ses.length - 4} más</div>` : ''}
+      ${evals.slice(0, 3).map(({ pl, a }) => `<div class="item institucional" title="Evaluación: ${esc(a.nombre)} · ${esc(nombreGrupoId(pl.grupoId))} · ${esc(nombreArea(pl.areaId))}">📝 ${esc(porId(S.grupos, pl.grupoId)?.nombre || '')} ${esc(a.nombre)}</div>`).join('')}
     </div>`;
   }
   return `
@@ -47,7 +54,7 @@ RENDERS.calendario = () => {
     <div style="margin-left:auto"><label>Mostrar clases de</label><select onchange="ui.calMes.grupoId=this.value;render()">${opcionesGrupos(c.grupoId, 'Todos los grupos')}</select></div>
   </div>
   <div class="cal">${DIAS_SEMANA.map((d) => `<div class="dsem">${d}</div>`).join('')}${celdas}</div>
-  <div class="fila" style="margin-top:10px">${Object.entries(TIPOS_EVENTO).map(([k, v]) => `<span class="item ${k}">${v}</span>`).join('')}<span class="item plan">Clase planeada</span><span class="item periodo">Periodo académico</span></div>`;
+  <div class="fila" style="margin-top:10px">${Object.entries(TIPOS_EVENTO).map(([k, v]) => `<span class="item ${k}">${v}</span>`).join('')}<span class="item plan">Clase planeada</span><span class="item institucional">📝 Actividad evaluativa</span><span class="item periodo">Periodo académico</span></div>`;
 };
 
 function moverMes(d) {

@@ -103,7 +103,12 @@ function buscarPlanilla(grupoId, areaId, periodoId) {
 function obtenerPlanilla(grupoId, areaId, periodoId) {
   let p = buscarPlanilla(grupoId, areaId, periodoId);
   if (!p) {
-    p = { id: uid(), grupoId, areaId, periodoId, criterios: S.config.criteriosPorDefecto.map((c) => ({ id: uid(), nombre: c.nombre, peso: c.peso, actividades: [] })) };
+    const per = porId(S.config.periodos, periodoId);
+    p = { id: uid(), grupoId, areaId, periodoId, criterios: (S.config.componentesPorDefecto || COMPONENTES_POR_DEFECTO).map((c) => ({
+      id: uid(), nombre: c.nombre, peso: c.peso,
+      actividades: (c.actividades || []).map((a) => ({ id: uid(), nombre: a.nombre, fecha: '', descripcion: '', tecnicaId: '', rubricaId: porId(S.rubricas, a.rubricaId) ? a.rubricaId : '' })),
+    })) };
+    if (per && !per.inicio) void 0;
     S.planillas.push(p);
     guardar();
   }
@@ -140,14 +145,15 @@ function claseNota(n) { return n != null && redondear(n) < +S.config.notaAprobac
 
 // ---------- Calificaciones ----------
 RENDERS.calificaciones = () => {
-  const c = ui.cal || (ui.cal = { grupoId: '', areaId: '', periodoId: '', pestana: 'planilla' });
+  const c = ui.cal || (ui.cal = { grupoId: '', areaId: '', periodoId: '', pestana: 'programacion' });
   contextoPorDefecto(c);
-  const pestanas = `<div class="pestanas">${[['planilla', '📊 Planilla del periodo'], ['anual', '📈 Consolidado anual'], ['rubricas', '📋 Rúbricas']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
-  const cab = `<div class="cabecera"><div><h1>Calificaciones</h1><p class="sub">Escala ${S.config.escalaMin} a ${S.config.escalaMax} · Aprobación desde ${S.config.notaAprobacion} · Decreto 1290 de 2009</p></div>
-    ${c.pestana !== 'rubricas' ? `<div class="acciones"><button class="btn" onclick="exportarCalificaciones()">⬇️ Exportar a Excel</button></div>` : ''}</div>`;
+  const pestanas = `<div class="pestanas">${[['programacion', '📅 Programación evaluativa'], ['planilla', '📊 Planilla de notas'], ['anual', '📈 Consolidado anual'], ['rubricas', '📋 Instrumentos de evaluación']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
+  const cab = `<div class="cabecera"><div><h1>Evaluación y notas</h1><p class="sub">Escala ${S.config.escalaMin} a ${S.config.escalaMax} · Aprobación desde ${S.config.notaAprobacion} · Decreto 1290 de 2009</p></div>
+    ${c.pestana === 'planilla' || c.pestana === 'anual' ? `<div class="acciones"><button class="btn" onclick="exportarCalificaciones()">⬇️ Exportar a Excel</button></div>` : ''}</div>`;
   if (c.pestana === 'rubricas') return cab + pestanas + vistaRubricas();
   if (!S.grupos.length || !S.config.periodos.length) return cab + pestanas + '<div class="tarjeta vacio">Configura primero tus grupos y los periodos académicos.</div>';
   if (c.pestana === 'anual') return cab + pestanas + selectorGrupoArea(c, 'ui.cal') + vistaAnual(c);
+  if (c.pestana === 'programacion') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaProgramacion(c);
   return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaPlanilla(c);
 };
 
@@ -158,20 +164,9 @@ function vistaPlanilla(c) {
   const sumaPesos = pl.criterios.reduce((s, x) => s + (+x.peso || 0), 0);
   let col = 0;
   return `
-  <div class="tarjeta">
-    <div class="cabecera"><h2 style="margin:0">Criterios de evaluación</h2><div class="fila">
-      <button class="btn pequeno" onclick="copiarEstructura('${pl.id}')">Copiar estructura de otra planilla</button>
-      <button class="btn pequeno primario" onclick="agregarCriterio('${pl.id}')">＋ Criterio</button></div></div>
-    ${sumaPesos !== 100 ? `<div class="alerta">Los porcentajes suman <b>${sumaPesos}%</b>. Deberían sumar 100%.</div>` : ''}
-    <table class="tabla"><thead><tr><th>Criterio</th><th style="width:110px">Porcentaje</th><th>Actividades</th><th></th></tr></thead><tbody>
-    ${pl.criterios.map((cr) => `<tr>
-      <td><input value="${esc(cr.nombre)}" onchange="porId(porId(S.planillas,'${pl.id}').criterios,'${cr.id}').nombre=this.value;guardar();render()"></td>
-      <td><div class="fila" style="flex-wrap:nowrap"><input type="number" min="0" max="100" value="${esc(cr.peso)}" style="width:70px" onchange="porId(porId(S.planillas,'${pl.id}').criterios,'${cr.id}').peso=+this.value;guardar();render()"> %</div></td>
-      <td>${cr.actividades.map((a) => `<span class="chip" style="margin:2px;cursor:pointer" title="Editar" onclick="editarActividad('${pl.id}','${cr.id}','${a.id}')">${a.rubricaId ? '📋 ' : ''}${esc(a.nombre)}</span>`).join('')}
-        <button class="btn pequeno" onclick="editarActividad('${pl.id}','${cr.id}')">＋ Actividad</button></td>
-      <td><button class="icono" title="Eliminar criterio" onclick="eliminarCriterio('${pl.id}','${cr.id}')">🗑️</button></td></tr>`).join('')}
-    </tbody></table>
-  </div>
+  <div class="alerta ${sumaPesos === 100 ? 'info' : ''}" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+    <span>${pl.criterios.map((cr) => `<b>${esc(cr.nombre)}</b> ${esc(cr.peso)}%`).join(' · ')}${sumaPesos !== 100 ? ` — suman <b>${sumaPesos}%</b>, deberían sumar 100%` : ''}</span>
+    <button class="btn pequeno" onclick="ui.cal.pestana='programacion';render()">✏️ Editar programación</button></div>
   ${alumnos.length ? `<div class="envoltura-tabla"><table class="tabla planilla"><thead>
     <tr><th class="alumno" rowspan="2">Estudiante</th>${pl.criterios.map((cr) => `<th class="criterio" colspan="${cr.actividades.length + 1}" style="text-align:center">${esc(cr.nombre)} (${esc(cr.peso)}%)</th>`).join('')}<th rowspan="2" class="num">Nota<br>periodo</th><th rowspan="2">Desempeño</th></tr>
     <tr>${pl.criterios.map((cr) => cr.actividades.map((a) => `<th title="${esc(a.descripcion || '')}${a.fecha ? ' · ' + esc(fechaCorta(a.fecha)) : ''}" style="cursor:pointer" onclick="editarActividad('${pl.id}','${cr.id}','${a.id}')">${a.rubricaId ? '📋 ' : ''}${esc(a.nombre.length > 14 ? a.nombre.slice(0, 13) + '…' : a.nombre)}</th>`).join('') + '<th class="num">Prom.</th>').join('')}</tr>
@@ -239,13 +234,13 @@ function navegarNotas(e, input) {
 }
 
 function agregarCriterio(plId) {
-  porId(S.planillas, plId).criterios.push({ id: uid(), nombre: 'Nuevo criterio', peso: 0, actividades: [] });
+  porId(S.planillas, plId).criterios.push({ id: uid(), nombre: 'Nuevo componente', peso: 0, actividades: [] });
   guardar(); render();
 }
 async function eliminarCriterio(plId, crId) {
   const pl = porId(S.planillas, plId);
   const cr = porId(pl.criterios, crId);
-  if (!(await confirmar(`¿Eliminar el criterio "${cr.nombre}" y sus ${cr.actividades.length} actividad(es) con sus notas?`))) return;
+  if (!(await confirmar(`¿Eliminar el componente "${cr.nombre}" y sus ${cr.actividades.length} actividad(es) con sus notas?`))) return;
   cr.actividades.forEach((a) => { delete S.notas[a.id]; delete S.notasRubrica[a.id]; });
   pl.criterios = pl.criterios.filter((x) => x.id !== crId);
   guardar(); render();
@@ -259,14 +254,17 @@ function editarActividad(plId, crId, actId) {
       <div class="campo"><label>Fecha</label><input type="date" id="m-fecha" value="${esc(a.fecha || '')}"></div>
     </div>
     <div class="campo"><label>Descripción (opcional)</label><input id="m-desc" value="${esc(a.descripcion || '')}"></div>
-    <div class="campo"><label>Calificar con rúbrica (opcional)</label><select id="m-rub">${opciones(S.rubricas, a.rubricaId, { vacio: 'No, nota directa' })}</select>
-      <div class="ayuda">Crea rúbricas en la pestaña "Rúbricas". La nota será el promedio de los niveles elegidos.</div></div>
+    <div class="rejilla r2">
+      <div class="campo"><label>Técnica o método</label><select id="m-tec">${opcionesTecnicas(a.tecnicaId)}</select></div>
+      <div class="campo"><label>Instrumento de evaluación</label><select id="m-rub">${opcionesInstrumentos(a.rubricaId)}</select>
+        <div class="ayuda">Con un instrumento, la nota se calcula al marcar los niveles o indicadores.</div></div>
+    </div>
     <div class="botones">${actId ? `<button class="btn peligro" style="margin-right:auto" onclick="eliminarActividad('${plId}','${crId}','${actId}')">Eliminar</button>` : ''}
       <button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" onclick="guardarActividad('${plId}','${crId}','${actId || ''}')">Guardar</button></div>`);
 }
 function guardarActividad(plId, crId, actId) {
   const cr = porId(porId(S.planillas, plId).criterios, crId);
-  const datos = { nombre: document.getElementById('m-nombre').value.trim() || 'Actividad', fecha: document.getElementById('m-fecha').value, descripcion: document.getElementById('m-desc').value.trim(), rubricaId: document.getElementById('m-rub').value };
+  const datos = { nombre: document.getElementById('m-nombre').value.trim() || 'Actividad', fecha: document.getElementById('m-fecha').value, descripcion: document.getElementById('m-desc').value.trim(), rubricaId: document.getElementById('m-rub').value, tecnicaId: document.getElementById('m-tec').value };
   if (actId) Object.assign(porId(cr.actividades, actId), datos);
   else cr.actividades.push({ id: uid(), ...datos });
   guardar(); cerrarModal(); render();
@@ -335,114 +333,3 @@ function exportarCalificaciones() {
   api.guardarCSV(nombre, aCSV(filas));
 }
 
-// ---------- Rúbricas ----------
-function vistaRubricas() {
-  return `<div class="cabecera"><p class="sub" style="margin:0">Las rúbricas describen niveles de desempeño por criterio. Asígnalas a una actividad para calificar haciendo clic.</p>
-    <button class="btn primario" onclick="editarRubrica()">＋ Nueva rúbrica</button></div>
-  ${S.rubricas.length ? S.rubricas.map((r) => `<div class="tarjeta">
-    <div class="cabecera"><h3 style="margin:0">${esc(r.nombre)}</h3><div><button class="btn pequeno" onclick="editarRubrica('${r.id}')">✏️ Editar</button> <button class="btn pequeno" onclick="duplicarRubrica('${r.id}')">📑 Duplicar</button> <button class="btn pequeno peligro" onclick="eliminarRubrica('${r.id}')">🗑️</button></div></div>
-    <table class="tabla"><thead><tr><th>Criterio</th>${r.niveles.map((n) => `<th>${esc(n.nombre)} (${esc(n.valor)})</th>`).join('')}</tr></thead><tbody>
-    ${r.criterios.map((c) => `<tr><td><b>${esc(c.nombre)}</b></td>${r.niveles.map((_, i) => `<td class="ayuda">${esc(r.descriptores?.[c.id]?.[i] || '')}</td>`).join('')}</tr>`).join('')}
-    </tbody></table></div>`).join('') : '<div class="tarjeta vacio"><div class="grande">📋</div>Aún no tienes rúbricas.</div>'}`;
-}
-
-let rubricaEnEdicion = null;
-function editarRubrica(id) {
-  rubricaEnEdicion = id ? structuredClone(porId(S.rubricas, id)) : {
-    id: null, nombre: '',
-    criterios: [{ id: uid(), nombre: 'Dominio conceptual' }, { id: uid(), nombre: 'Procedimiento' }, { id: uid(), nombre: 'Presentación y actitud' }],
-    niveles: [...S.config.desempenos].reverse().map((d) => ({ nombre: d.nombre, valor: d.nombre === 'Bajo' ? 2.0 : redondear((+d.desde + +d.hasta) / 2) })),
-    descriptores: {},
-  };
-  dibujarEditorRubrica();
-}
-function dibujarEditorRubrica() {
-  const r = rubricaEnEdicion;
-  abrirModal(`<h2>${r.id ? 'Editar' : 'Nueva'} rúbrica</h2>
-    <div class="campo"><label>Nombre</label><input value="${esc(r.nombre)}" oninput="rubricaEnEdicion.nombre=this.value" placeholder="Ej.: Rúbrica de exposición oral"></div>
-    <div style="overflow-x:auto"><table class="tabla rubrica"><thead><tr><th style="min-width:160px">Criterio</th>
-      ${r.niveles.map((n, i) => `<th style="min-width:150px"><input value="${esc(n.nombre)}" oninput="rubricaEnEdicion.niveles[${i}].nombre=this.value" style="margin-bottom:4px">
-        <div class="fila" style="flex-wrap:nowrap">Valor <input type="number" step="0.1" value="${esc(n.valor)}" oninput="rubricaEnEdicion.niveles[${i}].valor=+this.value" style="width:70px">
-        ${r.niveles.length > 2 ? `<button class="icono" onclick="rubricaEnEdicion.niveles.splice(${i},1);Object.values(rubricaEnEdicion.descriptores).forEach(d=>d.splice(${i},1));dibujarEditorRubrica()">✖</button>` : ''}</div></th>`).join('')}
-      <th><button class="btn pequeno" onclick="rubricaEnEdicion.niveles.push({nombre:'Nivel',valor:1});dibujarEditorRubrica()">＋ Nivel</button></th></tr></thead><tbody>
-      ${r.criterios.map((c, ci) => `<tr><td><input value="${esc(c.nombre)}" oninput="rubricaEnEdicion.criterios[${ci}].nombre=this.value"></td>
-        ${r.niveles.map((_, ni) => `<td><textarea oninput="(rubricaEnEdicion.descriptores['${c.id}'] ||= [])[${ni}]=this.value" placeholder="Descriptor…">${esc(r.descriptores?.[c.id]?.[ni] || '')}</textarea></td>`).join('')}
-        <td>${r.criterios.length > 1 ? `<button class="icono" onclick="rubricaEnEdicion.criterios.splice(${ci},1);dibujarEditorRubrica()">🗑️</button>` : ''}</td></tr>`).join('')}
-    </tbody></table></div>
-    <button class="btn pequeno" onclick="rubricaEnEdicion.criterios.push({id:uid(),nombre:''});dibujarEditorRubrica()">＋ Criterio</button>
-    <div class="botones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" onclick="guardarRubrica()">Guardar rúbrica</button></div>`, { ancho: true });
-}
-function guardarRubrica() {
-  const r = rubricaEnEdicion;
-  if (!r.nombre.trim()) return aviso('Ponle un nombre a la rúbrica', 'error');
-  if (r.id) {
-    const i = S.rubricas.findIndex((x) => x.id === r.id);
-    S.rubricas[i] = r;
-    recalcularNotasRubrica(r.id);
-  } else { r.id = uid(); S.rubricas.push(r); }
-  guardar(); cerrarModal(); render();
-}
-function duplicarRubrica(id) {
-  const r = structuredClone(porId(S.rubricas, id));
-  r.id = uid(); r.nombre += ' (copia)';
-  S.rubricas.push(r); guardar(); render();
-}
-async function eliminarRubrica(id) {
-  const usos = S.planillas.flatMap((p) => p.criterios.flatMap((c) => c.actividades)).filter((a) => a.rubricaId === id);
-  if (!(await confirmar(`¿Eliminar esta rúbrica?${usos.length ? ` Se usa en ${usos.length} actividad(es); sus notas se conservan como notas directas.` : ''}`))) return;
-  usos.forEach((a) => { a.rubricaId = ''; });
-  S.rubricas = S.rubricas.filter((r) => r.id !== id);
-  guardar(); render();
-}
-function notaDesdeRubrica(r, sel) {
-  const vals = r.criterios.map((c) => sel?.[c.id]).filter((i) => i != null && r.niveles[i]).map((i) => +r.niveles[i].valor);
-  return vals.length === r.criterios.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-}
-function recalcularNotasRubrica(rubId) {
-  const r = porId(S.rubricas, rubId);
-  for (const pl of S.planillas) for (const c of pl.criterios) for (const a of c.actividades) {
-    if (a.rubricaId !== rubId || !S.notasRubrica[a.id]) continue;
-    for (const [alId, sel] of Object.entries(S.notasRubrica[a.id])) {
-      const n = notaDesdeRubrica(r, sel);
-      S.notas[a.id] ||= {};
-      if (n == null) delete S.notas[a.id][alId]; else S.notas[a.id][alId] = redondear(n);
-    }
-  }
-}
-function buscarActividad(actId) {
-  for (const pl of S.planillas) for (const c of pl.criterios) for (const a of c.actividades) if (a.id === actId) return a;
-  return null;
-}
-let seleccionRubrica = {};
-function calificarConRubrica(actId, alumnoId) {
-  const a = buscarActividad(actId);
-  const r = porId(S.rubricas, a.rubricaId);
-  if (!r) return aviso('La rúbrica de esta actividad ya no existe', 'error');
-  seleccionRubrica = { ...(S.notasRubrica[actId]?.[alumnoId] || {}) };
-  const al = porId(S.alumnos, alumnoId);
-  const dibujar = () => {
-    const n = notaDesdeRubrica(r, seleccionRubrica);
-    abrirModal(`<h2>${esc(a.nombre)} – ${esc(nombreAlumno(al))}</h2><p class="ayuda">Rúbrica: ${esc(r.nombre)}</p>
-      <div class="rejilla" style="grid-template-columns: repeat(${Math.min(r.criterios.length, 3)}, 1fr)">
-      ${r.criterios.map((c) => `<div><h3>${esc(c.nombre)}</h3>${r.niveles.map((nv, i) => `<button class="nivel-btn ${seleccionRubrica[c.id] === i ? 'sel' : ''}" onclick="seleccionRubrica['${c.id}']=${i};window._dibRub()"><b>${esc(nv.nombre)} (${esc(nv.valor)})</b>${r.descriptores?.[c.id]?.[i] ? '<br>' + esc(r.descriptores[c.id][i]) : ''}</button>`).join('')}</div>`).join('')}
-      </div>
-      <h3>Nota: <span class="${claseNota(n)}">${fmtNota(n)}</span> ${chipDesempeno(n)}</h3>
-      <div class="botones"><button class="btn peligro" style="margin-right:auto" onclick="guardarNotaRubrica('${actId}','${alumnoId}',true)">Borrar calificación</button>
-        <button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" onclick="guardarNotaRubrica('${actId}','${alumnoId}')">Guardar</button></div>`, { ancho: true });
-  };
-  window._dibRub = dibujar;
-  dibujar();
-}
-function guardarNotaRubrica(actId, alumnoId, borrar = false) {
-  const r = porId(S.rubricas, buscarActividad(actId).rubricaId);
-  S.notasRubrica[actId] ||= {};
-  S.notas[actId] ||= {};
-  if (borrar) { delete S.notasRubrica[actId][alumnoId]; delete S.notas[actId][alumnoId]; }
-  else {
-    const n = notaDesdeRubrica(r, seleccionRubrica);
-    if (n == null) return aviso('Selecciona un nivel en cada criterio', 'error');
-    S.notasRubrica[actId][alumnoId] = { ...seleccionRubrica };
-    S.notas[actId][alumnoId] = redondear(n);
-  }
-  guardar(); cerrarModal(); render();
-}

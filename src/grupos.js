@@ -27,6 +27,7 @@ RENDERS.grupos = () => {
         <td>${(g.areas || []).map((x) => `${esc(nombreArea(x.areaId))} <span class="ayuda">(${esc(x.horas || '?')} h)</span>`).join('<br>') || '<span class="ayuda">Sin áreas asignadas</span>'}</td>
         <td class="num">${alumnosDe(g.id).length}</td>
         <td style="white-space:nowrap"><button class="btn pequeno" onclick="ir('alumnos',{grupoId:'${g.id}'})">👥 Alumnos</button>
+          <button class="btn pequeno" title="Estilos, gustos, barreras y ajustes del grupo" onclick="editarDiversidadGrupo('${g.id}')">🧠 Diversidad</button>
           <button class="icono" title="Editar" onclick="editarGrupo('${g.id}')">✏️</button>
           <button class="icono" title="Eliminar" onclick="eliminarGrupo('${g.id}')">🗑️</button></td></tr>`).join('')}
       </tbody></table>` : `<div class="vacio"><div class="grande">👥</div>Crea tu primer grupo (por ejemplo 6° – 601).</div>`}
@@ -210,4 +211,19 @@ function exportarAlumnos(grupoId) {
   const filas = [['#', 'Apellidos', 'Nombres', 'Documento', 'PIAR', 'Observaciones']];
   alumnosDe(grupoId).forEach((a, i) => filas.push([i + 1, a.apellidos, a.nombres, a.documento, a.piar ? 'Sí' : '', a.observaciones]));
   api.guardarCSV(`Lista ${nombreGrupoId(grupoId)}`, aCSV(filas));
+}
+
+// ---------- Perfil de diversidad del grupo ----------
+function editarDiversidadGrupo(id) {
+  const g = porId(S.grupos, id);
+  const d = g.diversidad || {};
+  abrirModal(`<h2>Diversidad del aula – ${esc(nombreGrupo(g))}</h2>
+    <p class="ayuda">Este perfil se copia automáticamente en cada planeación nueva de este grupo (y luego puedes ajustarlo en cada una).</p>
+    ${CAMPOS_DIVERSIDAD.map((c) => `<div class="campo"><label>${esc(c.t)}</label><textarea id="dv-${c.k}" style="min-height:80px" placeholder="${esc(c.ph)}">${esc(d[c.k] || '')}</textarea></div>`).join('')}
+    <div class="botones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" onclick="guardarDiversidadGrupo('${id}')">Guardar</button></div>`, { ancho: true });
+}
+function guardarDiversidadGrupo(id) {
+  porId(S.grupos, id).diversidad = Object.fromEntries(CAMPOS_DIVERSIDAD.map((c) => [c.k, document.getElementById('dv-' + c.k).value.trim()]));
+  guardar(); cerrarModal(); render();
+  aviso('Perfil de diversidad guardado', 'ok');
 }

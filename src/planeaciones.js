@@ -6,28 +6,48 @@ const TIPOS_PLAN = {
   secuencia: 'Secuencia didáctica / proyecto',
 };
 
+// Campos de texto de la planeación que puede redactar la IA
 const CAMPOS_TEXTO = [
-  { k: 'estandares', t: 'Estándares básicos de competencias', grupo: 'ref' },
-  { k: 'dba', t: 'Derechos Básicos de Aprendizaje (DBA)', grupo: 'ref' },
-  { k: 'competencias', t: 'Competencias', grupo: 'ref' },
-  { k: 'desempenoSaber', t: 'Desempeño – Saber (cognitivo)', grupo: 'des' },
-  { k: 'desempenoHacer', t: 'Desempeño – Hacer (procedimental)', grupo: 'des' },
-  { k: 'desempenoSer', t: 'Desempeño – Ser (actitudinal)', grupo: 'des' },
-  { k: 'recursos', t: 'Recursos y materiales', grupo: 'fin' },
-  { k: 'evaluacion', t: 'Evaluación (criterios e instrumentos)', grupo: 'fin' },
-  { k: 'evidencias', t: 'Evidencias de aprendizaje', grupo: 'fin' },
-  { k: 'ajustes', t: 'Ajustes razonables / PIAR / inclusión', grupo: 'fin' },
+  { k: 'componentes', t: 'Componentes del área' },
+  { k: 'competencias', t: 'Competencias' },
+  { k: 'estandares', t: 'Estándares básicos de competencias' },
+  { k: 'dba', t: 'Derechos Básicos de Aprendizaje (DBA)' },
+  { k: 'evidencias', t: 'Evidencias de aprendizaje' },
+  { k: 'objetivo', t: 'Objetivo de aprendizaje' },
+  { k: 'pregunta', t: 'Situación / pregunta problematizadora' },
+  { k: 'tme', t: 'Métodos, técnicas y estrategias' },
+  { k: 'desempenoSaber', t: 'Desempeño – Saber (cognitivo)' },
+  { k: 'desempenoHacer', t: 'Desempeño – Hacer (procedimental)' },
+  { k: 'desempenoSer', t: 'Desempeño – Ser (actitudinal)' },
+  { k: 'recursos', t: 'Recursos' },
+  { k: 'evaluacion', t: 'Técnicas e instrumentos de evaluación' },
+  { k: 'ajustes', t: 'Ajustes y apoyos (PIAR / inclusión)' },
+  { k: 'bibliografia', t: 'Bibliografía y/o cibergrafía' },
+];
+const CAMPOS_DIVERSIDAD = [
+  { k: 'estilos', t: 'Estilos de aprendizaje', ph: 'Cómo aprende mejor el grupo: visual, kinestésico, necesita instrucciones estructuradas…' },
+  { k: 'gustos', t: 'Los gustos', ph: 'Intereses y actividades que motivan al grupo…' },
+  { k: 'caracteristicas', t: 'Características del grupo, dificultades y barreras para el aprendizaje y la participación', ph: 'Atención, convivencia, lectura, ritmos, barreras…' },
+  { k: 'ajustes', t: 'Ajustes y apoyos', ph: '• Rutinas claras\n• Instrucciones de una en una\n• Apoyos visuales…' },
 ];
 
 const MOMENTOS = [
-  { k: 'exploracion', t: 'Exploración (inicio)', ph: 'Saberes previos, motivación, pregunta problematizadora…' },
-  { k: 'estructuracion', t: 'Estructuración / conceptualización', ph: 'Explicación, construcción de conceptos, modelación…' },
-  { k: 'practica', t: 'Práctica / transferencia', ph: 'Ejercicios, talleres, trabajo colaborativo, aplicación en contexto…' },
-  { k: 'valoracion', t: 'Valoración (cierre)', ph: 'Socialización, autoevaluación, verificación de aprendizajes…' },
+  { k: 'exploracion', t: 'Exploración', ph: 'Saberes previos, motivación, pregunta problematizadora…' },
+  { k: 'estructuracion', t: 'Estructuración', ph: 'Explicación, construcción de conceptos, modelación…' },
+  { k: 'practica', t: 'Práctica', ph: 'Ejercicios, talleres, trabajo colaborativo…' },
+  { k: 'transferencia', t: 'Transferencia', ph: 'Aplicación en nuevos contextos, situaciones reales…' },
+  { k: 'valoracion', t: 'Valoración / cierre', ph: 'Socialización, autoevaluación, verificación de aprendizajes…' },
 ];
 
 function nuevaSesion(fecha = '') {
-  return { id: uid(), fecha, titulo: '', duracion: 55, exploracion: '', estructuracion: '', practica: '', valoracion: '' };
+  const s = { id: uid(), fecha, titulo: '', duracion: 55 };
+  MOMENTOS.forEach((m) => { s[m.k] = ''; s[m.k + 'Med'] = ''; });
+  return s;
+}
+function aplicarDiversidadGrupo(p, reemplazar = false) {
+  const g = porId(S.grupos, p.grupoId);
+  const d = g?.diversidad || {};
+  CAMPOS_DIVERSIDAD.forEach((c) => { if (d[c.k] && (reemplazar || !p[c.k])) p[c.k] = d[c.k]; });
 }
 
 // ---------- Listado ----------
@@ -106,6 +126,8 @@ function crearPlaneacion() {
     creada: new Date().toISOString(), modificada: new Date().toISOString(),
   };
   CAMPOS_TEXTO.forEach((c) => { p[c.k] = ''; });
+  p.criterios = [];
+  aplicarDiversidadGrupo(p);
   S.planeaciones.push(p);
   guardar(); cerrarModal();
   editarPlaneacion(p.id);
@@ -122,16 +144,27 @@ async function eliminarPlaneacion(id) {
 }
 
 // ---------- Editor ----------
-function campoTexto(p, k, t, ph = '', banco = false) {
+function campoTexto(p, k, t, ph = '', banco = false, momentoBanco = '') {
   const id = `ta-${p.id}-${k}`;
-  return `<div class="campo"><label>${esc(t)}${banco ? botonBanco(id, k === 'evaluacion' ? 'valoracion' : '') : ''}</label><textarea id="${id}" data-campo="${k}" placeholder="${esc(ph)}" oninput="cambiarPlan('${p.id}','${k}',this.value)">${esc(p[k] || '')}</textarea></div>`;
+  return `<div class="campo"><label>${esc(t)}${banco ? botonBanco(id, momentoBanco) : ''}</label><textarea id="${id}" data-campo="${k}" placeholder="${esc(ph)}" oninput="cambiarPlan('${p.id}','${k}',this.value)">${esc(p[k] || '')}</textarea></div>`;
 }
+function campoLinea(p, k, t, ph = '') {
+  return `<div class="campo"><label>${esc(t)}</label><input value="${esc(p[k] || '')}" placeholder="${esc(ph)}" oninput="cambiarPlan('${p.id}','${k}',this.value)"></div>`;
+}
+function rangoDesempeno(nombre) {
+  const d = S.config.desempenos.find((x) => x.nombre === nombre);
+  return d ? `${fmtNota(d.hasta)} – ${fmtNota(d.desde)}` : '';
+}
+const NIVELES_CRITERIO = [['superior', 'Superior'], ['alto', 'Alto'], ['basico', 'Básico'], ['bajo', 'Bajo']];
 
 RENDERS.editor = ({ id }) => {
   const p = porId(S.planeaciones, id);
   if (!p) return '<p>Planeación no encontrada.</p>';
+  p.criterios ||= [];
   const areas = p.grupoId && areasDeGrupo(p.grupoId).length ? areasDeGrupo(p.grupoId) : S.areas;
   const piar = p.grupoId ? alumnosDe(p.grupoId).filter((a) => a.piar) : [];
+  const nEst = p.grupoId ? alumnosDe(p.grupoId).length : 0;
+  const g = porId(S.grupos, p.grupoId);
   const etiquetaSesion = p.tipo === 'semanal' ? 'Clase' : 'Sesión';
   return `
   <div class="cabecera"><div>
@@ -144,29 +177,48 @@ RENDERS.editor = ({ id }) => {
     <button class="btn primario" onclick="exportarPlanWord('${p.id}')">📄 Exportar a Word</button>
   </div></div>
 
-  <div class="tarjeta"><h2>Identificación</h2>
+  <div class="tarjeta"><h2>1. Identificación</h2>
     <div class="rejilla r4">
       <div class="campo" style="grid-column: span 2"><label>Tema / título</label><input value="${esc(p.titulo)}" oninput="cambiarPlan('${p.id}','titulo',this.value);document.querySelector('main h1').textContent=this.value||'Planeación sin título'"></div>
       <div class="campo"><label>Tipo</label><select onchange="cambiarPlan('${p.id}','tipo',this.value);render()">${Object.entries(TIPOS_PLAN).map(([k, v]) => `<option value="${k}" ${p.tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="campo"><label>Estado</label><select onchange="cambiarPlan('${p.id}','estado',this.value)"><option value="borrador">Borrador</option><option value="terminada" ${p.estado === 'terminada' ? 'selected' : ''}>Terminada</option></select></div>
-      <div class="campo"><label>Grupo</label><select onchange="cambiarPlan('${p.id}','grupoId',this.value);render()">${opcionesGrupos(p.grupoId, '(sin grupo)')}</select></div>
-      <div class="campo"><label>Área</label><select onchange="cambiarPlan('${p.id}','areaId',this.value);render()">${opcionesAreas(p.areaId, '(sin área)', areas)}</select></div>
-      <div class="campo"><label>Periodo</label><select onchange="cambiarPlan('${p.id}','periodoId',this.value)">${opcionesPeriodos(p.periodoId, '(sin periodo)')}</select></div>
-      <div class="campo"><label><input type="checkbox" ${p.enBanco ? 'checked' : ''} onchange="cambiarPlan('${p.id}','enBanco',this.checked)"> Guardar en el banco</label><div class="ayuda">Para reutilizarla en otros grupos o años.</div></div>
+      <div class="campo"><label>Grado / grupo</label><select onchange="cambiarPlan('${p.id}','grupoId',this.value);aplicarDiversidadGrupo(porId(S.planeaciones,'${p.id}'));render()">${opcionesGrupos(p.grupoId, '(sin grupo)')}</select>
+        <div class="ayuda">${p.grupoId ? `${nEst} estudiante(s)` : ''}</div></div>
+      <div class="campo"><label>Área / asignatura</label><select onchange="cambiarPlan('${p.id}','areaId',this.value);render()">${opcionesAreas(p.areaId, '(sin área)', areas)}</select></div>
+      <div class="campo"><label>Período</label><select onchange="cambiarPlan('${p.id}','periodoId',this.value)">${opcionesPeriodos(p.periodoId, '(sin periodo)')}</select></div>
+      ${campoLinea(p, 'duracion', 'Duración', 'Ej.: 2 horas académicas')}
       <div class="campo"><label>Fecha de inicio</label><input type="date" value="${esc(p.fechaInicio)}" onchange="cambiarPlan('${p.id}','fechaInicio',this.value);if(!porId(S.planeaciones,'${p.id}').periodoId){cambiarPlan('${p.id}','periodoId',periodoDeFecha(this.value)?.id||'');render()}"></div>
       <div class="campo"><label>Fecha de finalización</label><input type="date" value="${esc(p.fechaFin)}" onchange="cambiarPlan('${p.id}','fechaFin',this.value)"></div>
+      <div class="campo" style="grid-column: span 2">${campoLinea(p, 'locativos', 'Locativos', 'Ej.: Aula de clase y/o sala de cómputo').replace('<div class="campo">', '<div>')}</div>
+      <div class="campo" style="grid-column: span 3">${campoLinea(p, 'recursos', 'Recursos', 'Ej.: PC (docente), proyector, tablero, marcadores').replace('<div class="campo">', '<div>')}</div>
+      <div class="campo"><label><input type="checkbox" ${p.enBanco ? 'checked' : ''} onchange="cambiarPlan('${p.id}','enBanco',this.checked)"> Guardar en el banco</label><div class="ayuda">Para reutilizarla en otros grupos o años.</div></div>
     </div>
+  </div>
+
+  <div class="tarjeta"><div class="cabecera"><h2 style="margin:0">Diversidad del aula</h2>
+    ${g ? `<div class="fila"><button class="btn pequeno" onclick="aplicarDiversidadGrupo(porId(S.planeaciones,'${p.id}'),true);tocarPlan(porId(S.planeaciones,'${p.id}'));render()" title="Reemplaza estos campos con el perfil guardado del grupo">↺ Traer del perfil de ${esc(g.nombre)}</button>
+      <button class="btn pequeno" onclick="guardarDiversidadEnGrupo('${p.id}')" title="Guarda estos textos como perfil del grupo para próximas planeaciones">💾 Guardar como perfil del grupo</button></div>` : ''}</div>
+    <div class="rejilla r2">
+      ${CAMPOS_DIVERSIDAD.map((c) => campoTexto(p, c.k, c.t, c.ph, c.k === 'ajustes')).join('')}
+    </div>
+    ${piar.length ? `<div class="alerta info">Estudiantes con PIAR en este grupo: ${piar.map((a) => esc(nombreAlumno(a)) + (a.observaciones ? ` <span class="ayuda">(${esc(a.observaciones)})</span>` : '')).join(', ')}</div>` : ''}
   </div>
 
   ${tarjetaMallaEnEditor(p)}
 
-  <div class="tarjeta"><h2>Referentes curriculares</h2>
-    ${campoTexto(p, 'estandares', 'Estándares básicos de competencias', 'Copia el estándar del MEN que trabajarás…')}
-    ${campoTexto(p, 'dba', 'Derechos Básicos de Aprendizaje (DBA)', 'Ej.: DBA 2 – …')}
-    ${campoTexto(p, 'competencias', 'Competencias', 'Ej.: Razonamiento, comunicación, resolución de problemas…')}
-  </div>
-
-  <div class="tarjeta"><h2>Indicadores de desempeño</h2>
+  <div class="tarjeta"><h2>2. Fundamentación</h2>
+    <div class="rejilla r2">
+      ${campoTexto(p, 'componentes', 'Componentes', 'Ej.: Naturaleza y evolución de la tecnología; Uso y apropiación…')}
+      ${campoTexto(p, 'competencias', 'Competencias', 'Competencias a desarrollar…')}
+      ${campoTexto(p, 'estandares', 'Estándares básicos de competencias', 'Estándar(es) del MEN…')}
+      ${campoTexto(p, 'dba', 'Derechos Básicos de Aprendizaje (DBA)', 'Si el área los tiene…')}
+      ${campoTexto(p, 'evidencias', 'Evidencias de aprendizaje', 'Comparo…, Establezco…, Reflexiono…')}
+      <div>${campoLinea(p, 'unidad', 'Unidad', 'Ej.: Inventos que ayudan a vivir mejor en la ciudad')}
+        ${campoTexto(p, 'objetivo', 'Objetivo de aprendizaje', 'Que el estudiante logre…')}</div>
+      ${campoTexto(p, 'pregunta', 'Situación / pregunta problematizadora', '¿…?')}
+      ${campoTexto(p, 'tme', 'Métodos, técnicas y estrategias', 'Método rector, técnicas y estrategias que se usarán…', true)}
+    </div>
+    <h3>Indicadores de desempeño</h3>
     <div class="rejilla r3">
       ${campoTexto(p, 'desempenoSaber', 'Saber (cognitivo)', 'Identifica, reconoce, explica…')}
       ${campoTexto(p, 'desempenoHacer', 'Hacer (procedimental)', 'Resuelve, construye, aplica…')}
@@ -174,7 +226,18 @@ RENDERS.editor = ({ id }) => {
     </div>
   </div>
 
-  <div class="tarjeta"><div class="cabecera"><h2 style="margin:0">${p.tipo === 'sesion' ? 'Momentos de la clase' : (p.tipo === 'semanal' ? 'Clases de la semana' : 'Sesiones de la secuencia')}</h2>
+  <div class="tarjeta"><div class="cabecera"><h2 style="margin:0">2.1 Evaluación</h2>
+    <button class="btn pequeno primario" onclick="agregarCriterioPlan('${p.id}')">＋ Criterio de evaluación</button></div>
+    ${p.criterios.length ? `<div style="overflow-x:auto"><table class="tabla rubrica"><thead><tr><th style="min-width:180px">Criterio de evaluación</th>
+      ${NIVELES_CRITERIO.map(([, n]) => `<th style="min-width:150px">${n} (${rangoDesempeno(n)})</th>`).join('')}<th></th></tr></thead><tbody>
+      ${p.criterios.map((c, i) => `<tr><td><textarea oninput="cambiarCriterioPlan('${p.id}',${i},'criterio',this.value)">${esc(c.criterio)}</textarea></td>
+        ${NIVELES_CRITERIO.map(([k]) => `<td><textarea oninput="cambiarCriterioPlan('${p.id}',${i},'${k}',this.value)">${esc(c[k])}</textarea></td>`).join('')}
+        <td><button class="icono" title="Eliminar" onclick="eliminarCriterioPlan('${p.id}',${i})">🗑️</button></td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="ayuda">Agrega los criterios con su descriptor para cada nivel de desempeño (o usa la IA para un borrador).</p>'}
+    ${campoTexto(p, 'evaluacion', 'Técnicas e instrumentos de evaluación', 'Rúbrica, lista de cotejo, escala de valoración, autoevaluación, coevaluación…', true, 'valoracion')}
+  </div>
+
+  <div class="tarjeta"><div class="cabecera"><h2 style="margin:0">3. Acciones metodológicas${p.tipo === 'sesion' ? '' : (p.tipo === 'semanal' ? ' – clases de la semana' : ' – sesiones de la secuencia')}</h2>
     <button class="btn pequeno primario" onclick="agregarSesion('${p.id}')">＋ ${etiquetaSesion}</button></div>
     ${(p.sesiones || []).map((s, i) => `
     <div class="sesion-caja">
@@ -187,24 +250,31 @@ RENDERS.editor = ({ id }) => {
         <div class="campo"><label>Fecha</label><input type="date" value="${esc(s.fecha)}" onchange="cambiarSesion('${p.id}',${i},'fecha',this.value);render()"></div>
         <div class="campo"><label>Duración (min)</label><input type="number" min="0" value="${esc(s.duracion)}" oninput="cambiarSesion('${p.id}',${i},'duracion',+this.value)"></div>
       </div>
-      <div class="rejilla r2">
-        ${MOMENTOS.map((m) => `<div class="campo"><label>${m.t}${botonBanco(`ta-${s.id}-${m.k}`, m.k)}</label><textarea id="ta-${s.id}-${m.k}" placeholder="${esc(m.ph)}" oninput="cambiarSesion('${p.id}',${i},'${m.k}',this.value)">${esc(s[m.k])}</textarea></div>`).join('')}
-      </div>
+      <table class="tabla" style="background:transparent"><thead><tr><th style="width:130px">Momento</th><th>Acciones</th><th style="width:32%">Mediaciones (recursos o materiales didácticos)</th></tr></thead><tbody>
+        ${MOMENTOS.map((m) => `<tr><td><b>${m.t}</b><br>${botonBanco(`ta-${s.id}-${m.k}`, m.k).replace('margin-left:6px', 'margin:4px 0 0 0')}</td>
+          <td><textarea id="ta-${s.id}-${m.k}" placeholder="${esc(m.ph)}" oninput="cambiarSesion('${p.id}',${i},'${m.k}',this.value)">${esc(s[m.k] || '')}</textarea></td>
+          <td><textarea placeholder="Recursos, materiales, herramientas…" oninput="cambiarSesion('${p.id}',${i},'${m.k}Med',this.value)">${esc(s[m.k + 'Med'] || '')}</textarea></td></tr>`).join('')}
+      </tbody></table>
     </div>`).join('')}
   </div>
 
-  <div class="tarjeta"><h2>Recursos, evaluación y adecuaciones</h2>
-    <div class="rejilla r2">
-      ${campoTexto(p, 'recursos', 'Recursos y materiales', 'Guías, tablero, video, material concreto…')}
-      ${campoTexto(p, 'evidencias', 'Evidencias de aprendizaje', 'Taller resuelto, mapa conceptual, exposición…')}
-      ${campoTexto(p, 'evaluacion', 'Evaluación (criterios e instrumentos)', 'Rúbrica, lista de chequeo, autoevaluación, coevaluación…', true)}
-      <div>${campoTexto(p, 'ajustes', 'Ajustes razonables / PIAR / inclusión', 'Apoyos visuales, tiempos flexibles, tutoría entre pares…', true)}
-        ${piar.length ? `<div class="alerta info" style="margin-top:-6px">Estudiantes con PIAR en este grupo: ${piar.map((a) => esc(nombreAlumno(a)) + (a.observaciones ? ` <span class="ayuda">(${esc(a.observaciones)})</span>` : '')).join(', ')}</div>` : ''}</div>
-    </div>
-    ${campoTexto(p, 'observaciones', 'Observaciones / reflexión posterior a la clase', '¿Qué funcionó? ¿Qué ajustar la próxima vez?')}
-  </div>
+  <div class="tarjeta"><div class="rejilla r2">
+    ${campoTexto(p, 'bibliografia', 'Bibliografía y/o cibergrafía', 'Textos, sitios web, videos…')}
+    ${campoTexto(p, 'observaciones', 'Observaciones y reflexiones', '¿Qué funcionó? ¿Qué ajustar la próxima vez?')}
+  </div></div>
   <div class="fila" style="justify-content:flex-end"><button class="btn peligro" onclick="eliminarPlaneacion('${p.id}')">🗑️ Eliminar planeación</button></div>`;
 };
+
+function guardarDiversidadEnGrupo(planId) {
+  const p = porId(S.planeaciones, planId);
+  const g = porId(S.grupos, p.grupoId);
+  g.diversidad = Object.fromEntries(CAMPOS_DIVERSIDAD.map((c) => [c.k, p[c.k] || '']));
+  guardar();
+  aviso(`Perfil de diversidad guardado en ${g.nombre}`, 'ok');
+}
+function agregarCriterioPlan(id) { const p = porId(S.planeaciones, id); p.criterios.push({ criterio: '', superior: '', alto: '', basico: '', bajo: '' }); tocarPlan(p); render(); }
+function cambiarCriterioPlan(id, i, k, v) { const p = porId(S.planeaciones, id); p.criterios[i][k] = v; tocarPlan(p); }
+function eliminarCriterioPlan(id, i) { const p = porId(S.planeaciones, id); p.criterios.splice(i, 1); tocarPlan(p); render(); }
 
 function tocarPlan(p) { p.modificada = new Date().toISOString(); guardar(); }
 function cambiarPlan(id, campo, valor) { const p = porId(S.planeaciones, id); p[campo] = valor; tocarPlan(p); }
@@ -249,6 +319,10 @@ async function exportarPlanWord(id) {
   const g = porId(S.grupos, p.grupoId);
   const r = await api.exportarWord({
     config: S.config, plan: p,
+    numEstudiantes: p.grupoId ? alumnosDe(p.grupoId).length : '',
+    piar: p.grupoId ? alumnosDe(p.grupoId).filter((a) => a.piar).map((a) => nombreAlumno(a) + (a.observaciones ? ` (${a.observaciones})` : '')).join('; ') : '',
+    rangos: Object.fromEntries(NIVELES_CRITERIO.map(([k, n]) => [k, `${n} (${rangoDesempeno(n)})`])),
+    momentos: MOMENTOS.map((m) => ({ k: m.k, t: m.t })),
     grupoNombre: g ? nombreGrupo(g) : '', areaNombre: p.areaId ? nombreArea(p.areaId) : '',
     periodoNombre: nombrePeriodo(p.periodoId), tipoLabel: TIPOS_PLAN[p.tipo],
     nombreArchivo: `Planeación ${p.areaId ? nombreArea(p.areaId) : ''} ${g ? g.nombre : ''} ${p.fechaInicio || ''} ${p.titulo || ''}`.replace(/\s+/g, ' ').trim().slice(0, 120),
@@ -336,6 +410,7 @@ function dialogoIA(id) {
     ${!p.titulo ? '<p class="alerta">Escribe primero el <b>tema / título</b> para obtener mejores sugerencias.</p>' : ''}
     <div class="campo"><label>Campos a generar</label>
       ${CAMPOS_TEXTO.map((c) => `<label style="font-weight:normal;color:inherit;font-size:14px"><input type="checkbox" class="m-ia" value="${c.k}" ${!p[c.k] ? 'checked' : ''}> ${c.t}${p[c.k] ? ' <span class="ayuda">(ya tiene contenido)</span>' : ''}</label>`).join('')}
+      <label style="font-weight:normal;color:inherit;font-size:14px"><input type="checkbox" id="m-ia-crit" ${!(p.criterios || []).length ? 'checked' : ''}> Criterios de evaluación por niveles (Superior, Alto, Básico, Bajo)</label>
       <label style="font-weight:normal;color:inherit;font-size:14px"><input type="checkbox" id="m-ia-ses" ${sesionesVacias ? 'checked' : ''}> Momentos de las ${p.sesiones.length} sesión(es)</label>
     </div>
     <div class="campo"><label>Indicaciones adicionales (opcional)</label><textarea id="m-ia-extra" placeholder="Ej.: grupo numeroso, sin sala de sistemas, enfocar en trabajo cooperativo, contexto rural…"></textarea></div>
@@ -348,6 +423,7 @@ async function ejecutarIA(id) {
   const p = porId(S.planeaciones, id);
   const campos = [...document.querySelectorAll('.m-ia:checked')].map((c) => c.value);
   const conSesiones = document.getElementById('m-ia-ses').checked;
+  if (document.getElementById('m-ia-crit').checked) campos.push('criterios');
   const reemplazar = document.getElementById('m-ia-reemplazar').checked;
   if (!campos.length && !conSesiones) return aviso('Selecciona al menos un campo', 'error');
   const g = porId(S.grupos, p.grupoId);
@@ -359,6 +435,7 @@ async function ejecutarIA(id) {
     `Tema: ${p.titulo || 'no indicado'}`,
     p.sesiones.some((s) => s.titulo) ? `Títulos de sesiones: ${p.sesiones.map((s, i) => `${i + 1}) ${s.titulo || '-'}`).join('; ')}` : '',
     ...CAMPOS_TEXTO.filter((c) => p[c.k] && !campos.includes(c.k)).map((c) => `${c.t} (ya definido): ${p[c.k]}`),
+    ...CAMPOS_DIVERSIDAD.filter((c) => p[c.k]).map((c) => `Diversidad del aula – ${c.t}: ${p[c.k]}`),
     piar.length ? `Necesidades registradas en PIAR del grupo: ${piar.join('; ')}` : '',
     document.getElementById('m-ia-extra').value.trim() ? `Indicaciones del docente: ${document.getElementById('m-ia-extra').value.trim()}` : '',
   ].filter(Boolean).join('\n');
@@ -375,6 +452,10 @@ async function ejecutarIA(id) {
   }
   const d = r.datos;
   let n = 0;
+  if (campos.includes('criterios') && Array.isArray(d.criterios) && (reemplazar || !(p.criterios || []).length)) {
+    p.criterios = d.criterios.filter((c) => c && c.criterio).map((c) => ({ criterio: String(c.criterio), superior: String(c.superior || ''), alto: String(c.alto || ''), basico: String(c.basico || ''), bajo: String(c.bajo || '') }));
+    n++;
+  }
   for (const k of campos) {
     if (typeof d[k] === 'string' && d[k].trim() && (reemplazar || !p[k])) { p[k] = d[k].trim(); n++; }
   }
@@ -383,7 +464,10 @@ async function ejecutarIA(id) {
       const s = p.sesiones[i];
       if (!s || !sd) return;
       if (sd.titulo && (reemplazar || !s.titulo)) s.titulo = String(sd.titulo);
-      for (const m of MOMENTOS) if (sd[m.k] && (reemplazar || !s[m.k])) { s[m.k] = String(sd[m.k]).trim(); n++; }
+      for (const m of MOMENTOS) {
+        if (sd[m.k] && (reemplazar || !s[m.k])) { s[m.k] = String(sd[m.k]).trim(); n++; }
+        if (sd[m.k + 'Med'] && (reemplazar || !s[m.k + 'Med'])) s[m.k + 'Med'] = String(sd[m.k + 'Med']).trim();
+      }
     });
   }
   tocarPlan(p); cerrarModal(); render();

@@ -2,7 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula } = require('./exportar-word');
+const { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion } = require('./exportar-word');
 const { sugerirConIA } = require('./ia');
 
 const DATA_DIR = () => app.getPath('userData');
@@ -168,7 +168,7 @@ ipcMain.handle('word:planeacion', async (_e, payload) => {
   }
 });
 
-const GENERADORES = { malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula };
+const GENERADORES = { malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula, programacion: generarDocxProgramacion };
 ipcMain.handle('word:curricular', async (_e, { tipo, nombreArchivo, payload }) => {
   const nombre = (nombreArchivo || tipo).replace(/[\\/:*?"<>|]+/g, '-');
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {

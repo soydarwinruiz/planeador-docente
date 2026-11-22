@@ -25,6 +25,7 @@ function estadoInicial() {
         { id: uid(), nombre: 'Tercer periodo', inicio: `${anio}-07-06`, fin: `${anio}-09-11`, peso: 25 },
         { id: uid(), nombre: 'Cuarto periodo', inicio: `${anio}-09-14`, fin: `${anio}-11-27`, peso: 25 },
       ],
+      componentesPorDefecto: null,
       criteriosPorDefecto: [
         { nombre: 'Saber (cognitivo)', peso: 40 },
         { nombre: 'Hacer (procedimental)', peso: 40 },
@@ -50,6 +51,8 @@ function estadoInicial() {
     bancoPedagogico: [],
     bancoSemilla: 0,
     bancoEliminados: [],
+    instrumentosSemilla: 0,
+    instrumentosEliminados: [],
   };
 }
 
@@ -133,6 +136,7 @@ function migrar(d) {
   for (const k of Object.keys(base)) if (r[k] == null) r[k] = base[k];
   if (!d.config?.ia) r.config.ia = { proveedor: 'anthropic', claves: { anthropic: d.config?.apiKey || '' }, modelos: {}, url: '' };
   delete r.config.apiKey;
+  if (!r.config.componentesPorDefecto) r.config.componentesPorDefecto = structuredClone(COMPONENTES_POR_DEFECTO);
   r.version = VERSION_DATOS;
   return r;
 }
@@ -216,7 +220,8 @@ const VISTAS = [
   { id: 'cronograma', ico: '🧭', nombre: 'Cronograma' },
   { id: 'grupos', ico: '👥', nombre: 'Grupos y alumnos' },
   { id: 'asistencia', ico: '✅', nombre: 'Asistencia' },
-  { id: 'calificaciones', ico: '📊', nombre: 'Calificaciones' },
+  { id: 'calificaciones', ico: '📊', nombre: 'Evaluación y notas' },
+  { id: 'seguimiento', ico: '📈', nombre: 'Seguimiento del estudiante' },
   { id: 'configuracion', ico: '⚙️', nombre: 'Configuración' },
 ];
 
@@ -304,9 +309,10 @@ async function iniciar() {
     ir('configuracion');
     return;
   }
-  S = datos ? migrar(datos) : estadoInicial();
-  const semillaAntes = S.bancoSemilla;
+  S = migrar(datos || estadoInicial());
   sembrarBanco();
-  if (!datos || S.bancoSemilla !== semillaAntes) guardar();
+  sembrarInstrumentos();
+  guardar();
+  if (!datos || (!S.config.configurado && !S.config.institucion)) setTimeout(abrirAsistente, 300);
   render();
 }

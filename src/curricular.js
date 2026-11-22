@@ -384,6 +384,10 @@ function planearDesdeMalla(itemId, grupoId, areaId, periodoId) {
     creada: new Date().toISOString(), modificada: new Date().toISOString(),
   };
   CAMPOS_TEXTO.forEach((c) => { p[c.k] = ''; });
+  p.criterios = [];
+  p.unidad = ruta?.u?.nombre || '';
+  p.pregunta = obtenerMalla(areaId, porId(S.grupos, grupoId).grado, false)?.periodos[periodoId]?.pregunta || '';
+  aplicarDiversidadGrupo(p);
   copiarDeMalla(p, [itemId], false);
   S.planeaciones.push(p);
   guardar();

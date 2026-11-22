@@ -144,21 +144,28 @@ async function llamarModelo(ia, sistema, prompt) {
 
 function promptClase(contexto, campos, numSesiones) {
   const sesionesTxt = numSesiones > 0
-    ? `"sesiones": un arreglo de exactamente ${numSesiones} objetos, cada uno con "titulo", "exploracion", "estructuracion", "practica", "valoracion" (cada momento con actividades concretas, tiempos aproximados y preguntas orientadoras).`
+    ? `- "sesiones": un arreglo de exactamente ${numSesiones} objetos, cada uno con "titulo" y los momentos "exploracion", "estructuracion", "practica", "transferencia", "valoracion" (acciones concretas con tiempos aproximados y preguntas orientadoras) y sus mediaciones "exploracionMed", "estructuracionMed", "practicaMed", "transferenciaMed", "valoracionMed" (recursos o materiales didácticos de cada momento).`
     : '';
+  const otros = campos.filter((c) => c !== 'criterios');
   return `Datos de la planeación:
 ${contexto}
 
-Genera un borrador para estos campos: ${campos.join(', ')}.
-Devuelve un JSON con solo esas claves (cada valor es texto; usa saltos de línea y viñetas "• " cuando ayude):
-- "estandares": estándares básicos de competencias pertinentes.
-- "dba": Derechos Básicos de Aprendizaje relacionados.
+Genera un borrador para estos campos: ${[...otros, ...(campos.includes('criterios') ? ['criterios'] : []), ...(numSesiones ? ['sesiones'] : [])].join(', ')}.
+Devuelve un JSON con solo esas claves (los valores de texto pueden usar saltos de línea y viñetas "• "):
+- "componentes": componentes o ejes del área que se trabajan.
 - "competencias": competencias a desarrollar.
-- "desempenoSaber", "desempenoHacer", "desempenoSer": indicadores de desempeño (saber, hacer, ser).
-- "recursos": materiales y recursos.
-- "evaluacion": criterios e instrumentos de evaluación formativa y sumativa.
+- "estandares": estándares básicos de competencias pertinentes.
+- "dba": Derechos Básicos de Aprendizaje relacionados (si el área los tiene).
 - "evidencias": evidencias de aprendizaje.
-- "ajustes": ajustes razonables y estrategias de inclusión (DUA, PIAR) aplicables.
+- "objetivo": objetivo de aprendizaje de la clase.
+- "pregunta": situación o pregunta problematizadora.
+- "tme": método rector, técnicas y estrategias didácticas que se usarán.
+- "desempenoSaber", "desempenoHacer", "desempenoSer": indicadores de desempeño (saber, hacer, ser).
+- "recursos": recursos generales.
+- "evaluacion": técnicas e instrumentos de evaluación (alineados con las técnicas usadas).
+- "ajustes": ajustes y apoyos para la diversidad del aula y PIAR.
+- "bibliografia": bibliografía o cibergrafía (solo fuentes que existan con certeza).
+- "criterios": arreglo de 3 a 4 objetos con "criterio", "superior", "alto", "basico", "bajo" (descriptor observable de cada nivel de desempeño).
 ${sesionesTxt}`;
 }
 

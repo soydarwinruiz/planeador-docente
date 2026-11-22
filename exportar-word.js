@@ -59,101 +59,102 @@ function fechaLarga(iso) {
   return new Date(a, m - 1, d).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-async function generarDocxPlaneacion({ config, plan, grupoNombre, areaNombre, periodoNombre, tipoLabel }) {
+async function generarDocxPlaneacion({ config, plan, grupoNombre, areaNombre, periodoNombre, tipoLabel, numEstudiantes, piar, rangos, momentos }) {
   const c = config || {};
   const contenido = [];
+  const fila4 = (e1, v1, e2, v2) => new TableRow({ children: [
+    celda(e1, { ancho: 17, fondo: GRIS, negrita: true }), celda(v1 || '', { ancho: 33 }),
+    celda(e2, { ancho: 17, fondo: GRIS, negrita: true }), celda(v2 || '', { ancho: 33 }),
+  ] });
+  const bloque = (etiqueta, texto) => new TableRow({ children: [celda([
+    new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: etiqueta, bold: true, font: FUENTE, size: 20 })] }),
+    ...parrafos(texto || ''),
+  ])] });
 
   // Encabezado institucional
-  contenido.push(new Paragraph({
-    alignment: AlignmentType.CENTER,
-    children: [new TextRun({ text: (c.institucion || 'INSTITUCIÓN EDUCATIVA').toUpperCase(), bold: true, font: FUENTE, size: 28, color: AZUL })],
-  }));
-  if (c.sede || c.municipio) {
-    contenido.push(new Paragraph({
-      alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: [c.sede, c.municipio].filter(Boolean).join(' – '), font: FUENTE, size: 20 })],
-    }));
-  }
-  contenido.push(new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 120, after: 200 },
-    children: [new TextRun({ text: `PLANEACIÓN DE CLASE – ${tipoLabel.toUpperCase()}`, bold: true, font: FUENTE, size: 24 })],
-  }));
+  contenido.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (c.institucion || 'INSTITUCIÓN EDUCATIVA').toUpperCase(), bold: true, font: FUENTE, size: 28, color: AZUL })] }));
+  if (c.sede || c.municipio) contenido.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: [c.sede, c.municipio].filter(Boolean).join(' – '), font: FUENTE, size: 20 })] }));
+  contenido.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 40 }, children: [new TextRun({ text: 'ORIENTACIONES DIDÁCTICAS', bold: true, font: FUENTE, size: 24 })] }));
+  contenido.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 160 }, children: [new TextRun({ text: `Planeación ${tipoLabel.toLowerCase()}${plan.titulo ? ' – ' + plan.titulo : ''}`, font: FUENTE, size: 20 })] }));
 
-  // Datos de identificación
+  // 1. Identificación
   const rango = plan.fechaInicio && plan.fechaFin && plan.fechaFin !== plan.fechaInicio
-    ? `${fechaLarga(plan.fechaInicio)} al ${fechaLarga(plan.fechaFin)}`
-    : fechaLarga(plan.fechaInicio);
+    ? `${fechaLarga(plan.fechaInicio)} al ${fechaLarga(plan.fechaFin)}` : fechaLarga(plan.fechaInicio);
+  contenido.push(titulo('1. Identificación'));
   contenido.push(tabla([
-    new TableRow({ children: [
-      celda('Docente', { ancho: 15, fondo: GRIS, negrita: true }), celda(c.docente || '', { ancho: 35 }),
-      celda('Año lectivo', { ancho: 15, fondo: GRIS, negrita: true }), celda(String(c.anio || ''), { ancho: 35 }),
-    ] }),
-    new TableRow({ children: [
-      celda('Área / asignatura', { fondo: GRIS, negrita: true }), celda(areaNombre || ''),
-      celda('Grado / grupo', { fondo: GRIS, negrita: true }), celda(grupoNombre || ''),
-    ] }),
-    new TableRow({ children: [
-      celda('Periodo', { fondo: GRIS, negrita: true }), celda(periodoNombre || ''),
-      celda('Fecha(s)', { fondo: GRIS, negrita: true }), celda(rango || ''),
-    ] }),
-    new TableRow({ children: [
-      celda('Tema / título', { fondo: GRIS, negrita: true }), celda(plan.titulo || '', { columnas: 3 }),
-    ] }),
+    fila4('Área/Asignatura', areaNombre, 'Docente', c.docente),
+    fila4('Duración', plan.duracion, 'Período', periodoNombre),
+    fila4('Grado/Grupos', grupoNombre, 'Número de estudiantes', String(numEstudiantes ?? '')),
+    fila4('Locativos', plan.locativos, 'Recursos', plan.recursos),
+    fila4('Fecha(s)', rango, 'Año lectivo', String(c.anio || '')),
+  ]));
+  contenido.push(new Paragraph({ spacing: { after: 100 }, children: [] }));
+  contenido.push(tabla([
+    new TableRow({ children: [celda('Diversidad del aula', { fondo: AZUL, negrita: true, colorTexto: 'FFFFFF' })] }),
+    bloque('Estilos de aprendizaje:', plan.estilos),
+    bloque('Los gustos:', plan.gustos),
+    bloque('Características del grupo, dificultades y barreras para el aprendizaje y la participación:', plan.caracteristicas),
+    bloque('Ajustes y apoyos:', [plan.ajustes, piar ? 'Estudiantes con PIAR: ' + piar : ''].filter(Boolean).join('\n')),
   ]));
 
-  // Referentes curriculares
-  contenido.push(titulo('Referentes curriculares'));
+  // 2. Fundamentación
+  contenido.push(titulo('2. Fundamentación'));
+  const des = [plan.desempenoSaber && 'Saber: ' + plan.desempenoSaber, plan.desempenoHacer && 'Hacer: ' + plan.desempenoHacer, plan.desempenoSer && 'Ser: ' + plan.desempenoSer].filter(Boolean).join('\n');
   contenido.push(tabla([
-    filaEtiqueta('Estándares básicos de competencias', plan.estandares),
-    filaEtiqueta('Derechos Básicos de Aprendizaje (DBA)', plan.dba),
+    filaEtiqueta('Componentes', plan.componentes),
     filaEtiqueta('Competencias', plan.competencias),
+    ...(plan.estandares ? [filaEtiqueta('Estándares básicos de competencias', plan.estandares)] : []),
+    ...(plan.dba ? [filaEtiqueta('Derechos Básicos de Aprendizaje (DBA)', plan.dba)] : []),
+    filaEtiqueta('Evidencias de aprendizaje', plan.evidencias),
+    ...(des ? [filaEtiqueta('Indicadores de desempeño', des)] : []),
+    filaEtiqueta('Unidad', plan.unidad),
+    filaEtiqueta('Objetivo de aprendizaje', plan.objetivo),
+    filaEtiqueta('Situación / pregunta problematizadora', plan.pregunta),
+    ...(plan.tme ? [filaEtiqueta('Métodos, técnicas y estrategias', plan.tme)] : []),
   ]));
 
-  contenido.push(titulo('Indicadores de desempeño'));
-  contenido.push(tabla([
-    filaEtiqueta('Saber (cognitivo)', plan.desempenoSaber),
-    filaEtiqueta('Hacer (procedimental)', plan.desempenoHacer),
-    filaEtiqueta('Ser (actitudinal)', plan.desempenoSer),
-  ]));
+  // 2.1 Evaluación
+  contenido.push(titulo('2.1 Evaluación'));
+  const niv = ['superior', 'alto', 'basico', 'bajo'];
+  const crits = (plan.criterios || []).filter((x) => x.criterio);
+  contenido.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
+    new TableRow({ tableHeader: true, children: [celda('Criterios de evaluación', { fondo: AZUL, negrita: true, colorTexto: 'FFFFFF', ancho: 24 }),
+      ...niv.map((k) => celda(rangos?.[k] || k, { fondo: AZUL, negrita: true, colorTexto: 'FFFFFF', ancho: 19 }))] }),
+    ...(crits.length ? crits : [{}, {}, {}]).map((x) => new TableRow({ children: [celda(x.criterio || '', { negrita: true }), ...niv.map((k) => celda(x[k] || ''))] })),
+  ] }));
+  if (plan.evaluacion) {
+    contenido.push(new Paragraph({ spacing: { after: 60 }, children: [] }));
+    contenido.push(tabla([filaEtiqueta('Técnicas e instrumentos de evaluación', plan.evaluacion)]));
+  }
 
-  // Sesiones y momentos
+  // 3. Acciones metodológicas
+  contenido.push(titulo('3. Acciones metodológicas'));
   const sesiones = plan.sesiones || [];
-  contenido.push(titulo(sesiones.length > 1 ? 'Desarrollo de las sesiones' : 'Momentos de la clase'));
+  const ms = momentos || [];
   sesiones.forEach((s, i) => {
-    const encabezado = [
-      sesiones.length > 1 ? `Sesión ${i + 1}` : 'Sesión',
-      s.titulo,
-      s.fecha ? fechaLarga(s.fecha) : '',
-      s.duracion ? `${s.duracion} min` : '',
-    ].filter(Boolean).join(' · ');
-    contenido.push(tabla([
-      new TableRow({ children: [celda(encabezado, { columnas: 2, fondo: AZUL, negrita: true, colorTexto: 'FFFFFF' })] }),
-      filaEtiqueta('Exploración (inicio)', s.exploracion),
-      filaEtiqueta('Estructuración / conceptualización', s.estructuracion),
-      filaEtiqueta('Práctica / transferencia', s.practica),
-      filaEtiqueta('Valoración (cierre)', s.valoracion),
-    ]));
+    const encabezado = [sesiones.length > 1 ? `Sesión ${i + 1}` : 'Sesión', s.titulo, s.fecha ? fechaLarga(s.fecha) : '', s.duracion ? `${s.duracion} min` : ''].filter(Boolean).join(' · ');
+    contenido.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
+      new TableRow({ children: [celda(encabezado, { columnas: 3, fondo: AZUL, negrita: true, colorTexto: 'FFFFFF' })] }),
+      new TableRow({ tableHeader: true, children: [celda('Momento', { fondo: GRIS, negrita: true, ancho: 17 }), celda('Acciones', { fondo: GRIS, negrita: true, ancho: 53 }), celda('Mediaciones (recursos o materiales didácticos)', { fondo: GRIS, negrita: true, ancho: 30 })] }),
+      ...ms.map((m) => new TableRow({ children: [celda(m.t, { negrita: true }), celda(s[m.k] || ''), celda(s[m.k + 'Med'] || '')] })),
+    ] }));
     contenido.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
   });
 
-  contenido.push(titulo('Recursos, evaluación y adecuaciones'));
   contenido.push(tabla([
-    filaEtiqueta('Recursos y materiales', plan.recursos),
-    filaEtiqueta('Evaluación (criterios e instrumentos)', plan.evaluacion),
-    filaEtiqueta('Evidencias de aprendizaje', plan.evidencias),
-    filaEtiqueta('Ajustes razonables / PIAR / inclusión', plan.ajustes),
-    ...(plan.observaciones ? [filaEtiqueta('Observaciones', plan.observaciones)] : []),
+    filaEtiqueta('Bibliografía y/o cibergrafía', plan.bibliografia),
+    filaEtiqueta('Observaciones y reflexiones', plan.observaciones),
   ]));
 
   // Firmas
-  contenido.push(new Paragraph({ spacing: { before: 800 }, children: [] }));
+  contenido.push(new Paragraph({ spacing: { before: 700 }, children: [] }));
+  const sinBorde = { style: BorderStyle.NONE };
   contenido.push(new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
+    borders: { top: sinBorde, bottom: sinBorde, left: sinBorde, right: sinBorde, insideHorizontal: sinBorde, insideVertical: sinBorde },
     rows: [new TableRow({ children: [c.docente || 'Docente', c.coordinador || 'Coordinación académica'].map((nombre, i) => new TableCell({
       width: { size: 50, type: WidthType.PERCENTAGE },
-      borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+      borders: { top: sinBorde, bottom: sinBorde, left: sinBorde, right: sinBorde },
       children: [
         new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '______________________________', font: FUENTE })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: nombre, font: FUENTE, size: 20, bold: true })] }),
@@ -167,7 +168,7 @@ async function generarDocxPlaneacion({ config, plan, grupoNombre, areaNombre, pe
     title: plan.titulo || 'Planeación',
     styles: { default: { document: { run: { font: FUENTE, size: 20 } } } },
     sections: [{
-      properties: { page: { margin: { top: 1000, bottom: 1000, left: 1000, right: 1000 }, size: { orientation: PageOrientation.PORTRAIT } } },
+      properties: { page: { margin: { top: 900, bottom: 900, left: 900, right: 900 }, size: { orientation: PageOrientation.PORTRAIT } } },
       headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${areaNombre || ''} · ${grupoNombre || ''}`, font: FUENTE, size: 16, color: '808080' })] })] }) },
       footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [
         new TextRun({ text: 'Página ', font: FUENTE, size: 16, color: '808080' }),
@@ -178,10 +179,8 @@ async function generarDocxPlaneacion({ config, plan, grupoNombre, areaNombre, pe
       children: contenido,
     }],
   });
-
   return Packer.toBuffer(doc);
 }
-
 
 // ================= Documentos curriculares =================
 function encabezado(c, tituloDoc, subtitulo) {
@@ -352,4 +351,42 @@ async function generarDocxPlanAula({ config, datos }) {
   return documento(c, 'Plan de aula', [{ properties: HORIZONTAL, children: hijos }]);
 }
 
-module.exports = { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula };
+
+async function generarDocxProgramacion({ config, datos }) {
+  const c = config;
+  const hijos = [...encabezado(c, 'Programación evaluativa del periodo', `${datos.areaNombre} · ${datos.grupoNombre} · ${datos.periodoNombre}${datos.fechas ? ' (' + datos.fechas + ')' : ''}`)];
+  hijos.push(datosIdent([['Docente', c.docente], ['Año lectivo', String(c.anio || '')]]));
+  hijos.push(new Paragraph({ spacing: { before: 160, after: 120 }, children: [new TextRun({ font: FUENTE, size: 20,
+    text: 'Señor padre de familia o acudiente: a continuación encontrará las actividades con las que se evaluará a su hijo(a) durante este periodo, su fecha aproximada y el porcentaje que representa cada componente en la nota final. Le invitamos a acompañar su preparación y cumplimiento.' })] }));
+  const cols = [{ t: 'Componente', ancho: 20 }, { t: 'Actividad', ancho: 18 }, { t: 'Fecha', ancho: 12 }, { t: 'Descripción', ancho: 28 }, { t: 'Cómo se evalúa', ancho: 22 }];
+  const filas = [];
+  for (const comp of datos.componentes) {
+    const acts = comp.actividades.length ? comp.actividades : [{ nombre: '—', fecha: '', descripcion: '', evalua: '' }];
+    acts.forEach((a, i) => filas.push(new TableRow({ children: [
+      ...(i === 0 ? [celdaPeq(`${comp.nombre}\n${comp.peso}%`, { negrita: true, fondo: GRIS, filas: acts.length })] : []),
+      celdaPeq(a.nombre, { negrita: true }), celdaPeq(a.fecha), celdaPeq(a.descripcion), celdaPeq(a.evalua),
+    ] })));
+  }
+  const total = datos.componentes.reduce((s, x) => s + (+x.peso || 0), 0);
+  filas.push(new TableRow({ children: [celdaPeq(`TOTAL ${total}%`, { negrita: true, fondo: GRIS }), celdaPeq('', { columnas: 4 })] }));
+  hijos.push(tablaDatos(cols, filas));
+  hijos.push(titulo('Escala de valoración'));
+  hijos.push(...parrafos(`Escala institucional de ${datos.escala}. Nota mínima aprobatoria: ${datos.aprobacion}. Equivalencia con la escala nacional (Decreto 1290 de 2009):`));
+  hijos.push(new Table({ width: { size: 60, type: WidthType.PERCENTAGE }, rows: datos.desempenos.map(([n, r]) => new TableRow({ children: [celdaPeq(n, { negrita: true, fondo: GRIS, ancho: 50 }), celdaPeq(r, { ancho: 50 })] })) }));
+  hijos.push(new Paragraph({ spacing: { before: 700 }, children: [] }));
+  const sinBorde = { style: BorderStyle.NONE };
+  hijos.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: { top: sinBorde, bottom: sinBorde, left: sinBorde, right: sinBorde, insideHorizontal: sinBorde, insideVertical: sinBorde },
+    rows: [new TableRow({ children: [[c.docente || '', 'Docente'], ['', 'Firma del padre de familia o acudiente']].map(([n, rol]) => new TableCell({
+      width: { size: 50, type: WidthType.PERCENTAGE }, borders: { top: sinBorde, bottom: sinBorde, left: sinBorde, right: sinBorde },
+      children: [
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '______________________________', font: FUENTE })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: n || ' ', font: FUENTE, size: 20, bold: true })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: rol, font: FUENTE, size: 18 })] }),
+      ] })) })],
+  }));
+  return documento(c, 'Programación evaluativa', [{ properties: VERTICAL, children: hijos }]);
+}
+
+module.exports = { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion };
