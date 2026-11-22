@@ -103,6 +103,7 @@ async function restaurarRespaldo() {
   if (!(await confirmar('Se reemplazarán TODOS los datos actuales por los del respaldo. (Los datos actuales quedan en los respaldos automáticos.) ¿Continuar?', { boton: 'Restaurar' }))) return;
   S = migrar(r.datos);
   sembrarBanco();
+  migrarPlantillas();
   sembrarInstrumentos();
   guardar(); ir('inicio');
   aviso('Respaldo restaurado', 'ok');
@@ -118,6 +119,7 @@ async function restaurarAuto(nombre) {
   if (!(await confirmar('Se reemplazarán los datos actuales por este respaldo. ¿Continuar?', { boton: 'Restaurar' }))) return;
   S = migrar(await api.restaurarRespaldoAuto(nombre));
   sembrarBanco();
+  migrarPlantillas();
   sembrarInstrumentos();
   guardar(); ir('inicio');
   aviso('Respaldo restaurado', 'ok');
@@ -278,7 +280,7 @@ function dibujarAsistente() {
     <p class="ayuda">${suma === 100 ? '✔ Suman 100%.' : `<b style="color:var(--rojo)">Suman ${suma}%; deben sumar 100%.</b>`} Separa las actividades con comas.</p>`;
   }
   if (w.paso === 4) cuerpo = `<p>¡Listo! Tu configuración básica está guardada. Siguientes pasos recomendados:</p>
-    <ol><li><b>Grupos y alumnos:</b> crea tus áreas, grupos y listas de estudiantes, con el perfil de diversidad de cada grupo.</li>
+    <ol><li><b>Grupos y alumnos:</b> crea tus áreas, grupos y listas de estudiantes, y una <b>plantilla de planeación</b> por grado o grupo (estudiantes, duración, gustos, estilos de aprendizaje…).</li>
     <li><b>Planeación curricular:</b> plan de área y malla curricular.</li>
     <li><b>Calificaciones → Programación evaluativa:</b> fechas y actividades del periodo para compartir con los padres.</li>
     <li><b>Calendario:</b> agrega los festivos de Colombia con un clic.</li></ol>`;

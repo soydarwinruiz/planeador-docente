@@ -29,7 +29,7 @@ const SECCIONES_AREA = [
 // ---------- Datos ----------
 function gradosDeArea(areaId) {
   const g = [...new Set(S.grupos.filter((x) => (x.areas || []).some((a) => a.areaId === areaId)).map((x) => +x.grado))].sort((a, b) => a - b);
-  return g.length ? g : [6, 7, 8, 9];
+  return g.length ? g : GRADOS;
 }
 function intensidadDe(areaId, grado) {
   const g = S.grupos.find((x) => +x.grado === +grado && (x.areas || []).some((a) => a.areaId === areaId));
@@ -517,7 +517,7 @@ async function ejecutarIAPlanArea(id) {
   const campos = [...document.querySelectorAll('.m-sec:checked')].map((x) => x.value);
   if (!campos.length) return aviso('Selecciona al menos una sección', 'error');
   const extra = document.getElementById('m-extra').value.trim();
-  const contexto = [`Área: ${nombreArea(p.areaId)}`, p.asignaturas ? `Asignaturas: ${p.asignaturas}` : '', `Grados: ${gradosDeArea(p.areaId).map((g) => g + '°').join(', ')} (básica secundaria, Colombia)`,
+  const contexto = [`Área: ${nombreArea(p.areaId)}`, p.asignaturas ? `Asignaturas: ${p.asignaturas}` : '', `Grados: ${gradosDeArea(p.areaId).map((g) => g + '°').join(', ')} (Colombia)`,
     S.config.municipio ? `Municipio: ${S.config.municipio}` : '', extra ? `Contexto: ${extra}` : ''].filter(Boolean).join('\n');
   const btn = document.getElementById('m-ia-btn');
   btn.disabled = true; btn.innerHTML = '<span class="cargando"></span> Generando… (puede tardar un minuto)';

@@ -51,6 +51,7 @@ function estadoInicial() {
     bancoPedagogico: [],
     bancoSemilla: 0,
     bancoEliminados: [],
+    plantillas: [],
     instrumentosSemilla: 0,
     instrumentosEliminados: [],
   };
@@ -82,6 +83,10 @@ function porId(lista, id) { return lista.find((x) => x.id === id); }
 function normalizar(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function csvCelda(v) { const s = String(v ?? ''); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
 function aCSV(filas) { return filas.map((f) => f.map(csvCelda).join(';')).join('\r\n'); }
+
+// ---------- Grados ----------
+const GRADOS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+function nivelDeGrado(g) { g = +g; return g <= 5 ? 'básica primaria' : g <= 9 ? 'básica secundaria' : 'educación media'; }
 
 // ---------- Nombres ----------
 function nombreGrupo(g) { return g ? `${g.grado}° – ${g.nombre}` : '(sin grupo)'; }
@@ -156,7 +161,7 @@ function abrirModal(html, { ancho = false } = {}) {
   m.innerHTML = html;
   document.getElementById('modal-fondo').classList.remove('oculto');
   const primero = m.querySelector('input, select, textarea');
-  if (primero) setTimeout(() => primero.focus(), 30);
+  if (primero) setTimeout(() => { if (!m.contains(document.activeElement)) primero.focus(); }, 30);
 }
 function cerrarModal() { document.getElementById('modal-fondo').classList.add('oculto'); document.getElementById('modal').innerHTML = ''; }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModal(); });
@@ -214,6 +219,7 @@ const VISTAS = [
   { id: 'inicio', ico: '🏠', nombre: 'Inicio' },
   { id: 'curricular', ico: '🧩', nombre: 'Planeación curricular' },
   { id: 'planeaciones', ico: '📝', nombre: 'Planeaciones de clase' },
+  { id: 'plantillas', ico: '📋', nombre: 'Plantillas de planeación' },
   { id: 'banco', ico: '🗂️', nombre: 'Banco de planeaciones' },
   { id: 'bancoPedagogico', ico: '📚', nombre: 'Banco pedagógico' },
   { id: 'calendario', ico: '📅', nombre: 'Calendario' },
@@ -236,7 +242,7 @@ function renderNav() {
   document.getElementById('nav').innerHTML = VISTAS.map((v) =>
     `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || (ui.vista === 'alumnos' && v.id === 'grupos') ? 'activo' : ''}" onclick="ir('${v.id}')"><span class="ico">${v.ico}</span>${v.nombre}</button>`
   ).join('');
-  document.getElementById('marca-sub').textContent = S.config.institucion || 'Básica secundaria';
+  document.getElementById('marca-sub').textContent = S.config.institucion || 'Educación básica y media';
 }
 
 const RENDERS = {};
@@ -312,6 +318,7 @@ async function iniciar() {
   S = migrar(datos || estadoInicial());
   sembrarBanco();
   sembrarInstrumentos();
+  migrarPlantillas();
   guardar();
   if (!datos || (!S.config.configurado && !S.config.institucion)) setTimeout(abrirAsistente, 300);
   render();

@@ -19,7 +19,7 @@ function areaReferenteDe(areaId) {
   return '';
 }
 // Grado(s) de la app: los estándares vienen por pares (6-7) y los DBA por grado (6)
-function bandaDeGrado(grado) { const g = +grado; return g >= 6 && g <= 9 ? String(g) : ''; }
+function bandaDeGrado(grado) { const g = +grado; return g >= 1 && g <= 11 ? String(g) : ''; }
 function aplicaAGrado(x, grado) {
   if (!grado) return true;
   const g = +grado; const [a, z] = x.grados.split('-').map(Number);
@@ -64,7 +64,7 @@ function listaReferentesHTML(lista, { seleccionable, texto }) {
 }
 function filtrosReferentesHTML(s, prefijo) {
   const tipos = [...new Set(REFERENTES.items.map((x) => x.tipo))];
-  const bandas = ['6', '7', '8', '9'];
+  const bandas = GRADOS.map(String);
   return `<div class="filtros" style="margin-bottom:8px">
     <div><label>Área</label><select onchange="${prefijo}.area=this.value;${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'}">${areasReferente().map((a) => `<option ${a === s.area ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></div>
     <div><label>Grado</label><select onchange="${prefijo}.banda=this.value;${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'}">${bandas.map((b) => `<option value="${b}" ${b === s.banda ? 'selected' : ''}>${b}°</option>`).join('')}</select></div>

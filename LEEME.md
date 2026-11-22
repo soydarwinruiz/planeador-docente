@@ -1,11 +1,11 @@
 # Planeador Docente
 
-Aplicación de escritorio para Windows para planear clases de **básica secundaria en Colombia**.
+Aplicación de escritorio para Windows para planear clases de **educación básica y media en Colombia (grados 1.° a 11.°)**.
 Funciona **sin internet**: todos los datos quedan guardados en tu computador.
 
 ## Cómo abrirla
 
-- **Versión portable** (`PlaneadorDocente-portable-1.5.0.exe`): haz doble clic y listo. No necesita instalación.
+- **Versión portable** (`PlaneadorDocente-portable-1.6.0.exe`): haz doble clic y listo. No necesita instalación.
   Puedes llevarla en una memoria USB.
 - La primera vez, Windows puede mostrar *"Windows protegió su PC"* (el programa no tiene firma digital comercial).
   Haz clic en **Más información → Ejecutar de todas formas**.
@@ -32,10 +32,11 @@ Al abrir la app por primera vez aparece el **asistente de configuración** (inst
 
 | Módulo | Qué hace |
 |---|---|
-| Referentes MEN | Para 6.° a 9.°: **Estándares Básicos de Competencias** (MEN, 2006) de Lenguaje, Matemáticas, Ciencias Naturales, Ciencias Sociales y Competencias Ciudadanas; **DBA** con sus evidencias de Matemáticas, Lenguaje, Ciencias Naturales, Ciencias Sociales e Inglés; y **Orientaciones curriculares de Tecnología e Informática** (competencias y evidencias por componente). Se consultan en *Planeación curricular → Referentes MEN* y se insertan con el botón **📘 Referentes** en la malla y la planeación. La IA los usa para no inventar estándares |
+| Referentes MEN | Para 1.° a 11.°: **Estándares Básicos de Competencias** (MEN, 2006) de Lenguaje, Matemáticas, Ciencias Naturales, Ciencias Sociales y Competencias Ciudadanas; **DBA** con sus evidencias de Matemáticas, Lenguaje, Ciencias Naturales, Ciencias Sociales e Inglés (6.° a 11.°); y **Orientaciones curriculares de Tecnología e Informática** (competencias y evidencias por componente). Se consultan en *Planeación curricular → Referentes MEN* y se insertan con el botón **📘 Referentes** en la malla y la planeación. La IA los usa para no inventar estándares |
 | Planeación curricular | **Plan de área** (diagnóstico, justificación, objetivos por grado, enfoque, metodología, evaluación, inclusión…), **malla curricular** por grado y periodo (ejes, contenidos, estándares, DBA, competencias, desempeños, evidencias, horas), **plan de periodo** por unidades o proyectos y **plan de aula** por grupo con el avance de cada eje. Todo exportable a Word en hoja horizontal |
 | Planeaciones de clase | Estructura de orientaciones didácticas: identificación, diversidad del aula (desde el perfil del grupo), fundamentación, criterios de evaluación por niveles y acciones metodológicas (exploración, estructuración, práctica, transferencia y valoración, con mediaciones). Crear, buscar, filtrar, duplicar y exportar a Word. Se vinculan a la malla: al elegir un eje se copian sus estándares, DBA, competencias y desempeños |
 | Banco pedagógico | Incluye de fábrica **52 estrategias** (Radar 360°: generales y específicas de sesión), **60 técnicas** (búsqueda, comprensión, representación y comunicación) y los **9 métodos universales**, con código, clasificación y pasos. Estrategias, metodologías y técnicas con clasificación, momentos de la clase, descripción y pasos. Se agregan a mano o se importan desde Excel, y se insertan con el botón **📚 Banco** en la planeación de clase, el plan de periodo, el plan de aula y el plan de área |
+| Plantillas de planeación | Una plantilla por grado o por grupo (y opcionalmente por área) con duración, minutos por sesión, número de estudiantes, locativos, recursos, estilos de aprendizaje, gustos, barreras, ajustes y datos de fundamentación. Al crear una planeación se aplica sola la plantilla más específica |
 | Banco de planeaciones | Reutilizar planeaciones en otro grupo o en el siguiente año (las fechas se ajustan solas) |
 | Calendario | Vista mensual con clases planeadas, periodos, festivos y eventos |
 | Cronograma | Temas previstos semana a semana por área, grado y periodo |

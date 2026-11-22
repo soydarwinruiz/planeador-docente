@@ -132,7 +132,7 @@ RENDERS.cronograma = () => {
   if (!c.periodoId) c.periodoId = (periodoDeFecha(hoyISO()) || S.config.periodos[0] || {}).id || '';
   const per = porId(S.config.periodos, c.periodoId);
   const grados = [...new Set(S.grupos.map((g) => g.grado))].sort((a, b) => a - b);
-  if (!grados.length) grados.push(6, 7, 8, 9);
+  if (!grados.length) grados.push(...GRADOS);
 
   let cuerpo = '<div class="tarjeta vacio">Selecciona área, grado y periodo (con fechas definidas en Configuración).</div>';
   if (per && per.inicio && per.fin && c.areaId) {
@@ -175,7 +175,7 @@ function cambiarCrono(lunes, campo, valor) {
   guardar();
 }
 function copiarCronograma() {
-  const grados = [...new Set([...S.grupos.map((g) => g.grado), 6, 7, 8, 9])].sort((a, b) => a - b);
+  const grados = [...new Set([...S.grupos.map((g) => g.grado), ...GRADOS])].sort((a, b) => a - b);
   abrirModal(`<h2>Copiar cronograma</h2><p class="ayuda">Copia los temas de ${esc(nombreArea(ui.crono.areaId))} ${esc(ui.crono.grado)}° – ${esc(nombrePeriodo(ui.crono.periodoId))}, semana por semana, a otro destino (sin marcas de "desarrollado").</p>
     <div class="rejilla r3">
       <div class="campo"><label>Área</label><select id="m-area">${opcionesAreas(ui.crono.areaId)}</select></div>

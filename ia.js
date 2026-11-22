@@ -2,7 +2,7 @@
 // Solo funciona con internet (salvo un servidor local como Ollama) y una clave de API configurada.
 const Anthropic = require('@anthropic-ai/sdk');
 
-const SISTEMA = `Eres un asesor pedagógico experto en educación básica secundaria en Colombia (grados 6° a 9°).
+const SISTEMA = `Eres un asesor pedagógico experto en educación básica primaria, básica secundaria y media en Colombia (grados 1° a 11°). Adapta el lenguaje, la complejidad y las actividades a la edad y el grado indicados.
 Conoces los Estándares Básicos de Competencias, los Derechos Básicos de Aprendizaje (DBA), los Lineamientos Curriculares del MEN,
 el Decreto 1290 de 2009 (evaluación) y el Decreto 1421 de 2017 (educación inclusiva, PIAR y ajustes razonables).
 Redactas en español de Colombia, con lenguaje claro, concreto y realizable en un aula pública con recursos limitados.

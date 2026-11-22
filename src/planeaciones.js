@@ -44,11 +44,8 @@ function nuevaSesion(fecha = '') {
   MOMENTOS.forEach((m) => { s[m.k] = ''; s[m.k + 'Med'] = ''; });
   return s;
 }
-function aplicarDiversidadGrupo(p, reemplazar = false) {
-  const g = porId(S.grupos, p.grupoId);
-  const d = g?.diversidad || {};
-  CAMPOS_DIVERSIDAD.forEach((c) => { if (d[c.k] && (reemplazar || !p[c.k])) p[c.k] = d[c.k]; });
-}
+// Compatibilidad: ahora el "perfil del grupo" es la plantilla sugerida para el grupo y el área
+function aplicarDiversidadGrupo(p, reemplazar = false) { aplicarPlantilla(p, plantillaSugerida(p.grupoId, p.areaId), reemplazar); }
 
 // ---------- Listado ----------
 RENDERS.planeaciones = () => {
@@ -62,7 +59,7 @@ RENDERS.planeaciones = () => {
 
   return `
   <div class="cabecera"><div><h1>Planeaciones</h1><p class="sub">Planeaciones por sesión, semanales o por secuencia didáctica.</p></div>
-    <div class="acciones"><button class="btn primario" onclick="nuevaPlaneacion()">＋ Nueva planeación</button></div></div>
+    <div class="acciones"><button class="btn" onclick="ir('plantillas')">📋 Plantillas (${S.plantillas.length})</button><button class="btn primario" onclick="nuevaPlaneacion()">＋ Nueva planeación</button></div></div>
   <div class="filtros tarjeta">
     <div style="flex:1;min-width:200px"><label>Buscar</label><input value="${esc(f.texto)}" placeholder="Tema, competencia, DBA…" oninput="ui.filtroPlan.texto=this.value;clearTimeout(window._tb);window._tb=setTimeout(()=>{render();const i=document.querySelector('.filtros input');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)"></div>
     <div><label>Grupo</label><select onchange="ui.filtroPlan.grupoId=this.value;render()">${opcionesGrupos(f.grupoId, 'Todos')}</select></div>
@@ -94,7 +91,9 @@ function nuevaPlaneacion(fecha) {
     </div>
     <div class="rejilla r2">
       <div class="campo"><label>Grupo</label><select id="m-grupo" onchange="actualizarAreasModal()">${opciones(grupos, grupos[0]?.id, { vacio: '(sin grupo)', texto: nombreGrupo })}</select></div>
-      <div class="campo"><label>Área</label><select id="m-area"></select></div>
+      <div class="campo"><label>Área</label><select id="m-area" onchange="actualizarPlantillaModal()"></select></div>
+      <div class="campo" style="grid-column: span 2"><label>Plantilla</label><select id="m-plantilla" onchange="tipoDesdePlantillaModal()"></select>
+        <div class="ayuda" id="m-plantilla-ayuda"></div></div>
       <div class="campo"><label>Fecha de inicio</label><input type="date" id="m-fecha" value="${fecha || hoyISO()}"></div>
       <div class="campo"><label>Tema / título</label><input id="m-titulo" placeholder="Ej.: Números enteros en la recta"></div>
     </div>
@@ -106,6 +105,22 @@ function actualizarAreasModal() {
   const g = document.getElementById('m-grupo').value;
   const lista = g && areasDeGrupo(g).length ? areasDeGrupo(g) : S.areas;
   document.getElementById('m-area').innerHTML = opcionesAreas(lista[0]?.id, '(sin área)', lista);
+  actualizarPlantillaModal();
+}
+function actualizarPlantillaModal() {
+  const g = document.getElementById('m-grupo').value, a = document.getElementById('m-area').value;
+  const sug = plantillasPara(g, a);
+  const otras = S.plantillas.filter((t) => !sug.includes(t));
+  document.getElementById('m-plantilla').innerHTML = `<option value="">Sin plantilla</option>`
+    + (sug.length ? `<optgroup label="Para este grupo">${sug.map((t, i) => `<option value="${t.id}" ${i === 0 ? 'selected' : ''}>${esc(nombrePlantilla(t))} — ${esc(descripcionAlcance(t))}</option>`).join('')}</optgroup>` : '')
+    + (otras.length ? `<optgroup label="Otras">${otras.map((t) => `<option value="${t.id}">${esc(nombrePlantilla(t))} — ${esc(descripcionAlcance(t))}</option>`).join('')}</optgroup>` : '');
+  document.getElementById('m-plantilla-ayuda').innerHTML = S.plantillas.length ? (sug.length ? 'Se llenarán la identificación, la diversidad del aula y los demás datos de la plantilla.' : 'No hay plantilla para este grupo o grado.')
+    : 'Aún no tienes plantillas. <a href="#" onclick="cerrarModal();ir(\'plantillas\');return false">Crear plantillas</a>';
+  tipoDesdePlantillaModal();
+}
+function tipoDesdePlantillaModal() {
+  const t = porId(S.plantillas, document.getElementById('m-plantilla').value);
+  if (t?.tipoPlan) { const r = document.querySelector(`input[name=m-tipo][value=${t.tipoPlan}]`); if (r) r.checked = true; }
 }
 function crearPlaneacion() {
   const tipo = document.querySelector('input[name=m-tipo]:checked').value;
@@ -127,7 +142,7 @@ function crearPlaneacion() {
   };
   CAMPOS_TEXTO.forEach((c) => { p[c.k] = ''; });
   p.criterios = [];
-  aplicarDiversidadGrupo(p);
+  aplicarPlantilla(p, porId(S.plantillas, document.getElementById('m-plantilla').value));
   S.planeaciones.push(p);
   guardar(); cerrarModal();
   editarPlaneacion(p.id);
@@ -183,7 +198,7 @@ RENDERS.editor = ({ id }) => {
       <div class="campo"><label>Tipo</label><select onchange="cambiarPlan('${p.id}','tipo',this.value);render()">${Object.entries(TIPOS_PLAN).map(([k, v]) => `<option value="${k}" ${p.tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
       <div class="campo"><label>Estado</label><select onchange="cambiarPlan('${p.id}','estado',this.value)"><option value="borrador">Borrador</option><option value="terminada" ${p.estado === 'terminada' ? 'selected' : ''}>Terminada</option></select></div>
       <div class="campo"><label>Grado / grupo</label><select onchange="cambiarPlan('${p.id}','grupoId',this.value);aplicarDiversidadGrupo(porId(S.planeaciones,'${p.id}'));render()">${opcionesGrupos(p.grupoId, '(sin grupo)')}</select>
-        <div class="ayuda">${p.grupoId ? `${nEst} estudiante(s)` : ''}</div></div>
+        <div class="ayuda">${numEstudiantesPlan(p) ? `${numEstudiantesPlan(p)} estudiante(s)` : ''}${p.plantillaId && porId(S.plantillas, p.plantillaId) ? ` · plantilla: ${esc(nombrePlantilla(porId(S.plantillas, p.plantillaId)))}` : ''}</div></div>
       <div class="campo"><label>Área / asignatura</label><select onchange="cambiarPlan('${p.id}','areaId',this.value);render()">${opcionesAreas(p.areaId, '(sin área)', areas)}</select></div>
       <div class="campo"><label>Período</label><select onchange="cambiarPlan('${p.id}','periodoId',this.value)">${opcionesPeriodos(p.periodoId, '(sin periodo)')}</select></div>
       ${campoLinea(p, 'duracion', 'Duración', 'Ej.: 2 horas académicas')}
@@ -196,8 +211,8 @@ RENDERS.editor = ({ id }) => {
   </div>
 
   <div class="tarjeta"><div class="cabecera"><h2 style="margin:0">Diversidad del aula</h2>
-    ${g ? `<div class="fila"><button class="btn pequeno" onclick="aplicarDiversidadGrupo(porId(S.planeaciones,'${p.id}'),true);tocarPlan(porId(S.planeaciones,'${p.id}'));render()" title="Reemplaza estos campos con el perfil guardado del grupo">↺ Traer del perfil de ${esc(g.nombre)}</button>
-      <button class="btn pequeno" onclick="guardarDiversidadEnGrupo('${p.id}')" title="Guarda estos textos como perfil del grupo para próximas planeaciones">💾 Guardar como perfil del grupo</button></div>` : ''}</div>
+    <div class="fila"><button class="btn pequeno" onclick="dialogoAplicarPlantilla('${p.id}')" title="Llena la identificación y la diversidad del aula desde una plantilla">📋 Aplicar plantilla</button>
+      <button class="btn pequeno" onclick="guardarComoPlantilla('${p.id}')" title="Guarda estos datos como plantilla del grupo o grado para próximas planeaciones">💾 Guardar como plantilla</button></div></div>
     <div class="rejilla r2">
       ${CAMPOS_DIVERSIDAD.map((c) => campoTexto(p, c.k, c.t, c.ph, c.k === 'ajustes')).join('')}
     </div>
@@ -319,7 +334,7 @@ async function exportarPlanWord(id) {
   const g = porId(S.grupos, p.grupoId);
   const r = await api.exportarWord({
     config: S.config, plan: p,
-    numEstudiantes: p.grupoId ? alumnosDe(p.grupoId).length : '',
+    numEstudiantes: numEstudiantesPlan(p),
     piar: p.grupoId ? alumnosDe(p.grupoId).filter((a) => a.piar).map((a) => nombreAlumno(a) + (a.observaciones ? ` (${a.observaciones})` : '')).join('; ') : '',
     rangos: Object.fromEntries(NIVELES_CRITERIO.map(([k, n]) => [k, `${n} (${rangoDesempeno(n)})`])),
     momentos: MOMENTOS.map((m) => ({ k: m.k, t: m.t })),
@@ -382,7 +397,7 @@ RENDERS.banco = () => {
   <div class="filtros tarjeta">
     <div style="flex:1;min-width:200px"><label>Buscar</label><input value="${esc(f.texto)}" onchange="ui.filtroBanco.texto=this.value;render()" placeholder="Tema, DBA, competencia… (Enter)"></div>
     <div><label>Área</label><select onchange="ui.filtroBanco.areaId=this.value;render()">${opcionesAreas(f.areaId, 'Todas')}</select></div>
-    <div><label>Grado</label><select onchange="ui.filtroBanco.grado=this.value;render()"><option value="">Todos</option>${[6, 7, 8, 9, 10, 11].map((n) => `<option value="${n}" ${f.grado === String(n) ? 'selected' : ''}>${n}°</option>`).join('')}</select></div>
+    <div><label>Grado</label><select onchange="ui.filtroBanco.grado=this.value;render()"><option value="">Todos</option>${GRADOS.map((n) => `<option value="${n}" ${f.grado === String(n) ? 'selected' : ''}>${n}°</option>`).join('')}</select></div>
     <div><label><input type="checkbox" ${f.todas ? 'checked' : ''} onchange="ui.filtroBanco.todas=this.checked;render()"> Incluir todas mis planeaciones</label></div>
   </div>
   ${lista.length ? `<div class="banco">${lista.map((p) => `
@@ -430,7 +445,7 @@ async function ejecutarIA(id) {
   const piar = p.grupoId ? alumnosDe(p.grupoId).filter((a) => a.piar).map((a) => a.observaciones).filter(Boolean) : [];
   const contexto = [
     `Área: ${p.areaId ? nombreArea(p.areaId) : 'no indicada'}`,
-    `Grado: ${g ? g.grado + '°' : (p.gradoOrigen ? p.gradoOrigen + '°' : 'no indicado')} (básica secundaria, Colombia)`,
+    `Grado: ${g ? g.grado + '°' : (p.gradoOrigen ? p.gradoOrigen + '°' : 'no indicado')} (${nivelDeGrado(g ? g.grado : p.gradoOrigen)}, Colombia)`,
     `Tipo de planeación: ${TIPOS_PLAN[p.tipo]} con ${p.sesiones.length} sesión(es) de ${p.sesiones[0]?.duracion || 55} minutos`,
     `Tema: ${p.titulo || 'no indicado'}`,
     p.sesiones.some((s) => s.titulo) ? `Títulos de sesiones: ${p.sesiones.map((s, i) => `${i + 1}) ${s.titulo || '-'}`).join('; ')}` : '',

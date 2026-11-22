@@ -1,8 +1,8 @@
 {
   "name": "planeador-docente",
   "productName": "Planeador Docente",
-  "version": "1.5.0",
-  "description": "Sistema de planeación docente para básica secundaria (Colombia)",
+  "version": "1.6.0",
+  "description": "Sistema de planeación docente para educación básica y media (Colombia, grados 1.° a 11.°)",
   "main": "main.js",
   "author": "Planeador Docente",
   "license": "MIT",

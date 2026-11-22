@@ -27,7 +27,7 @@ RENDERS.grupos = () => {
         <td>${(g.areas || []).map((x) => `${esc(nombreArea(x.areaId))} <span class="ayuda">(${esc(x.horas || '?')} h)</span>`).join('<br>') || '<span class="ayuda">Sin áreas asignadas</span>'}</td>
         <td class="num">${alumnosDe(g.id).length}</td>
         <td style="white-space:nowrap"><button class="btn pequeno" onclick="ir('alumnos',{grupoId:'${g.id}'})">👥 Alumnos</button>
-          <button class="btn pequeno" title="Estilos, gustos, barreras y ajustes del grupo" onclick="editarDiversidadGrupo('${g.id}')">🧠 Diversidad</button>
+          <button class="btn pequeno" title="Datos que se copian en cada planeación de este grupo" onclick="plantillaDeGrupo('${g.id}')">📋 Plantilla</button>
           <button class="icono" title="Editar" onclick="editarGrupo('${g.id}')">✏️</button>
           <button class="icono" title="Eliminar" onclick="eliminarGrupo('${g.id}')">🗑️</button></td></tr>`).join('')}
       </tbody></table>` : `<div class="vacio"><div class="grande">👥</div>Crea tu primer grupo (por ejemplo 6° – 601).</div>`}
@@ -70,7 +70,7 @@ function editarGrupo(id) {
   const asignadas = Object.fromEntries((g.areas || []).map((x) => [x.areaId, x.horas]));
   abrirModal(`<h2>${id ? 'Editar' : 'Nuevo'} grupo</h2>
     <div class="rejilla r3">
-      <div class="campo"><label>Grado</label><select id="m-grado">${[6, 7, 8, 9, 10, 11].map((n) => `<option value="${n}" ${+g.grado === n ? 'selected' : ''}>${n}°</option>`).join('')}</select></div>
+      <div class="campo"><label>Grado</label><select id="m-grado">${GRADOS.map((n) => `<option value="${n}" ${+g.grado === n ? 'selected' : ''}>${n}°</option>`).join('')}</select></div>
       <div class="campo"><label>Nombre del grupo</label><input id="m-nombre" value="${esc(g.nombre)}" placeholder="Ej.: 601, 7A"></div>
       <div class="campo"><label>Jornada</label><select id="m-jornada">${['Mañana', 'Tarde', 'Única', 'Noche', 'Fin de semana'].map((j) => `<option ${g.jornada === j ? 'selected' : ''}>${j}</option>`).join('')}</select></div>
     </div>
@@ -213,17 +213,9 @@ function exportarAlumnos(grupoId) {
   api.guardarCSV(`Lista ${nombreGrupoId(grupoId)}`, aCSV(filas));
 }
 
-// ---------- Perfil de diversidad del grupo ----------
-function editarDiversidadGrupo(id) {
-  const g = porId(S.grupos, id);
-  const d = g.diversidad || {};
-  abrirModal(`<h2>Diversidad del aula – ${esc(nombreGrupo(g))}</h2>
-    <p class="ayuda">Este perfil se copia automáticamente en cada planeación nueva de este grupo (y luego puedes ajustarlo en cada una).</p>
-    ${CAMPOS_DIVERSIDAD.map((c) => `<div class="campo"><label>${esc(c.t)}</label><textarea id="dv-${c.k}" style="min-height:80px" placeholder="${esc(c.ph)}">${esc(d[c.k] || '')}</textarea></div>`).join('')}
-    <div class="botones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" onclick="guardarDiversidadGrupo('${id}')">Guardar</button></div>`, { ancho: true });
-}
-function guardarDiversidadGrupo(id) {
-  porId(S.grupos, id).diversidad = Object.fromEntries(CAMPOS_DIVERSIDAD.map((c) => [c.k, document.getElementById('dv-' + c.k).value.trim()]));
-  guardar(); cerrarModal(); render();
-  aviso('Perfil de diversidad guardado', 'ok');
+// ---------- Plantilla del grupo ----------
+function plantillaDeGrupo(id) {
+  const t = S.plantillas.find((x) => x.alcance === 'grupo' && x.grupoId === id && !x.areaId);
+  if (t) editarPlantilla(t.id);
+  else editarPlantilla(null, { alcance: 'grupo', grupoId: id, grado: porId(S.grupos, id).grado, nombre: `Plantilla ${nombreGrupoId(id)}` });
 }

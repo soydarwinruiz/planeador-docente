@@ -13,7 +13,7 @@ const CAMPOS_BANCO = [
   { k: 'descripcion', t: 'Descripción', ph: '¿En qué consiste?' },
   { k: 'pasos', t: 'Cómo aplicarla (pasos)', ph: '1. …\n2. …' },
   { k: 'recursos', t: 'Recursos necesarios', ph: '' },
-  { k: 'areas', t: 'Áreas o grados recomendados', ph: 'Ej.: todas, Ciencias Naturales, 6° a 9°' },
+  { k: 'areas', t: 'Áreas o grados recomendados', ph: 'Ej.: todas, Ciencias Naturales, 1° a 5°' },
   { k: 'fuente', t: 'Fuente / referencia', ph: '' },
 ];
 
