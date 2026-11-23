@@ -127,7 +127,7 @@ function tarjetaMenu() {
     <p class="ayuda">Desmarca los módulos que no usas para ocultarlos y ordénalos a tu gusto (arrastra o usa las flechas). Ocultar un módulo no borra sus datos; puedes volver a mostrarlo cuando quieras.</p>
     <ul class="lista-simple lista-menu">${lista.map((v, i) => {
       const fija = VISTAS_FIJAS.includes(v.id);
-      return `<li draggable="true" ondragstart="arrastreMenu='${v.id}'" ondragover="event.preventDefault()" ondrop="soltarMenu('${v.id}')" class="${ocultos.has(v.id) && !fija ? 'oculto' : ''}">
+      return `<li draggable="true" ondragstart="arrastreMenu='${v.id}'" ondragover="event.preventDefault()" ondrop="soltarMenu('${v.id}')" class="${ocultos.has(v.id) && !fija ? 'menu-oculto' : ''}">
         <label style="font-weight:normal;color:inherit;margin:0;flex:1;cursor:grab"><span class="ayuda">⋮⋮</span>
           <input type="checkbox" ${fija || !ocultos.has(v.id) ? 'checked' : ''} ${fija ? 'disabled title="Siempre visible"' : ''} onchange="alternarMenu('${v.id}',this.checked)"> ${v.ico} ${esc(v.nombre)}</label>
         <span><button class="icono" title="Subir" ${i === 0 ? 'disabled' : ''} onclick="moverMenu('${v.id}',-1)">▲</button><button class="icono" title="Bajar" ${i === lista.length - 1 ? 'disabled' : ''} onclick="moverMenu('${v.id}',1)">▼</button></span></li>`;

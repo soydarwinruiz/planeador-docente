@@ -251,10 +251,34 @@ function agregarCriterio(plId) {
   porId(S.planillas, plId).criterios.push({ id: uid(), nombre: 'Nuevo componente', peso: 0, actividades: [] });
   guardar(); render();
 }
+// Cuántas calificaciones tiene una actividad (notas, instrumentos y retroalimentaciones)
+function calificacionesDe(actId) {
+  const ids = new Set();
+  for (const [id, v] of Object.entries(S.notas[actId] || {})) if (v !== '' && v != null) ids.add(id);
+  for (const id of Object.keys(S.notasRubrica[actId] || {})) ids.add(id);
+  for (const id of Object.keys((S.retro || {})[actId] || {})) ids.add(id);
+  return ids.size;
+}
+function avisoNoEliminar(titulo, filas) {
+  abrirModal(`<h2>🔒 ${esc(titulo)}</h2>
+    <p>Para proteger las calificaciones, no se puede eliminar porque ya tiene notas registradas:</p>
+    <ul>${filas.map(([a, n]) => `<li><b>${esc(a.nombre)}</b>: ${n} estudiante(s) calificado(s)</li>`).join('')}</ul>
+    <p class="ayuda">Si la actividad se creó por error y de verdad quieres eliminarla, primero vacía sus notas con el botón 🧹 (en "Editar actividad") y luego elimínala. Si solo quieres cambiarle el nombre o la fecha, edítala.</p>
+    <div class="botones"><button class="btn primario" onclick="cerrarModal()">Entendido</button></div>`);
+}
+async function vaciarNotasActividad(plId, crId, actId) {
+  const a = porId(porId(porId(S.planillas, plId).criterios, crId).actividades, actId);
+  const n = calificacionesDe(actId);
+  if (!(await confirmar(`Se borrarán las ${n} calificación(es) de "${a.nombre}" (las notas no se pueden recuperar, salvo desde un respaldo). ¿Vaciar las notas?`, { boton: 'Vaciar notas' }))) return;
+  delete S.notas[actId]; delete S.notasRubrica[actId]; if (S.retro) delete S.retro[actId];
+  guardar(); render(); aviso('Notas vaciadas. Ahora puedes eliminar la actividad si lo necesitas.');
+}
 async function eliminarCriterio(plId, crId) {
   const pl = porId(S.planillas, plId);
   const cr = porId(pl.criterios, crId);
-  if (!(await confirmar(`¿Eliminar el componente "${cr.nombre}" y sus ${cr.actividades.length} actividad(es) con sus notas?`))) return;
+  const conNotas = cr.actividades.map((a) => [a, calificacionesDe(a.id)]).filter(([, n]) => n);
+  if (conNotas.length) return avisoNoEliminar(`No se puede eliminar el componente "${cr.nombre}"`, conNotas);
+  if (!(await confirmar(`¿Eliminar el componente "${cr.nombre}" y sus ${cr.actividades.length} actividad(es) (sin notas)?`))) return;
   cr.actividades.forEach((a) => { delete S.notas[a.id]; delete S.notasRubrica[a.id]; });
   pl.criterios = pl.criterios.filter((x) => x.id !== crId);
   guardar(); render();
@@ -273,7 +297,9 @@ function editarActividad(plId, crId, actId) {
       <div class="campo"><label>Instrumento de evaluación</label><select id="m-rub">${opcionesInstrumentos(a.rubricaId)}</select>
         <div class="ayuda">Con un instrumento, la nota se calcula al marcar los niveles o indicadores.</div></div>
     </div>
-    <div class="botones">${actId ? `<button class="btn peligro" style="margin-right:auto" onclick="eliminarActividad('${plId}','${crId}','${actId}')">Eliminar</button>` : ''}
+    ${actId && calificacionesDe(actId) ? `<p class="ayuda">🔒 Esta actividad tiene ${calificacionesDe(actId)} estudiante(s) calificado(s): puedes editarla, pero no eliminarla.</p>` : ''}
+    <div class="botones">${actId ? (calificacionesDe(actId) ? `<button class="btn" style="margin-right:auto" title="Borra todas las notas de esta actividad" onclick="cerrarModal();vaciarNotasActividad('${plId}','${crId}','${actId}')">🧹 Vaciar notas</button>`
+      : `<button class="btn peligro" style="margin-right:auto" onclick="eliminarActividad('${plId}','${crId}','${actId}')">Eliminar</button>`) : ''}
       <button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" onclick="guardarActividad('${plId}','${crId}','${actId || ''}')">Guardar</button></div>`);
 }
 function guardarActividad(plId, crId, actId) {
@@ -284,8 +310,11 @@ function guardarActividad(plId, crId, actId) {
   guardar(); cerrarModal(); render();
 }
 async function eliminarActividad(plId, crId, actId) {
-  if (!(await confirmar('¿Eliminar esta actividad y todas sus notas?'))) return;
   const cr = porId(porId(S.planillas, plId).criterios, crId);
+  const a = porId(cr.actividades, actId);
+  const n = calificacionesDe(actId);
+  if (n) return avisoNoEliminar(`No se puede eliminar "${a.nombre}"`, [[a, n]]);
+  if (!(await confirmar(`¿Eliminar la actividad "${a.nombre}"? (no tiene notas)`))) return;
   cr.actividades = cr.actividades.filter((a) => a.id !== actId);
   delete S.notas[actId]; delete S.notasRubrica[actId];
   guardar(); render();
@@ -300,9 +329,9 @@ function copiarEstructura(plId) {
 async function ejecutarCopiaEstructura(plId) {
   const origen = porId(S.planillas, document.getElementById('m-origen').value);
   const pl = porId(S.planillas, plId);
-  const hayNotas = pl.criterios.some((c) => c.actividades.some((a) => S.notas[a.id] && Object.keys(S.notas[a.id]).length));
+  const conNotas = pl.criterios.flatMap((c) => c.actividades).map((a) => [a, calificacionesDe(a.id)]).filter(([, n]) => n);
   cerrarModal();
-  if (hayNotas && !(await confirmar('La planilla actual ya tiene notas que se perderán. ¿Continuar?', { boton: 'Reemplazar' }))) return;
+  if (conNotas.length) return avisoNoEliminar('No se puede reemplazar la estructura de esta planilla', conNotas);
   pl.criterios.forEach((c) => c.actividades.forEach((a) => { delete S.notas[a.id]; delete S.notasRubrica[a.id]; }));
   pl.criterios = origen.criterios.map((c) => ({ ...c, id: uid(), actividades: c.actividades.map((a) => ({ ...a, id: uid() })) }));
   guardar(); render();

@@ -173,7 +173,7 @@ function vistaProgramacion(c) {
         <td><select onchange="cambiarActividad('${a.id}','tecnicaId',this.value);render()">${opcionesTecnicas(a.tecnicaId)}</select></td>
         <td><select onchange="cambiarInstrumentoActividad('${a.id}',this.value)">${opcionesInstrumentos(a.rubricaId)}</select>
           ${sug && tipoInstrumento(actual) !== sug ? `<div class="ayuda">Sugerido para esta técnica: <b>${TIPOS_INSTRUMENTO[sug].nombre.toLowerCase()}</b></div>` : ''}</td>
-        <td><button class="icono" title="Eliminar actividad" onclick="eliminarActividad('${pl.id}','${cr.id}','${a.id}')">🗑️</button></td></tr>`;
+        <td>${calificacionesDe(a.id) ? `<span class="icono" title="Tiene ${calificacionesDe(a.id)} estudiante(s) calificado(s): no se puede eliminar" style="cursor:help">🔒</span>` : `<button class="icono" title="Eliminar actividad" onclick="eliminarActividad('${pl.id}','${cr.id}','${a.id}')">🗑️</button>`}</td></tr>`;
       }).join('')}
     </tbody></table>` : '<p class="ayuda">Sin actividades.</p>'}
     <p class="ayuda" style="margin-bottom:0">La nota del componente es el promedio de sus actividades${cr.actividades.length ? ` (cada una vale ${fmtNota((+cr.peso || 0) / cr.actividades.length)}% de la nota del periodo)` : ''}.</p>

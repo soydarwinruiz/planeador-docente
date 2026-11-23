@@ -224,7 +224,7 @@ body.oscuro .estadistica .num, body.oscuro .pestanas button.activo, body.oscuro 
 body.oscuro .planilla th.alumno { background: var(--azul-claro); }
 
 .lista-menu li { padding: 4px 6px; }
-.lista-menu li.oculto { opacity: .5; }
+.lista-menu li.menu-oculto { opacity: .55; } .lista-menu li.menu-oculto label::after { content: ' (oculto)'; color: var(--suave); font-size: 12px; }
 .lista-menu .icono[disabled] { opacity: .25; cursor: default; }
 
 /* Alertas */
