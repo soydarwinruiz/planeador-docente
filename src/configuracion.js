@@ -66,6 +66,8 @@ RENDERS.configuracion = () => {
 
   ${tarjetaIA()}
 
+  ${tarjetaVoz()}
+
   <div class="tarjeta"><h2>💾 Respaldo de datos</h2>
     <p class="ayuda">Todos tus datos se guardan en este equipo. Haz respaldos frecuentes en una memoria USB o en una carpeta sincronizada (OneDrive, Google Drive).
     Además, la aplicación crea un respaldo automático cada vez que se abre (se conservan los últimos 15).</p>
@@ -144,7 +146,7 @@ async function nuevoAnio() {
   const anio = (+S.config.anio || new Date().getFullYear()) + 1;
   S.planeaciones.forEach((p) => { const g = porId(S.grupos, p.grupoId); if (g) p.gradoOrigen = g.grado; });
   Object.assign(S, { grupos: [], alumnos: [], asistencia: {}, planillas: [], notas: {}, notasRubrica: {}, eventos: [], cronograma: {}, planesAula: [],
-    observaciones: {}, diario: [], comunicadosEnviados: [], alertasOcultas: [], planesApoyo: [], piar: [] });
+    observaciones: {}, diario: [], comunicadosEnviados: [], alertasOcultas: [], planesApoyo: [], piar: [], gamificacion: {}, retro: {} });
   S.pendientes = (S.pendientes || []).filter((p) => !p.hecho);
   (S.pruebas || []).forEach((p) => { p.grupoId = ''; p.respuestas = {}; p.abiertas = {}; p.actividadId = ''; p.periodoId = ''; });
   if (S.horario) S.horario.celdas = {};

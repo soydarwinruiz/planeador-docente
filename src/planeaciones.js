@@ -216,6 +216,7 @@ RENDERS.editor = ({ id }) => {
     <button class="btn" onclick="ir('planeaciones')">← Volver</button>
     <button class="btn ia" onclick="dialogoIA('${p.id}')">✨ Sugerir con IA</button>
     <button class="btn" title="Mostrar los momentos de la clase en el video beam" onclick="aula.proy={tipo:'plan',id:'${p.id}',i:0,mostrar:false};abrirAula('${p.grupoId}','${p.areaId}','proyector')">📽️ Proyectar</button>
+    <button class="btn" title="Guía, sopa de letras, crucigrama… a partir de esta clase" onclick="ui.ficha=nuevaFicha('guia');aplicarPlaneacionFicha('${p.id}');ir('fichas')">🧩 Ficha</button>
     <button class="btn" onclick="dialogoOtrosGrupos('${p.id}')">👥 Otros grupos${p.vinculadas?.length ? ` (${p.vinculadas.length})` : ''}</button>
     <button class="btn" onclick="dialogoReutilizar('${p.id}')">📑 Duplicar</button>
     <button class="btn primario" onclick="exportarPlanWord('${p.id}')">📄 Exportar a Word</button>

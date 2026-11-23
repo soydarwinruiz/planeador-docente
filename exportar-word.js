@@ -83,7 +83,7 @@ function tabla(filas) {
 
 function titulo(texto) {
   return new Paragraph({
-    spacing: { before: 240, after: 100 },
+    spacing: { before: 240, after: 100 }, keepNext: true,
     children: [new TextRun({ text: texto.toUpperCase(), bold: true, font: FUENTE, size: 22, color: AZUL })],
   });
 }
@@ -582,4 +582,29 @@ async function generarDocxPrueba({ config, prueba: p, version = 'estudiante', an
   return documento(c, p.titulo || 'Prueba', [{ properties: VERTICAL, children: hijos }]);
 }
 
-module.exports = { generarDocxTabla, generarDocxComunicados, generarDocxPrueba, generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion, generarDocxApoyo, generarDocxPiar };
+// Informe con secciones (texto y tablas), p. ej. el informe de cierre de periodo
+async function generarDocxInforme({ config, titulo: tit, subtitulo, ident = [], secciones = [], firmas = [], horizontal = false }) {
+  const c = config;
+  const hijos = [...encabezado(c, tit, subtitulo)];
+  if (ident.length) hijos.push(datosIdent(ident));
+  secciones.forEach((sec, i) => {
+    hijos.push(titulo(`${i + 1}. ${sec.titulo}`));
+    if (sec.texto) hijos.push(...parrafos(sec.texto, { size: 19 }));
+    if (sec.tabla && sec.tabla.filas.length) {
+      hijos.push(tablaDatos(sec.tabla.columnas, sec.tabla.filas.map((f, k) => new TableRow({ children: f.map((v, j) => celdaPeq(v, { ancho: sec.tabla.columnas[j]?.ancho, fondo: k % 2 ? 'F2F6FC' : undefined })) }))));
+    } else if (sec.tabla && sec.vacio) hijos.push(...parrafos(sec.vacio, { size: 18, italics: true, color: '606060' }));
+    if (sec.nota) hijos.push(...parrafos(sec.nota, { size: 16, italics: true, color: '606060' }));
+  });
+  if (firmas.length) {
+    hijos.push(new Paragraph({ spacing: { before: 800 }, children: [] }));
+    hijos.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: { ...SIN_BORDES, insideHorizontal: SIN_BORDE, insideVertical: SIN_BORDE },
+      rows: [new TableRow({ children: firmas.map(([n, rol]) => new TableCell({ borders: SIN_BORDES, width: { size: Math.floor(100 / firmas.length), type: WidthType.PERCENTAGE }, children: [
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '________________________', font: FUENTE })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: n || ' ', font: FUENTE, size: 18, bold: true })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: rol, font: FUENTE, size: 16 })] }),
+      ] })) })] }));
+  }
+  return documento(c, tit, [{ properties: horizontal ? HORIZONTAL : VERTICAL, children: hijos }]);
+}
+
+module.exports = { generarDocxInforme, generarDocxTabla, generarDocxComunicados, generarDocxPrueba, generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion, generarDocxApoyo, generarDocxPiar };

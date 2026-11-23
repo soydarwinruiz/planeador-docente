@@ -20,7 +20,7 @@ function calcularAlertas() {
         const n = al.filter((a) => !(obs[a.id] || '').trim()).length;
         if (n) faltanObs.push({ pl, n, total: al.length });
       }
-      add(`cierre|${per.id}|${dias}`, dias <= 3 ? 'urgente' : 'aviso', '⏳', `${dias === 0 ? 'Hoy cierra' : `Faltan ${dias} día(s) para cerrar`} el <b>${esc(per.nombre)}</b> (${esc(fechaCorta(per.fin))}).`, `ui.cal={grupoId:'',areaId:'',periodoId:'${per.id}',pestana:'planilla'};ir('calificaciones')`, 'Ir a las notas');
+      add(`cierre|${per.id}|${dias}`, dias <= 3 ? 'urgente' : 'aviso', '⏳', `${dias === 0 ? 'Hoy cierra' : `Faltan ${dias} día(s) para cerrar`} el <b>${esc(per.nombre)}</b> (${esc(fechaCorta(per.fin))}).`, `ui.cal={grupoId:'',areaId:'',periodoId:'${per.id}',pestana:'riesgo'};ir('calificaciones');dialogoInformeCierre()`, 'Informe de cierre');
       for (const x of faltanObs) add(`obs|${x.pl.id}|${x.n}`, 'aviso', '📝', `Faltan observaciones del boletín en <b>${esc(nombreGrupoId(x.pl.grupoId))} · ${esc(nombreArea(x.pl.areaId))}</b> (${x.n} de ${x.total}).`,
         `ui.cal={grupoId:'${x.pl.grupoId}',areaId:'${x.pl.areaId}',periodoId:'${per.id}',pestana:'observaciones'};ir('calificaciones')`, 'Redactar');
     }
@@ -57,6 +57,13 @@ function calcularAlertas() {
       add(`faltas|${a.id}|${per.id}|${asis.faltas}`, asis.faltas >= umbralFaltas() + 2 ? 'urgente' : 'aviso', '🚸', `<b>${esc(tipoTitulo(nombreAlumno(a)))}</b> (${esc(g.nombre)}) lleva ${asis.faltas} falta(s) en el ${esc(per.nombre.toLowerCase())}.`,
         `comunicadoPara('${a.id}','inasistencia')`, 'Avisar al acudiente');
     }
+  }
+
+  // 4b. Estudiantes en riesgo alto (semáforo rojo) en el periodo actual
+  if (per) for (const pl of S.planillas.filter((p) => p.periodoId === per.id)) {
+    const rojos = alumnosDe(pl.grupoId).filter((a) => riesgoAlumno(pl.grupoId, pl.areaId, per.id, a.id).estado === 'rojo');
+    if (rojos.length) add(`riesgo|${pl.id}|${rojos.map((a) => a.id).join(',')}`, 'urgente', '🔴', `<b>${esc(nombreGrupoId(pl.grupoId))} · ${esc(nombreArea(pl.areaId))}:</b> ${rojos.length} estudiante(s) en riesgo alto de perder el periodo (${rojos.slice(0, 3).map((a) => esc(primerNombre(a))).join(', ')}${rojos.length > 3 ? '…' : ''}).`,
+      `ui.cal={grupoId:'${pl.grupoId}',areaId:'${pl.areaId}',periodoId:'${per.id}',pestana:'riesgo'};ir('calificaciones')`, 'Ver semáforo');
   }
 
   // 5. Planes de apoyo vencidos

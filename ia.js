@@ -56,7 +56,7 @@ const PROVEEDORES = {
 
 class ErrorIA extends Error {}
 
-async function llamarAnthropic({ clave, modelo }, sistema, prompt) {
+async function llamarAnthropic({ clave, modelo }, sistema, prompt, imagenes = []) {
   const client = new Anthropic({ apiKey: clave, maxRetries: 2, timeout: 180000 });
   try {
     const r = await client.beta.messages.create({
@@ -66,7 +66,7 @@ async function llamarAnthropic({ clave, modelo }, sistema, prompt) {
       fallbacks: 'default',
       output_config: { effort: 'medium' },
       system: sistema,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: imagenes.length ? [...imagenes.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.tipo, data: i.datos } })), { type: 'text', text: prompt }] : prompt }],
     });
     if (r.stop_reason === 'refusal') throw new ErrorIA('La IA no pudo generar esta sugerencia. Ajusta el tema e inténtalo de nuevo.');
     return r.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
@@ -101,27 +101,27 @@ async function pedirJSON(url, opciones) {
   return datos;
 }
 
-async function llamarCompatibleOpenAI({ clave, modelo, url }, sistema, prompt) {
+async function llamarCompatibleOpenAI({ clave, modelo, url }, sistema, prompt, imagenes = []) {
   const base = (url || 'https://api.openai.com/v1').replace(/\/+$/, '');
   const headers = { 'Content-Type': 'application/json' };
   if (clave) headers.Authorization = `Bearer ${clave}`;
   const datos = await pedirJSON(`${base}/chat/completions`, {
     method: 'POST', headers,
-    body: JSON.stringify({ model: modelo, messages: [{ role: 'system', content: sistema }, { role: 'user', content: prompt }] }),
+    body: JSON.stringify({ model: modelo, messages: [{ role: 'system', content: sistema }, { role: 'user', content: imagenes.length ? [{ type: 'text', text: prompt }, ...imagenes.map((i) => ({ type: 'image_url', image_url: { url: `data:${i.tipo};base64,${i.datos}` } }))] : prompt }] }),
   });
   const texto = datos?.choices?.[0]?.message?.content;
   if (!texto) throw new ErrorIA('El servicio respondió sin contenido.');
   return texto;
 }
 
-async function llamarGemini({ clave, modelo }, sistema, prompt) {
+async function llamarGemini({ clave, modelo }, sistema, prompt, imagenes = []) {
   const m = encodeURIComponent(modelo || PROVEEDORES.gemini.modelo);
   const datos = await pedirJSON(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: sistema }] },
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: [{ role: 'user', parts: [{ text: prompt }, ...imagenes.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.datos } }))] }],
       generationConfig: { responseMimeType: 'application/json' },
     }),
   });
@@ -131,15 +131,15 @@ async function llamarGemini({ clave, modelo }, sistema, prompt) {
   return texto;
 }
 
-async function llamarModelo(ia, sistema, prompt) {
+async function llamarModelo(ia, sistema, prompt, imagenes = []) {
   const p = ia.proveedor || 'anthropic';
   const cfg = { clave: (ia.claves?.[p] || '').trim(), modelo: (ia.modelos?.[p] || PROVEEDORES[p]?.modelo || '').trim(), url: (ia.url || '').trim() };
   if (p !== 'compatible' && !cfg.clave) throw new ErrorIA(`Falta la clave de API de ${PROVEEDORES[p]?.nombre || p}. Configúrala en Configuración > Inteligencia artificial.`);
   if (p === 'compatible' && (!cfg.url || !cfg.modelo)) throw new ErrorIA('Para un servicio compatible con OpenAI indica la dirección (URL) y el nombre del modelo.');
-  if (p === 'anthropic') return llamarAnthropic(cfg, sistema, prompt);
-  if (p === 'gemini') return llamarGemini(cfg, sistema, prompt);
-  if (p === 'openai') return llamarCompatibleOpenAI({ ...cfg, url: 'https://api.openai.com/v1' }, sistema, prompt);
-  return llamarCompatibleOpenAI(cfg, sistema, prompt);
+  if (p === 'anthropic') return llamarAnthropic(cfg, sistema, prompt, imagenes);
+  if (p === 'gemini') return llamarGemini(cfg, sistema, prompt, imagenes);
+  if (p === 'openai') return llamarCompatibleOpenAI({ ...cfg, url: 'https://api.openai.com/v1' }, sistema, prompt, imagenes);
+  return llamarCompatibleOpenAI(cfg, sistema, prompt, imagenes);
 }
 
 function promptClase(contexto, campos, numSesiones) {
@@ -169,7 +169,7 @@ Devuelve un JSON con solo esas claves (los valores de texto pueden usar saltos d
 ${sesionesTxt}`;
 }
 
-async function sugerirConIA({ ia, contexto, campos = [], numSesiones = 0, tarea = 'clase', numItems = 3 }) {
+async function sugerirConIA({ ia, contexto, campos = [], numSesiones = 0, tarea = 'clase', numItems = 3, imagenes = [] }) {
   if (!ia) return { ok: false, error: 'Configura la inteligencia artificial en Configuración.' };
   const prompt = tarea === 'malla' ? promptMalla(contexto, numItems)
     : tarea === 'planArea' ? promptPlanArea(contexto, campos)
@@ -181,6 +181,25 @@ ${contexto}
 Reglas: 2 a 3 oraciones (máximo 55 palabras) por estudiante, en tercera persona, tono respetuoso y motivador, sin repetir la nota numérica.
 Empieza con el marcador {nombre} (se reemplazará por el nombre real). Incluye una fortaleza concreta del área, un aspecto por mejorar si lo hay y una recomendación práctica para el estudiante y su familia.
 Varía la redacción entre estudiantes. Devuelve un JSON: {"observaciones": {"E1": "...", "E2": "..."}}`
+    : tarea === 'retro' ? `Evalúa el trabajo de un estudiante con el instrumento indicado y escribe una retroalimentación formativa.
+${contexto}
+
+${imagenes.length ? 'El trabajo está en la(s) imagen(es) adjunta(s): primero transcríbelo con fidelidad (si algo no se entiende, escribe [ilegible]). ' : ''}Sé justo y basa cada valoración en evidencias concretas del trabajo. Si el trabajo no corresponde a la consigna, dilo.
+Devuelve un JSON con:
+- "transcripcion": ${imagenes.length ? 'el texto del trabajo tal como está escrito' : '""'},
+- "criterios": arreglo con un objeto por criterio, en el mismo orden: {"criterio": "nombre", "nivel": número del nivel elegido empezando en 0 según la lista dada (en lista de cotejo usa 1 = sí cumple, 0 = no cumple), "evidencia": "frase corta citando o describiendo lo que justifica el nivel"},
+- "fortalezas": 2 o 3 viñetas "• " con lo que hizo bien,
+- "mejoras": 2 o 3 viñetas "• " con lo que debe mejorar y cómo,
+- "retroalimentacion": mensaje para el estudiante en segunda persona (tú), cálido, concreto y motivador, de 60 a 120 palabras, sin mencionar la nota numérica.`
+    : tarea === 'ficha' ? `Prepara el contenido de una ficha de trabajo imprimible para estudiantes.
+${contexto}
+
+Usa vocabulario adecuado a la edad y al grado. Devuelve un JSON con solo las claves del tipo pedido:
+- sopa: {"palabras": ["10 a 14 palabras clave del tema, una sola palabra cada una, sin tildes problemáticas"]}
+- crucigrama: {"pistas": [{"palabra": "UNA PALABRA SIN ESPACIOS", "pista": "definición o pregunta corta"}]} (8 a 12)
+- emparejar: {"pares": [{"a": "término o pregunta", "b": "definición o respuesta"}]} (6 a 10)
+- completar: {"texto": "párrafo de 80 a 150 palabras sobre el tema donde las 6 a 10 palabras clave que el estudiante debe completar van entre asteriscos, por ejemplo: la *fotosíntesis* ocurre en las *hojas*"}
+- guia: {"objetivo": "", "explicacion": "explicación clara y breve del tema con ejemplos", "ejemplos": "1 a 3 ejemplos resueltos", "actividades": ["4 a 6 actividades graduales, de lo simple a lo complejo"], "reto": "una actividad de profundización", "autoevaluacion": ["3 a 4 afirmaciones del tipo 'Puedo...'"]}`
     : tarea === 'saber' ? `Diseña preguntas para evaluar en el aula con el estilo de las pruebas Saber del ICFES.
 ${contexto}
 
@@ -189,7 +208,7 @@ Las preguntas abiertas tienen "contexto", "enunciado" y "respuesta" (respuesta e
 Devuelve un JSON: {"instrucciones": "instrucciones para el estudiante", "preguntas": [{"tipo": "multiple" o "abierta", "contexto": "", "enunciado": "", "opciones": ["", "", "", ""], "correcta": "A", "competencia": "", "explicacion": "", "respuesta": ""}]}`
     : promptClase(contexto, campos, numSesiones);
   try {
-    const texto = await llamarModelo(ia, SISTEMA, prompt);
+    const texto = await llamarModelo(ia, SISTEMA, prompt, imagenes);
     return { ok: true, datos: extraerJSON(texto) };
   } catch (e) {
     if (e instanceof ErrorIA) return { ok: false, error: e.message };
@@ -198,4 +217,37 @@ Devuelve un JSON: {"instrucciones": "instrucciones para el estudiante", "pregunt
   }
 }
 
-module.exports = { sugerirConIA, PROVEEDORES };
+// ---------- Transcripción de voz (dictado) ----------
+// audio: WAV mono 16 kHz en base64. Usa OpenAI, Gemini o un servicio compatible (p. ej. Groq con whisper-large-v3).
+async function transcribirAudio({ ia, voz = {}, audio }) {
+  try {
+    const p = voz.proveedor && voz.proveedor !== 'auto' ? voz.proveedor
+      : ia.claves?.openai ? 'openai' : ia.claves?.gemini ? 'gemini' : (ia.url && ia.proveedor === 'compatible') ? 'compatible' : '';
+    if (!p) return { ok: false, error: 'Para dictar con la app se necesita una clave de OpenAI o de Gemini (o un servicio compatible) en Configuración → Inteligencia artificial. También puedes usar el dictado de Windows: tecla Windows + H.' };
+    const buf = Buffer.from(audio, 'base64');
+    if (p === 'gemini') {
+      const clave = (ia.claves?.gemini || '').trim();
+      if (!clave) return { ok: false, error: 'Falta la clave de Gemini.' };
+      const m = encodeURIComponent(voz.modelo || ia.modelos?.gemini || PROVEEDORES.gemini.modelo);
+      const d = await pedirJSON(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Transcribe literalmente este audio en español de Colombia, con puntuación correcta. Responde solo con el texto transcrito, sin comillas ni comentarios.' }, { inlineData: { mimeType: 'audio/wav', data: audio } }] }] }),
+      });
+      return { ok: true, texto: (d?.candidates?.[0]?.content?.parts || []).map((x) => x.text || '').join('').trim() };
+    }
+    const base = p === 'openai' ? 'https://api.openai.com/v1' : (ia.url || '').replace(/\/+$/, '');
+    const clave = (p === 'openai' ? ia.claves?.openai : ia.claves?.compatible || '') || '';
+    const modelo = voz.modelo || (p === 'openai' ? 'gpt-4o-mini-transcribe' : 'whisper-large-v3');
+    const form = new FormData();
+    form.append('file', new Blob([buf], { type: 'audio/wav' }), 'dictado.wav');
+    form.append('model', modelo);
+    form.append('language', 'es');
+    const headers = clave ? { Authorization: `Bearer ${clave.trim()}` } : {};
+    const d = await pedirJSON(`${base}/audio/transcriptions`, { method: 'POST', headers, body: form });
+    return { ok: true, texto: String(d?.text || '').trim() };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+module.exports = { sugerirConIA, transcribirAudio, PROVEEDORES };

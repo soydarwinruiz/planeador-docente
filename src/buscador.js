@@ -20,6 +20,7 @@ function fuentesBusqueda() {
   for (const d of S.diario || []) r.push({ tipo: '📓 Diario', titulo: `${fechaCorta(d.fecha)} · ${nombreGrupoId(d.grupoId)}`, detalle: nombreArea(d.areaId), texto: [d.logrado, d.pendiente, d.novedades].join(' '), ir: () => abrirDiario('', '', '', d.id) });
   for (const p of S.pruebas || []) r.push({ tipo: p.tipo === 'taller' ? '📄 Taller' : '🧪 Prueba', titulo: p.titulo || 'Sin título', detalle: `${nombreArea(p.areaId)} · ${p.preguntas.length} preguntas`,
     texto: [p.titulo, p.tema, ...p.preguntas.flatMap((q) => [q.enunciado, q.contexto])].join(' '), ir: () => { ui.pruebaPest = 'preguntas'; ir('pruebaEditor', { id: p.id }); } });
+  for (const f of S.fichas || []) r.push({ tipo: '🧩 Ficha', titulo: f.titulo || TIPOS_FICHA[f.tipo].t, detalle: TIPOS_FICHA[f.tipo].t, texto: [f.titulo, f.palabras, f.pistas, f.pares, f.texto, ...Object.values(f.guia || {})].join(' '), ir: () => { ui.ficha = structuredClone(f); ir('fichas'); } });
   for (const v of vistasMenu()) r.push({ tipo: '➡️ Ir a', titulo: v.nombre, detalle: '', texto: v.nombre, ir: () => ir(v.id) });
   return r;
 }

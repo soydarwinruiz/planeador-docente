@@ -62,6 +62,9 @@ function estadoInicial() {
     pruebas: [],
     alertasOcultas: [],
     comunicadosEnviados: [],
+    gamificacion: {},
+    fichas: [],
+    retro: {},
   };
 }
 
@@ -241,7 +244,9 @@ const VISTAS = [
   { id: 'banco', ico: '🗂️', nombre: 'Banco de planeaciones' },
   { id: 'bancoPedagogico', ico: '📚', nombre: 'Banco pedagógico' },
   { id: 'pruebas', ico: '🧪', nombre: 'Pruebas y talleres' },
+  { id: 'fichas', ico: '🧩', nombre: 'Fichas imprimibles' },
   { id: 'aula', ico: '🎲', nombre: 'Herramientas de aula' },
+  { id: 'gamificacion', ico: '🏆', nombre: 'Gamificación' },
   { id: 'calendario', ico: '📅', nombre: 'Calendario' },
   { id: 'horario', ico: '🕒', nombre: 'Mi horario' },
   { id: 'cronograma', ico: '🧭', nombre: 'Cronograma' },

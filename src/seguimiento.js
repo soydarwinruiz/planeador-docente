@@ -102,7 +102,7 @@ function vistaGrupoSeg(c) {
     const validas = notas.filter((n) => n != null);
     const prom = validas.length ? validas.reduce((x, y) => x + y, 0) / validas.length : null;
     const bajas = notas.filter((n) => n != null && redondear(n) < +S.config.notaAprobacion).length;
-    return { a, notas, prom, bajas, asis: asistenciaAlumno(a.id, c.grupoId, per) };
+    return { a, notas, prom, bajas, asis: asistenciaAlumno(a.id, c.grupoId, per), sem: semaforoGeneral(c.grupoId, a.id, c.periodoId) };
   });
   const conProm = filas.filter((f) => f.prom != null);
   const promGrupo = conProm.length ? conProm.reduce((s, f) => s + f.prom, 0) / conProm.length : null;
@@ -114,10 +114,10 @@ function vistaGrupoSeg(c) {
     ${tarjetaDato(enRiesgo.length, 'Requieren atención', '<div class="ayuda">Alguna área en Bajo o asistencia &lt; 80%</div>')}
     ${tarjetaDato(conProm.filter((f) => desempeno(f.prom) === S.config.desempenos[S.config.desempenos.length - 1].nombre).length, `En desempeño ${S.config.desempenos[S.config.desempenos.length - 1].nombre}`)}
   </div>
-  ${filas.length ? `<div class="envoltura-tabla"><table class="tabla planilla"><thead><tr><th class="alumno">Estudiante</th>
+  ${filas.length ? `<div class="envoltura-tabla"><table class="tabla planilla"><thead><tr><th style="width:26px" title="Semáforo de riesgo"></th><th class="alumno">Estudiante</th>
     ${areas.map((ar) => `<th class="num">${esc(ar.abreviatura || ar.nombre)}</th>`).join('')}<th class="num">Promedio</th><th>Desempeño</th><th class="num">Asistencia</th><th></th></tr></thead><tbody>
-    ${filas.sort((x, y) => (y.bajas - x.bajas) || ((x.prom ?? 99) - (y.prom ?? 99))).map((f) => `<tr>
-      <td class="alumno"><a href="#" onclick="ui.seg.alumnoId='${f.a.id}';render();return false">${esc(nombreAlumno(f.a))}</a> ${f.a.piar ? '<span class="chip piar">PIAR</span>' : ''}</td>
+    ${filas.sort((x, y) => (ORDEN_SEMAFORO[x.sem] - ORDEN_SEMAFORO[y.sem]) || (y.bajas - x.bajas) || ((x.prom ?? 99) - (y.prom ?? 99))).map((f) => `<tr>
+      <td>${puntoSemaforo(f.sem)}</td><td class="alumno"><a href="#" onclick="ui.seg.alumnoId='${f.a.id}';render();return false">${esc(nombreAlumno(f.a))}</a> ${f.a.piar ? '<span class="chip piar">PIAR</span>' : ''}</td>
       ${f.notas.map((n) => `<td class="prom ${claseNota(n)}">${fmtNota(n)}</td>`).join('')}
       <td class="final ${claseNota(f.prom)}">${fmtNota(f.prom)}</td><td>${chipDesempeno(f.prom)}</td>
       <td class="num ${f.asis && f.asis.pct < 80 ? 'bajo' : ''}">${f.asis ? f.asis.pct + '%' : '—'}</td>
@@ -156,6 +156,7 @@ function vistaAlumno(c) {
     ${tarjetaDato(bajas.length, 'Áreas en desempeño bajo', bajas.length ? `<div class="ayuda">${bajas.map((b) => esc(b.nombre)).join(', ')}</div>` : '')}
     ${tarjetaDato(pendientes.length, 'Actividades sin nota', '<div class="ayuda">Con fecha ya cumplida</div>')}
   </div>
+  ${tarjetaCalculadora(c.grupoId, al.id, c.periodoId)}
   <div class="rejilla r2" style="align-items:start">
     <div class="tarjeta"><h3>Promedio general por periodo</h3>${graficaLinea(serie, { ref: +S.config.notaAprobacion, titulo: 'Promedio general por periodo' })}</div>
     <div class="tarjeta"><div class="cabecera" style="margin-bottom:6px"><h3 style="margin:0">Componentes – ${esc(per?.nombre || '')}</h3>

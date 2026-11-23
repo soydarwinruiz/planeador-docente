@@ -88,6 +88,7 @@ const PARTES_PAQUETE = [
   ['rubricas', '📋 Instrumentos de evaluación'],
   ['banco', '📚 Entradas propias del banco pedagógico'],
   ['pruebas', '🧪 Pruebas y talleres (sin resultados)'],
+  ['fichas', '🧩 Fichas imprimibles'],
 ];
 function dialogoExportarPaquete() {
   const n = {
@@ -95,6 +96,7 @@ function dialogoExportarPaquete() {
     planesArea: S.planesArea.length, plantillas: S.plantillas.length, rubricas: S.rubricas.filter((r) => !r.predeterminado).length,
     banco: S.bancoPedagogico.filter((x) => !x.predeterminado).length,
     pruebas: (S.pruebas || []).filter((p) => p.preguntas.length).length,
+    fichas: (S.fichas || []).length,
   };
   abrirModal(`<h2>📤 Compartir con otros docentes</h2>
     <p class="ayuda">Crea un archivo <b>.planeador</b> que puedes enviar por correo, WhatsApp o USB. Nunca incluye estudiantes, notas, asistencia ni PIAR.</p>
@@ -122,6 +124,7 @@ async function exportarPaquete() {
   if (partes.includes('plantillas')) d.plantillas = S.plantillas.map((t) => { const c = structuredClone(t); if (c.alcance === 'grupo') { c.alcance = 'grado'; c.grupoId = ''; } usarArea(c.areaId); ['estilos', 'gustos', 'caracteristicas', 'numEstudiantes'].forEach((k) => { c[k] = ''; }); return c; });
   if (partes.includes('rubricas')) d.rubricas = structuredClone(S.rubricas.filter((r) => !r.predeterminado));
   if (partes.includes('banco')) d.banco = structuredClone(S.bancoPedagogico.filter((x) => !x.predeterminado));
+  if (partes.includes('fichas')) d.fichas = (S.fichas || []).filter((f) => !area || f.areaId === area).map((f) => { usarArea(f.areaId); const g = porId(S.grupos, f.grupoId); return { ...structuredClone(f), grado: g ? g.grado : f.grado, grupoId: '' }; });
   if (partes.includes('pruebas')) d.pruebas = S.pruebas.filter((p) => p.preguntas.length && (!area || p.areaId === area)).map((p) => {
     usarArea(p.areaId);
     const g = porId(S.grupos, p.grupoId);
@@ -176,6 +179,7 @@ function ejecutarImportacion() {
   if (partes.includes('plantillas')) for (const t of d.plantillas || []) { S.plantillas.push({ ...t, id: uid(), areaId: area(t.areaId), nombre: t.nombre + (d.autor ? ` (de ${d.autor})` : '') }); n++; }
   if (partes.includes('rubricas')) for (const r of d.rubricas || []) { S.rubricas.push({ ...r, id: uid(), nombre: r.nombre + (d.autor ? ` (de ${d.autor})` : '') }); n++; }
   if (partes.includes('banco')) for (const x of d.banco || []) { S.bancoPedagogico.push({ ...x, id: uid() }); n++; }
+  if (partes.includes('fichas')) for (const f of d.fichas || []) { (S.fichas ||= []).push({ ...f, id: uid(), areaId: area(f.areaId), titulo: f.titulo + (d.autor ? ` (de ${d.autor})` : '') }); n++; }
   if (partes.includes('pruebas')) for (const p of d.pruebas || []) {
     S.pruebas.push({ ...p, id: uid(), areaId: area(p.areaId), titulo: p.titulo + (d.autor ? ` (de ${d.autor})` : ''), preguntas: (p.preguntas || []).map((q) => ({ ...q, id: uid() })), modificada: new Date().toISOString() }); n++;
   }

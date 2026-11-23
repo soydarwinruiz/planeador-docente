@@ -64,7 +64,7 @@ RENDERS.pruebaEditor = ({ id }) => {
   const p = porId(S.pruebas, id);
   if (!p) return '<p>Prueba no encontrada.</p>';
   const pest = ui.pruebaPest || 'preguntas';
-  const tabs = [['preguntas', `✏️ Preguntas (${p.preguntas.length})`], ['calificar', '✅ Calificar'], ['resultados', '📈 Resultados']];
+  const tabs = [['preguntas', `✏️ Preguntas (${p.preguntas.length})`], ['celulares', `📱 Aplicar en celulares${sesionQR?.pruebaId === p.id ? ' ●' : ''}`], ['calificar', '✅ Calificar'], ['resultados', '📈 Resultados']];
   return `
   <div class="cabecera"><div><h1>${esc(p.titulo || 'Sin título')}</h1><p class="sub">${p.tipo === 'taller' ? '📄 Taller' : '🧪 Prueba tipo Saber'} · ${esc(nombreArea(p.areaId))} · ${p.grupoId ? esc(nombreGrupoId(p.grupoId)) : gradoPrueba(p) + '°'}</p></div>
     <div class="acciones"><button class="btn" onclick="ir('pruebas')">← Volver</button>
@@ -72,7 +72,7 @@ RENDERS.pruebaEditor = ({ id }) => {
       <button class="btn" onclick="exportarPrueba('${p.id}','docente')">🔑 Clave del docente</button>
       <button class="btn" onclick="ui.proyector={pruebaId:'${p.id}',i:0};abrirAula('','','proyector')" title="Mostrar las preguntas en el video beam">📽️ Proyectar</button></div></div>
   <div class="pestanas">${tabs.map(([k, t]) => `<button class="${pest === k ? 'activo' : ''}" onclick="ui.pruebaPest='${k}';render()">${t}</button>`).join('')}</div>
-  ${pest === 'calificar' ? vistaCalificarPrueba(p) : pest === 'resultados' ? vistaResultadosPrueba(p) : vistaPreguntasPrueba(p)}`;
+  ${pest === 'celulares' ? vistaCelulares(p) : pest === 'calificar' ? vistaCalificarPrueba(p) : pest === 'resultados' ? vistaResultadosPrueba(p) : vistaPreguntasPrueba(p)}`;
 };
 function vistaPreguntasPrueba(p) {
   const cp = (campo) => `onchange="cambiarPrueba('${p.id}','${campo}',this.value)"`;
@@ -218,7 +218,7 @@ function vistaCalificarPrueba(p) {
   if (!p.preguntas.length) return '<div class="tarjeta vacio">Primero agrega las preguntas.</div>';
   if (!p.grupoId) return `<div class="tarjeta"><p>¿Qué grupo presentó la prueba?</p><select onchange="cambiarPrueba('${p.id}','grupoId',this.value);render()" style="max-width:300px">${opcionesGrupos('', 'Selecciona el grupo…')}</select></div>`;
   const alumnos = alumnosDe(p.grupoId);
-  return `<div class="tarjeta"><p class="ayuda" style="margin:0">${cerradas.length ? `Digita las respuestas de cada estudiante en orden, una letra por pregunta (ej.: <b>ABDCA…</b>). Usa <b>-</b> si dejó la pregunta en blanco. Clave: <code>${cerradas.map((q) => q.correcta).join('')}</code>.` : ''}
+  return `<div class="tarjeta"><div class="fila" style="margin-bottom:8px">${cerradas.length ? `<button class="btn" onclick="dialogoHojasOMR('${p.id}')">🖨️ Hojas para cámara</button><button class="btn primario" onclick="abrirCamaraOMR('${p.id}')">📷 Calificar con la cámara</button>` : ''}</div><p class="ayuda" style="margin:0">${cerradas.length ? `Digita las respuestas de cada estudiante en orden, una letra por pregunta (ej.: <b>ABDCA…</b>). Usa <b>-</b> si dejó la pregunta en blanco. Clave: <code>${cerradas.map((q) => q.correcta).join('')}</code>.` : ''}
     ${abiertas.length ? ` En las abiertas escribe los puntos obtenidos.` : ''} La nota se calcula sobre ${S.config.escalaMax} en forma proporcional.</p></div>
   <div class="tarjeta" style="padding:0"><div class="envoltura-tabla" style="border:0"><table class="tabla"><thead><tr><th>#</th><th>Estudiante</th>
     ${cerradas.length ? `<th>Respuestas (${cerradas.length})</th>` : ''}${abiertas.map((q) => `<th class="num" title="${esc(q.enunciado)}">P${p.preguntas.indexOf(q) + 1} (${q.puntos || 1})</th>`).join('')}
@@ -227,7 +227,7 @@ function vistaCalificarPrueba(p) {
       ${cerradas.length ? `<td><input class="resp-prueba" value="${esc(respuestasDe(p, a.id))}" maxlength="${cerradas.length + 10}" style="font-family:monospace;letter-spacing:2px;text-transform:uppercase;min-width:${Math.min(40, cerradas.length) * 14 + 30}px"
         oninput="ponerRespuestas('${p.id}','${a.id}',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('tr').nextElementSibling?.querySelector('input')?.focus()}">
         <div class="aciertos" data-ac="${a.id}">${r ? marcasAciertos(r) : ''}</div></td>` : ''}
-      ${abiertas.map((q) => `<td class="num"><input type="number" min="0" max="${q.puntos || 1}" step="0.5" style="width:64px" value="${esc(pa[q.id] ?? '')}" onchange="ponerPuntosAbierta('${p.id}','${a.id}','${q.id}',this.value)"></td>`).join('')}
+      ${abiertas.map((q) => { const txt = (p.abiertasTexto || {})[a.id]?.[q.id]; return `<td class="num" style="white-space:nowrap"><input type="number" min="0" max="${q.puntos || 1}" step="0.5" style="width:64px" value="${esc(pa[q.id] ?? '')}" onchange="ponerPuntosAbierta('${p.id}','${a.id}','${q.id}',this.value)">${txt ? `<button class="icono" title="Ver lo que escribió en el celular" onclick="verRespuestaAbierta('${p.id}','${a.id}','${q.id}')">👁️</button>` : ''}</td>`; }).join('')}
       <td class="num" data-pts="${a.id}">${r ? `${r.total}/${r.max}` : '—'}</td><td class="num ${claseNota(r?.nota)}" data-nota="${a.id}"><b>${fmtNota(r?.nota)}</b></td></tr>`; }).join('')}
   </tbody></table></div></div>
   ${tarjetaEnviarPlanilla(p)}`;
@@ -319,4 +319,141 @@ function exportarPrueba(id, version) {
   const datos = { ...p, areaNombre: nombreArea(p.areaId), gradoTexto: gradoPrueba(p) ? gradoPrueba(p) + '°' : '', grupoNombre: p.grupoId ? nombreGrupoId(p.grupoId) : '', periodoNombre: nombrePeriodo(p.periodoId) };
   api.exportarWordCurricular('prueba', `${p.titulo || 'Prueba'}${version === 'docente' ? ' - clave' : ''}`, { config: S.config, prueba: datos, version, analisis: an && an.res.length ? an.porPregunta : null })
     .then((r) => { if (r.ok) aviso('Documento de Word creado', 'ok'); else if (r.error) aviso(r.error, 'error'); });
+}
+
+// ---------- Aplicar en celulares (código QR, red local) ----------
+let sesionQR = null; // { pruebaId, codigo, urls, qr, fin, abierta, alumnos: { id: resumen } }
+let refrescoQR = null;
+api.alEventoQR((d) => {
+  if (!sesionQR) return;
+  if ('abierta' in d && d.abierta !== undefined) sesionQR.abierta = d.abierta;
+  if (d.alumnoId) { sesionQR.alumnos[d.alumnoId] = d; aplicarResultadoQR(d); }
+  if (d.tipo === 'entrego') { const a = porId(S.alumnos, d.alumnoId); if (a) aviso(`✔ ${primerNombre(a)} entregó`); }
+  clearTimeout(refrescoQR);
+  refrescoQR = setTimeout(() => { if (ui.vista === 'pruebaEditor' && ui.pruebaPest === 'celulares' && !document.querySelector('#modal-fondo:not(.oculto)')) render(); }, 250);
+});
+function aplicarResultadoQR(d) {
+  const p = porId(S.pruebas, sesionQR.pruebaId);
+  if (!p) return;
+  if (d.letras) (p.respuestas ||= {})[d.alumnoId] = d.letras; else if (p.respuestas) delete p.respuestas[d.alumnoId];
+  const ab = (p.abiertasTexto ||= {});
+  if (d.textos && Object.keys(d.textos).length) ab[d.alumnoId] = d.textos;
+  (p.qr ||= {})[d.alumnoId] = { salidas: d.salidas, entregado: d.entregado };
+  tocarPrueba(p);
+}
+function asegurarPines(grupoId) {
+  const al = alumnosDe(grupoId);
+  const usados = new Set(al.map((a) => a.pin).filter(Boolean));
+  let n = 0;
+  for (const a of al) if (!a.pin) { let pin; do { pin = String(1000 + Math.floor(Math.random() * 9000)); } while (usados.has(pin)); a.pin = pin; usados.add(pin); n++; }
+  if (n) guardar();
+}
+function vistaCelulares(p) {
+  if (!p.preguntas.length) return '<div class="tarjeta vacio">Primero agrega las preguntas.</div>';
+  if (!p.grupoId) return `<div class="tarjeta"><p>¿Qué grupo presentará la prueba?</p><select onchange="cambiarPrueba('${p.id}','grupoId',this.value);render()" style="max-width:300px">${opcionesGrupos('', 'Selecciona el grupo…')}</select></div>`;
+  const activa = sesionQR && sesionQR.pruebaId === p.id;
+  const op = ui.qrOp || (ui.qrOp = { pin: true, barajar: true, nota: false, tiempo: !!p.tiempo });
+  if (!activa) return `
+    <div class="rejilla r2" style="align-items:start">
+      <div class="tarjeta"><h3 style="margin-top:0">📱 Aplicar en los celulares de ${esc(nombreGrupoId(p.grupoId))}</h3>
+        <p class="ayuda">Tu computador comparte la prueba por el WiFi del salón. Los estudiantes escanean un código QR con la cámara y responden en el navegador del celular: <b>no instalan nada y no se necesita internet</b>. La clave nunca sale de tu computador.</p>
+        ${[['pin', 'Pedir PIN a cada estudiante (evita que alguien responda por otro)'], ['barajar', 'Orden distinto de preguntas y opciones para cada estudiante'], ['nota', 'Mostrar al estudiante cuántas acertó al entregar']].map(([k, t]) => `<label style="font-weight:normal;color:inherit;display:block;margin:6px 0"><input type="checkbox" ${op[k] ? 'checked' : ''} onchange="ui.qrOp.${k}=this.checked"> ${t}</label>`).join('')}
+        <label style="font-weight:normal;color:inherit;display:block;margin:6px 0"><input type="checkbox" ${op.tiempo ? 'checked' : ''} onchange="ui.qrOp.tiempo=this.checked"> Límite de tiempo: <input type="number" min="1" max="240" value="${esc(p.tiempo || 45)}" style="width:70px;display:inline-block" onchange="cambiarPrueba('${p.id}','tiempo',this.value)"> minutos</label>
+        <div class="fila" style="margin-top:12px"><button class="btn primario" onclick="abrirPruebaQR('${p.id}')">▶ Abrir la prueba en los celulares</button>
+          <button class="btn" onclick="imprimirPines('${p.grupoId}')">🖨️ PIN de cada estudiante</button></div></div>
+      <div class="tarjeta"><h3 style="margin-top:0">📶 ¿Qué red usar?</h3>
+        <ol class="ayuda" style="line-height:1.6;padding-left:18px">
+          <li><b>Punto de acceso del celular del docente:</b> activa "Compartir internet / Hotspot", conecta el portátil y los celulares de los estudiantes a esa red. No gasta datos (todo queda dentro del salón). Ideal para 10–15 estudiantes.</li>
+          <li><b>WiFi del colegio:</b> funciona si la red permite que los equipos se vean entre sí. Pruébalo con tu propio celular antes de clase.</li>
+          <li><b>Un router pequeño</b> solo para el salón: aguanta 30 o más celulares sin internet.</li></ol>
+        <p class="ayuda">La primera vez Windows preguntará si permite la conexión: elige <b>Redes privadas</b> y pulsa <b>Permitir</b>.</p></div></div>`;
+  const al = alumnosDe(p.grupoId);
+  const est = (a) => sesionQR.alumnos[a.id] || { respondidas: 0, total: p.preguntas.length };
+  const entregaron = al.filter((a) => est(a).entregado).length, dentro = al.filter((a) => est(a).ingreso && !est(a).entregado).length;
+  const restan = sesionQR.fin ? Math.max(0, Math.round((sesionQR.fin - Date.now()) / 60000)) : null;
+  return `
+  <div class="rejilla" style="grid-template-columns: 340px 1fr; align-items:start">
+    <div class="tarjeta" style="text-align:center">
+      <div class="qr-caja" onclick="qrGrande()" title="Clic para ver en grande">${sesionQR.qr}</div>
+      <div style="font-size:30px;font-weight:800;letter-spacing:6px;margin:6px 0">${esc(sesionQR.codigo)}</div>
+      <div class="ayuda" style="word-break:break-all">${esc(sesionQR.urls[0] || 'No se encontró una red. Conecta el computador a un WiFi o punto de acceso.')}</div>
+      ${sesionQR.urls.length > 1 ? `<details class="ayuda" style="margin-top:4px"><summary>Otras direcciones</summary>${sesionQR.urls.slice(1).map(esc).join('<br>')}</details>` : ''}
+      <p><span class="chip ${sesionQR.abierta ? 'terminada' : 'Bajo'}">${sesionQR.abierta ? '● Abierta' : '■ Cerrada'}</span>${restan != null ? ` <span class="chip">⏱ quedan ${restan} min</span>` : ''}</p>
+      <div class="fila" style="justify-content:center">
+        <button class="btn" onclick="qrGrande()">📽️ QR en grande</button>
+        <button class="btn" onclick="api.qrAbrirEnEquipo(sesionQR.urls[0])" title="Abre la página del estudiante en este computador para probar">🌐 Probar aquí</button>
+        ${sesionQR.abierta ? `<button class="btn peligro" onclick="cerrarPruebaQR()">⏹ Cerrar prueba</button>` : `<button class="btn" onclick="reabrirPruebaQR(5)">↺ Reabrir 5 min</button>`}
+        <button class="btn" onclick="terminarQR()">🔌 Terminar</button></div>
+      <p class="ayuda">Para probar la red: abre la dirección en tu propio celular conectado al mismo WiFi.</p></div>
+    <div class="tarjeta" style="padding:0">
+      <div class="fila" style="padding:12px 16px;justify-content:space-between"><b>${entregaron} entregaron · ${dentro} respondiendo · ${al.length - entregaron - dentro} sin entrar</b>
+        <button class="btn pequeno" onclick="ui.pruebaPest='resultados';render()">📈 Ver resultados</button></div>
+      <table class="tabla"><thead><tr><th>Estudiante</th><th class="num">PIN</th><th>Estado</th><th>Avance</th><th class="num" title="Veces que salió de la página">Salidas</th><th class="num">Nota</th></tr></thead><tbody>
+      ${al.map((a) => { const e = est(a); const r = resultadoAlumno(p, a.id); const pct = Math.round(((e.respondidas || 0) / (e.total || 1)) * 100); return `<tr>
+        <td>${esc(nombreAlumno(a))}</td><td class="num"><code>${esc(op.pin ? a.pin || '' : '—')}</code></td>
+        <td>${e.entregado ? '<span class="chip terminada">✔ Entregó</span>' : e.ingreso ? (e.fuera ? '<span class="chip Bajo">⚠ Fuera de la página</span>' : '<span class="chip sesion">✏️ Respondiendo</span>') : '<span class="chip">Sin entrar</span>'}</td>
+        <td><div class="gam-progreso" style="width:120px;display:inline-block;vertical-align:middle"><div style="width:${pct}%"></div></div> <span class="ayuda">${e.respondidas || 0}/${e.total || p.preguntas.length}</span></td>
+        <td class="num ${e.salidas ? 'bajo' : ''}">${e.salidas || ''}</td><td class="num ${claseNota(r?.nota)}"><b>${e.entregado ? fmtNota(r?.nota) : '—'}</b></td></tr>`; }).join('')}
+      </tbody></table></div></div>`;
+}
+async function abrirPruebaQR(id) {
+  const p = porId(S.pruebas, id);
+  if (sesionQR && sesionQR.pruebaId !== id && !(await confirmar('Hay otra prueba abierta en los celulares. ¿Terminarla y abrir esta?', { boton: 'Abrir esta', peligro: false }))) return;
+  asegurarPines(p.grupoId);
+  const op = ui.qrOp;
+  const cerradas = preguntasCerradas(p);
+  // si ya había respuestas de esta prueba (por ejemplo, se reinició la app), se retoman
+  const previas = {};
+  for (const [aid, letras] of Object.entries(p.respuestas || {})) {
+    if (!p.qr?.[aid]) continue;
+    const resp = {}; cerradas.forEach((q, k) => { if (letras[k] && letras[k] !== '-') resp[q.id] = letras[k]; });
+    Object.assign(resp, (p.abiertasTexto || {})[aid] || {});
+    previas[aid] = { respuestas: resp, salidas: p.qr[aid].salidas || 0, entregado: p.qr[aid].entregado || 0 };
+  }
+  const r = await api.qrIniciar({
+    prueba: { titulo: p.titulo, instrucciones: p.instrucciones, preguntas: p.preguntas.map((q) => ({ id: q.id, tipo: q.tipo, contexto: q.contexto, enunciado: q.enunciado, opciones: q.opciones, correcta: q.correcta })) },
+    alumnos: alumnosDe(p.grupoId).map((a) => ({ id: a.id, nombre: tipoTitulo(`${a.nombres} ${a.apellidos}`), pin: a.pin })),
+    grupo: nombreGrupoId(p.grupoId), requierePin: op.pin, barajar: op.barajar, mostrarNota: op.nota, minutos: op.tiempo ? +p.tiempo || 0 : 0, previas,
+  });
+  if (!r.ok) return aviso('No se pudo abrir: ' + r.error, 'error');
+  const est = await api.qrEstado();
+  sesionQR = { pruebaId: id, codigo: r.codigo, urls: r.urls, qr: r.qr, fin: r.fin, abierta: true, alumnos: Object.fromEntries((est.alumnos || []).map((x) => [x.alumnoId, x])) };
+  render();
+  if (!r.urls.length) aviso('El computador no está conectado a ninguna red WiFi.', 'error');
+}
+function qrGrande() {
+  const d = document.createElement('div');
+  d.className = 'qr-pantalla';
+  d.innerHTML = `<div class="qr-caja grande">${sesionQR.qr}</div><div><div class="qr-paso">1. Conéctate al WiFi del salón</div><div class="qr-paso">2. Escanea el código con la cámara</div>
+    <div class="qr-paso">o abre <b>${esc((sesionQR.urls[0] || '').replace(/\?c=.*/, ''))}</b> y escribe el código</div><div class="qr-codigo">${esc(sesionQR.codigo)}</div><div class="ayuda">Clic para cerrar</div></div>`;
+  d.onclick = () => d.remove();
+  document.body.appendChild(d);
+  d.requestFullscreen?.().catch(() => {});
+}
+async function cerrarPruebaQR() {
+  if (!(await confirmar('Al cerrar, los celulares envían lo que tengan respondido y ya no se puede responder. ¿Cerrar la prueba?', { boton: 'Cerrar prueba' }))) return;
+  await api.qrCerrar(); sesionQR.abierta = false; render();
+}
+async function reabrirPruebaQR(min) { const r = await api.qrReabrir(min); sesionQR.abierta = true; if (r?.fin) sesionQR.fin = r.fin; render(); }
+async function terminarQR() {
+  if (sesionQR?.abierta && !(await confirmar('La prueba sigue abierta. Si terminas, los estudiantes que no han entregado ya no podrán enviar sus respuestas. ¿Terminar?', { boton: 'Terminar' }))) return;
+  await api.qrDetener(); sesionQR = null; render();
+}
+function imprimirPines(grupoId) {
+  asegurarPines(grupoId);
+  const al = alumnosDe(grupoId);
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:letter;margin:12mm} body{font-family:Arial,sans-serif;margin:0}
+    .g{display:grid;grid-template-columns:repeat(3,1fr);gap:0} .c{border:1px dashed #999;padding:12px 10px;text-align:center;height:34mm;box-sizing:border-box}
+    .n{font-size:11pt;font-weight:bold} .p{font-size:26pt;font-weight:bold;letter-spacing:6px;margin-top:4px;color:#1f4e79} .s{font-size:8pt;color:#666}</style></head><body>
+    ${membreteHTML()}<h3 style="text-align:center;margin:4px 0 10px">PIN para las pruebas en el celular · ${esc(nombreGrupoId(grupoId))}</h3>
+    <div class="g">${al.map((a) => `<div class="c"><div class="n">${esc(tipoTitulo(`${a.nombres} ${a.apellidos}`))}</div><div class="p">${esc(a.pin)}</div><div class="s">✂ Guarda tu PIN: lo usarás en todas las pruebas</div></div>`).join('')}</div></body></html>`;
+  api.guardarPDF({ nombre: `PIN ${nombreGrupoId(grupoId)}`, html }).then((r) => { if (r.ok) aviso('PDF de PIN creado', 'ok'); });
+}
+
+function verRespuestaAbierta(pid, aid, qid) {
+  const p = porId(S.pruebas, pid); const q = p.preguntas.find((x) => x.id === qid); const a = porId(S.alumnos, aid);
+  abrirModal(`<h2>${esc(nombreAlumno(a))} · Pregunta ${p.preguntas.indexOf(q) + 1}</h2><p class="ayuda">${esc(q.enunciado)}</p>
+    <div class="tarjeta" style="white-space:pre-wrap">${esc(p.abiertasTexto[aid][qid])}</div>${q.respuesta ? `<p class="ayuda"><b>Respuesta esperada:</b> ${esc(q.respuesta)}</p>` : ''}
+    <div class="fila">Puntos (máx. ${q.puntos || 1}): <input type="number" id="ra-pts" min="0" max="${q.puntos || 1}" step="0.5" style="width:80px" value="${esc((p.abiertas || {})[aid]?.[qid] ?? '')}"></div>
+    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="ponerPuntosAbierta('${pid}','${aid}','${qid}',document.getElementById('ra-pts').value);cerrarModal();render()">Guardar puntos</button></div>`);
 }

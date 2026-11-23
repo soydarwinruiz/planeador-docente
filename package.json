@@ -1,7 +1,7 @@
 {
   "name": "planeador-docente",
   "productName": "Planeador Docente",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Sistema de planeación docente para educación básica y media (Colombia, grados 1.° a 11.°)",
   "main": "main.js",
   "author": "Planeador Docente",
@@ -22,7 +22,9 @@
       "src/**/*",
       "package.json",
       "build/icon.png",
-      "actualizaciones.js"
+      "actualizaciones.js",
+      "servidor-aula.js",
+      "pagina-movil.js"
     ],
     "win": {
       "icon": "build/icon.ico"
@@ -54,7 +56,8 @@
     "@anthropic-ai/sdk": "^1.12.0",
     "docx": "^9.16.0",
     "electron-updater": "^6.8.11",
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "electron": "^45.4.1",

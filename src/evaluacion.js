@@ -154,12 +154,14 @@ function claseNota(n) { return n != null && redondear(n) < +S.config.notaAprobac
 RENDERS.calificaciones = () => {
   const c = ui.cal || (ui.cal = { grupoId: '', areaId: '', periodoId: '', pestana: 'programacion' });
   contextoPorDefecto(c);
-  const pestanas = `<div class="pestanas">${[['programacion', '📅 Programación evaluativa'], ['planilla', '📊 Planilla de notas'], ['anual', '📈 Consolidado anual'], ['apoyo', '🆘 Planes de apoyo'], ['observaciones', '📝 Observaciones del boletín'], ['rubricas', '📋 Instrumentos de evaluación']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
+  const pestanas = `<div class="pestanas">${[['programacion', '📅 Programación evaluativa'], ['planilla', '📊 Planilla de notas'], ['anual', '📈 Consolidado anual'], ['apoyo', '🆘 Planes de apoyo'], ['riesgo', '🚦 Semáforo de riesgo'], ['observaciones', '📝 Observaciones del boletín'], ['rubricas', '📋 Instrumentos de evaluación']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
   const cab = `<div class="cabecera"><div><h1>Evaluación y notas</h1><p class="sub">Escala ${S.config.escalaMin} a ${S.config.escalaMax} · Aprobación desde ${S.config.notaAprobacion} · Decreto 1290 de 2009</p></div>
-    ${c.pestana === 'planilla' || c.pestana === 'anual' ? `<div class="acciones"><button class="btn" onclick="exportarCalificaciones()">⬇️ Exportar a Excel</button></div>` : ''}</div>`;
+    <div class="acciones">${c.pestana === 'planilla' || c.pestana === 'anual' ? `<button class="btn" onclick="exportarCalificaciones()">⬇️ Exportar a Excel</button>` : ''}
+      <button class="btn" onclick="dialogoInformeCierre()" title="Informe del periodo para coordinación">📑 Informe de cierre</button></div></div>`;
   if (c.pestana === 'rubricas') return cab + pestanas + vistaRubricas();
   if (!S.grupos.length || !S.config.periodos.length) return cab + pestanas + '<div class="tarjeta vacio">Configura primero tus grupos y los periodos académicos.</div>';
   if (c.pestana === 'anual') return cab + pestanas + selectorGrupoArea(c, 'ui.cal') + vistaAnual(c);
+  if (c.pestana === 'riesgo') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaRiesgo(c);
   if (c.pestana === 'observaciones') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaObservaciones(c);
   if (c.pestana === 'apoyo') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaApoyo(c);
   if (c.pestana === 'programacion') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaProgramacion(c);
@@ -175,7 +177,9 @@ function vistaPlanilla(c) {
   return `
   <div class="alerta ${sumaPesos === 100 ? 'info' : ''}" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
     <span>${pl.criterios.map((cr) => `<b>${esc(cr.nombre)}</b> ${esc(cr.peso)}%`).join(' · ')}${sumaPesos !== 100 ? ` — suman <b>${sumaPesos}%</b>, deberían sumar 100%` : ''}</span>
-    <span class="fila" style="flex-wrap:nowrap"><button class="btn pequeno" onclick="importarNotas()" title="Desde Excel, Google Forms o Classroom">📥 Importar notas</button>
+    <span class="fila" style="flex-wrap:nowrap"><button class="btn pequeno" onclick="dialogoRetro()" title="Valorar un trabajo escrito (texto o foto) con tu rúbrica y la IA">✍️ Retroalimentación IA</button>
+    <button class="btn pequeno" onclick="exportarRetroalimentaciones()" title="Word con las retroalimentaciones guardadas">⬇️ Retroalimentaciones</button>
+    <button class="btn pequeno" onclick="importarNotas()" title="Desde Excel, Google Forms o Classroom">📥 Importar notas</button>
     <button class="btn pequeno" onclick="ui.cal.pestana='programacion';render()">✏️ Editar programación</button></span></div>
   ${alumnos.length ? `<div class="envoltura-tabla"><table class="tabla planilla"><thead>
     <tr><th class="alumno" rowspan="2">Estudiante</th>${pl.criterios.map((cr) => `<th class="criterio" colspan="${cr.actividades.length + 1}" style="text-align:center">${esc(cr.nombre)} (${esc(cr.peso)}%)</th>`).join('')}<th rowspan="2" class="num">Nota<br>periodo</th><th rowspan="2">Desempeño</th></tr>

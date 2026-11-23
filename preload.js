@@ -27,4 +27,13 @@ contextBridge.exposeInMainWorld('api', {
   guardarCSV: (nombre, contenido) => ipcRenderer.invoke('csv:guardar', { nombre, contenido }),
   sugerirIA: (payload) => ipcRenderer.invoke('ia:sugerir', payload),
   abrirTabla: () => ipcRenderer.invoke('tabla:abrir'),
+  transcribir: (d) => ipcRenderer.invoke('ia:transcribir', d),
+  guardarPDF: (datos) => ipcRenderer.invoke('pdf:html', datos),
+  qrIniciar: (d) => ipcRenderer.invoke('qr:iniciar', d),
+  qrCerrar: () => ipcRenderer.invoke('qr:cerrar'),
+  qrReabrir: (min) => ipcRenderer.invoke('qr:reabrir', min),
+  qrDetener: () => ipcRenderer.invoke('qr:detener'),
+  qrEstado: () => ipcRenderer.invoke('qr:estado'),
+  qrAbrirEnEquipo: (url) => ipcRenderer.invoke('qr:abrirEnEquipo', url),
+  alEventoQR: (fn) => ipcRenderer.on('qr:evento', (_e, d) => fn(d)),
 });

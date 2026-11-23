@@ -2,9 +2,10 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { generarDocxTabla, generarDocxComunicados, generarDocxPrueba, generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion, generarDocxApoyo, generarDocxPiar } = require('./exportar-word');
-const { sugerirConIA } = require('./ia');
+const { generarDocxInforme, generarDocxTabla, generarDocxComunicados, generarDocxPrueba, generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion, generarDocxApoyo, generarDocxPiar } = require('./exportar-word');
+const { sugerirConIA, transcribirAudio } = require('./ia');
 const { iniciarActualizaciones } = require('./actualizaciones');
+const { iniciarAplicacionMovil, detenerAplicacionMovil } = require('./servidor-aula');
 
 const DATA_DIR = () => app.getPath('userData');
 const DATA_FILE = () => path.join(DATA_DIR(), 'datos.json');
@@ -82,6 +83,7 @@ app.whenReady().then(() => {
   respaldoAutomatico();
   crearVentana();
   iniciarActualizaciones(ventana);
+  iniciarAplicacionMovil(ventana);
 });
 
 app.on('before-quit', () => {
@@ -90,7 +92,7 @@ app.on('before-quit', () => {
   }
 });
 
-app.on('window-all-closed', () => app.quit());
+app.on('window-all-closed', () => { detenerAplicacionMovil(); app.quit(); });
 
 // ---------- Datos ----------
 ipcMain.handle('datos:cargar', () => {
@@ -180,7 +182,7 @@ ipcMain.handle('word:planeacion', async (_e, payload) => {
   }
 });
 
-const GENERADORES = { tabla: generarDocxTabla, comunicados: generarDocxComunicados, prueba: generarDocxPrueba, malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula, programacion: generarDocxProgramacion, apoyo: generarDocxApoyo, piar: generarDocxPiar };
+const GENERADORES = { informe: generarDocxInforme, tabla: generarDocxTabla, comunicados: generarDocxComunicados, prueba: generarDocxPrueba, malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula, programacion: generarDocxProgramacion, apoyo: generarDocxApoyo, piar: generarDocxPiar };
 ipcMain.handle('word:curricular', async (_e, { tipo, nombreArchivo, payload }) => {
   const nombre = (nombreArchivo || tipo).replace(/[\\/:*?"<>|]+/g, '-');
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
@@ -296,6 +298,30 @@ ipcMain.handle('paquete:abrir', async () => {
   } catch (e) { return { ok: false, error: e.message }; }
 });
 
+// ---------- PDF desde HTML (fichas, hojas de respuestas para cámara) ----------
+async function htmlAPdf(html, { horizontal = false } = {}) {
+  const tmp = path.join(app.getPath('temp'), `planeador-${Date.now()}.html`);
+  fs.writeFileSync(tmp, html, 'utf8');
+  const w = new BrowserWindow({ show: false, webPreferences: { javascript: false, offscreen: false } });
+  try {
+    await w.loadFile(tmp);
+    return await w.webContents.printToPDF({ pageSize: 'Letter', landscape: horizontal, printBackground: true, margins: { marginType: 'none' } });
+  } finally { w.destroy(); fs.rmSync(tmp, { force: true }); }
+}
+ipcMain.handle('pdf:html', async (_e, { nombre, html, horizontal, ruta }) => {
+  let filePath = ruta;
+  if (!filePath) {
+    const r = await dialog.showSaveDialog(ventana, { title: 'Guardar PDF', defaultPath: `${String(nombre || 'documento').replace(/[\\/:*?"<>|]+/g, '-')}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+    if (r.canceled || !r.filePath) return { ok: false };
+    filePath = r.filePath;
+  }
+  try {
+    fs.writeFileSync(filePath, await htmlAPdf(html, { horizontal }));
+    if (!ruta) shell.openPath(filePath);
+    return { ok: true, ruta: filePath };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+
 // ---------- Leer tablas (Excel o CSV) para importar notas ----------
 function valorCelda(v) {
   if (v == null) return '';
@@ -354,3 +380,4 @@ ipcMain.handle('tabla:abrir', async () => {
 
 // ---------- IA ----------
 ipcMain.handle('ia:sugerir', async (_e, payload) => sugerirConIA(payload));
+ipcMain.handle('ia:transcribir', async (_e, payload) => transcribirAudio(payload));

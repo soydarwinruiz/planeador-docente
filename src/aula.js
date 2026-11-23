@@ -42,12 +42,12 @@ document.addEventListener('keydown', (e) => {
 function pintarAula() {
   const el = document.getElementById('aula');
   if (!el || el.classList.contains('oculto')) return;
-  const tabs = [['azar', '🎲 Estudiante al azar'], ['equipos', '👥 Grupos de trabajo'], ['temporizador', '⏱️ Temporizador'], ['proyector', '📽️ Proyector']];
+  const tabs = [['azar', '🎲 Estudiante al azar'], ['equipos', '👥 Grupos de trabajo'], ['temporizador', '⏱️ Temporizador'], ['proyector', '📽️ Proyector'], ['tablero', '🏆 Tablero']];
   el.innerHTML = `<div class="aula-barra">
       <div class="pestanas" style="margin:0;border:0">${tabs.map(([k, t]) => `<button class="${aula.pestana === k ? 'activo' : ''}" onclick="aula.pestana='${k}';pintarAula()">${t}</button>`).join('')}</div>
       <div class="fila">${aula.t.corriendo || aula.t.resta !== aula.t.total ? `<span class="aula-mini-reloj ${claseReloj()}" onclick="aula.pestana='temporizador';pintarAula()">⏱️ ${formatoReloj(aula.t.resta)}</span>` : ''}
         <button class="btn" onclick="pantallaCompleta()" title="Pantalla completa (para el video beam)">⛶</button><button class="btn" onclick="cerrarAula()" title="Cerrar (Esc)">✕ Cerrar</button></div></div>
-    <div class="aula-cuerpo">${({ azar: aulaAzar, equipos: aulaEquipos, temporizador: aulaTemporizador, proyector: aulaProyector })[aula.pestana]()}</div>`;
+    <div class="aula-cuerpo">${({ azar: aulaAzar, equipos: aulaEquipos, temporizador: aulaTemporizador, proyector: aulaProyector, tablero: aulaTablero })[aula.pestana]()}</div>`;
 }
 function selectorGrupoAula(extra = '') {
   return `<div class="fila aula-controles"><select onchange="aula.grupoId=this.value;aula.usados=[];aula.historial=[];aula.equipos=null;pintarAula()" style="width:auto">${opcionesGrupos(aula.grupoId, 'Elige el grupo…')}</select>${extra}</div>`;
@@ -70,6 +70,7 @@ function aulaAzar() {
   return `${selectorGrupoAula(`<label style="font-weight:normal;color:inherit;margin:0"><input type="checkbox" ${aula.excluirAusentes ? 'checked' : ''} onchange="aula.excluirAusentes=this.checked;pintarAula()"> Excluir ausentes de hoy</label>`)}
     ${!pres.length ? '<p class="aula-vacio">Elige un grupo con estudiantes.</p>' : `
     <div class="aula-nombre" id="azar-nombre">${actual ? esc(tipoTitulo(`${actual.nombres} ${actual.apellidos}`)) : '¿Quién será?'}</div>
+    ${actual ? `<div class="fila" style="justify-content:center;margin-bottom:6px">${motivosPuntos().filter((m) => m.p > 0).slice(0, 3).map((m) => `<button class="btn" onclick="darPuntos(aula.grupoId,['a:${actual.id}'],${m.p},'${esc(m.t)}');aviso('${m.ico} +${m.p} para ${esc(primerNombre(actual))}','ok')">${m.ico} +${m.p} ${esc(m.t)}</button>`).join('')}</div>` : ''}
     <div class="fila" style="justify-content:center"><button class="btn primario aula-boton" onclick="elegirAlAzar()">🎲 Elegir</button>
       <button class="btn" onclick="aula.usados=[];aula.historial=[];pintarAula()">↺ Reiniciar</button></div>
     <p class="aula-ayuda">Sin repetir hasta que pasen todos · quedan ${quedan.length} de ${pres.length} · Enter también elige</p>
@@ -105,7 +106,7 @@ function aulaEquipos() {
     <button class="btn primario" onclick="formarEquipos()">🔀 Formar equipos</button>`;
   return `${selectorGrupoAula(controles)}
     ${!pres.length ? '<p class="aula-vacio">Elige un grupo con estudiantes.</p>' : aula.equipos ? `<div class="aula-equipos">${aula.equipos.map((eq, i) => `<div class="aula-equipo"><h3>Equipo ${i + 1}</h3><ol>${eq.map((m) => `<li>${esc(tipoTitulo(nombreAlumno(porId(S.alumnos, m.id) || { apellidos: '', nombres: '' })))}${m.rol ? ` <span class="aula-rol">${esc(m.rol)}</span>` : ''}</li>`).join('')}</ol></div>`).join('')}</div>
-      <div class="fila" style="justify-content:center;margin-top:12px"><button class="btn" onclick="copiarTexto(aula.equipos.map((eq,i)=>'Equipo '+(i+1)+': '+eq.map(m=>tipoTitulo(nombreAlumno(porId(S.alumnos,m.id)))+(m.rol?' ('+m.rol+')':'')).join(', ')).join('\\n'))">📋 Copiar</button></div>`
+      <div class="fila" style="justify-content:center;margin-top:12px"><button class="btn" onclick="equiposDesdeAula()">🏆 Usar en gamificación</button><button class="btn" onclick="copiarTexto(aula.equipos.map((eq,i)=>'Equipo '+(i+1)+': '+eq.map(m=>tipoTitulo(nombreAlumno(porId(S.alumnos,m.id)))+(m.rol?' ('+m.rol+')':'')).join(', ')).join('\\n'))">📋 Copiar</button></div>`
       : `<p class="aula-vacio">${pres.length} estudiante(s). Elige cómo formar los equipos y pulsa "Formar equipos".</p>`}`;
 }
 function formarEquipos() {
@@ -220,6 +221,9 @@ function aulaProyector() {
       <span class="aula-ayuda" style="margin:0 12px">${pr.i + 1} / ${d.length}</span>
       <button class="btn aula-boton" onclick="moverDiapositiva(1)" ${pr.i < d.length - 1 ? '' : 'disabled'}>→</button>
       ${x.correcta || x.respuesta ? `<button class="btn" onclick="aula.proy.mostrar=!aula.proy.mostrar;pintarAula()">${pr.mostrar ? '🙈 Ocultar respuesta' : '👁️ Mostrar respuesta'}</button>` : ''}</div>`;
+}
+function aulaTablero() {
+  return `${selectorGrupoAula(`<button class="btn" onclick="pintarAula()">↻ Actualizar</button>`)}${aula.grupoId ? htmlTablero(aula.grupoId, true) : '<p class="aula-vacio">Elige un grupo.</p>'}`;
 }
 function moverDiapositiva(d) {
   const n = diapositivasProyector().length;

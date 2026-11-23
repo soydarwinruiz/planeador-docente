@@ -273,3 +273,66 @@ h2 .insignia { margin-left: 4px; vertical-align: middle; }
 .aula-opciones { font-size: clamp(20px, 2.4vw, 34px); line-height: 1.6; padding-left: 1.6em; }
 .aula-opciones li::marker { font-weight: 800; color: var(--azul); }
 .aula-opciones li.correcta { color: #2e7d32; font-weight: 700; }
+
+/* Semáforo */
+.semaforo { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: middle; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+.semaforo.rojo { background: #e53935; } .semaforo.amarillo { background: #fbc02d; } .semaforo.verde { background: #43a047; } .semaforo.gris { background: #bdbdbd; }
+
+/* Cobertura curricular */
+.cob-sin { background: var(--superficie-2); } .cob-malla { background: #bbdefb; } .cob-planeado { background: #ffe082; } .cob-desarrollado { background: #81c784; }
+body.oscuro .cob-malla { background: #1e4f7a; } body.oscuro .cob-planeado { background: #7a6420; } body.oscuro .cob-desarrollado { background: #2e6b33; }
+.tabla.cobertura td[class^="cob-"] { border: 2px solid var(--superficie); }
+.tabla.cobertura tr.cob-grupo td { background: var(--azul-claro); font-weight: 600; font-size: 12px; }
+.barra-cobertura { display: flex; height: 26px; border-radius: 8px; overflow: hidden; border: 1px solid var(--borde); }
+.barra-cobertura div { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.leyenda-cob { font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.leyenda-cob span { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--borde); }
+
+/* Gamificación */
+.gam-alumnos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.gam-alumno { background: var(--superficie); border: 2px solid var(--borde); border-radius: 12px; padding: 10px; text-align: center; cursor: pointer; user-select: none; }
+.gam-alumno.sel { border-color: var(--azul-2); background: var(--azul-claro); }
+.gam-nivel { font-size: 30px; }
+.gam-nombre { font-weight: 600; font-size: 14px; min-height: 2.4em; }
+.gam-puntos { font-size: 22px; font-weight: 800; color: var(--azul); }
+.gam-progreso { height: 6px; background: var(--superficie-2); border-radius: 3px; margin: 4px 0; overflow: hidden; }
+.gam-progreso div { height: 100%; background: #43a047; }
+.gam-insignias { min-height: 22px; font-size: 18px; }
+.gam-elegir-insignia { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.gam-tablero { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+.gam-tablero h2 { margin-top: 0; }
+.gam-barra-eq { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.gam-eq-nombre { width: 130px; font-weight: 600; }
+.gam-barra { flex: 1; height: 26px; background: var(--superficie-2); border-radius: 6px; overflow: hidden; }
+.gam-barra div { height: 100%; border-radius: 6px; transition: width .5s; }
+.gam-ranking { list-style: none; padding: 0; margin: 0; }
+.gam-ranking li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--borde); }
+.gam-ranking li b { margin-left: auto; }
+.gam-pos { width: 34px; text-align: center; font-weight: 700; }
+.gam-ins-mini { font-size: 14px; }
+.gam-tablero.grande { font-size: 22px; }
+.gam-tablero.grande h2 { font-size: 34px; }
+.gam-tablero.grande .gam-barra { height: 40px; }
+.gam-tablero.grande .gam-eq-nombre { width: 200px; }
+
+/* Fichas */
+.ficha-previa { width: 100%; height: calc(100vh - 230px); min-height: 520px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; }
+
+/* Pruebas por QR */
+.qr-caja { background: #fff; padding: 10px; border-radius: 12px; cursor: zoom-in; } .qr-caja svg { width: 100%; height: auto; display: block; }
+.qr-pantalla { position: fixed; inset: 0; z-index: 1000; background: #fff; color: #111; display: flex; align-items: center; justify-content: center; gap: 5vw; padding: 4vh; cursor: zoom-out; }
+.qr-caja.grande { width: min(70vh, 48vw); padding: 0; } .qr-paso { font-size: clamp(18px, 2.4vw, 32px); margin: 10px 0; }
+.qr-codigo { font-size: clamp(48px, 9vw, 120px); font-weight: 900; letter-spacing: .15em; color: #1f4e79; margin-top: 20px; }
+
+/* Cámara OMR */
+#modal.muy-ancho { max-width: 1150px; width: 96vw; }
+.cam-caja { position: relative; background: #000; border-radius: 10px; overflow: hidden; }
+.cam-caja video { width: 100%; display: block; } .cam-caja canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+/* Dictado por voz */
+#boton-voz { position: fixed; z-index: 1200; display: none; align-items: center; gap: 4px; height: 28px; min-width: 28px; padding: 0 6px; border: 1px solid var(--borde, #ccd); border-radius: 14px; background: var(--superficie, #fff); cursor: pointer; font-size: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.15); opacity: .85; }
+#boton-voz:hover { opacity: 1; }
+#boton-voz.grabando { background: #e53935; color: #fff; border-color: #e53935; opacity: 1; animation: pulso-voz 1.2s infinite; }
+#boton-voz.procesando { opacity: 1; }
+#boton-voz span { font-size: 12px; font-weight: 700; }
+@keyframes pulso-voz { 50% { box-shadow: 0 0 0 6px rgba(229,57,53,.25); } }

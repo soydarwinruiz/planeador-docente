@@ -93,12 +93,12 @@ RENDERS.curricular = () => {
   if (!c.areaId && S.areas.length) c.areaId = S.areas[0].id;
   if (c.areaId && !gradosDeArea(c.areaId).includes(+c.grado)) c.grado = String(gradosDeArea(c.areaId)[0]);
   if (!c.periodoId) c.periodoId = (periodoDeFecha(hoyISO()) || S.config.periodos[0] || {}).id || '';
-  const pestanas = [['area', '📘 Plan de área'], ['malla', '🧩 Malla curricular'], ['periodo', '🗓️ Plan de periodo'], ['aula', '🏫 Plan de aula'], ['referentes', '📚 Referentes MEN']];
+  const pestanas = [['area', '📘 Plan de área'], ['malla', '🧩 Malla curricular'], ['periodo', '🗓️ Plan de periodo'], ['aula', '🏫 Plan de aula'], ['cobertura', '🗺️ Cobertura'], ['referentes', '📚 Referentes MEN']];
   const cab = `<div class="cabecera"><div><h1>Planeación curricular</h1>
     <p class="sub">Del plan de área a la clase: la malla alimenta el plan de periodo, el plan de aula y tus planeaciones de clase.</p></div></div>
     <div class="pestanas">${pestanas.map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cur.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
   if (!S.areas.length) return cab + `<div class="tarjeta vacio"><div class="grande">🧩</div>Primero crea tus áreas en <a href="#" onclick="ir('grupos')">Grupos y alumnos</a>.</div>`;
-  const vista = { area: vistaPlanArea, malla: vistaMalla, periodo: vistaPlanPeriodo, aula: vistaPlanAula, referentes: vistaReferentes }[c.pestana];
+  const vista = { area: vistaPlanArea, malla: vistaMalla, periodo: vistaPlanPeriodo, aula: vistaPlanAula, cobertura: vistaCobertura, referentes: vistaReferentes }[c.pestana];
   return cab + vista(c);
 };
 
