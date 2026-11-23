@@ -44,6 +44,7 @@ RENDERS.horario = () => {
     <p class="sub">Con tu horario la app muestra tus clases de hoy, propone las fechas de las sesiones al planear y abre la asistencia del grupo correcto.</p></div>
     <div class="acciones"><label class="btn" style="margin:0;font-weight:normal;color:inherit"><input type="checkbox" ${h.sabado ? 'checked' : ''} onchange="horario().sabado=this.checked;guardar();render()"> Incluir sábado</label>
       <button class="btn" onclick="agregarBloque()">＋ Franja</button></div></div>
+  ${tarjetaSemanaSinPlan()}
   ${!combos.length ? '<div class="alerta">Primero crea tus grupos y asígnales las áreas que dictas en <a href="#" onclick="ir(\'grupos\');return false">Grupos y alumnos</a>.</div>' : ''}
   <div class="envoltura-tabla"><table class="tabla horario"><thead><tr><th style="width:150px">Hora</th>${dias.map(([, n]) => `<th>${n}</th>`).join('')}<th style="width:40px"></th></tr></thead><tbody>
   ${h.bloques.map((b, i) => `<tr class="${b.descanso ? 'descanso' : ''}">
@@ -80,6 +81,33 @@ async function quitarBloque(i) {
 }
 function ordenarBloques() { horario().bloques.sort((a, b) => a.inicio.localeCompare(b.inicio)); guardar(); render(); }
 
+// ---------- Clases de la semana sin planeación ----------
+function planDeClase(grupoId, areaId, fecha) {
+  return S.planeaciones.find((p) => p.grupoId === grupoId && p.areaId === areaId && (p.sesiones || []).some((s) => s.fecha === fecha));
+}
+function clasesSinPlan(dias = 7) {
+  const r = [];
+  const hoy = hoyISO();
+  for (let i = 0; i < dias; i++) {
+    const f = sumarDias(hoy, i);
+    for (const { b, c } of clasesDelDia(f)) if (!planDeClase(c.grupoId, c.areaId, f)) r.push({ fecha: f, b, c });
+  }
+  return r;
+}
+function tarjetaSemanaSinPlan() {
+  if (!Object.keys(horario().celdas).length) return '';
+  const lista = clasesSinPlan(7);
+  // agrupar por grupo y área: una planeación semanal por cada uno
+  const combos = {};
+  lista.forEach((x) => { (combos[`${x.c.grupoId}|${x.c.areaId}`] ||= []).push(x); });
+  return `<div class="tarjeta"><h2>🗓️ Planear la semana</h2>
+    ${lista.length ? `<p class="ayuda">${lista.length} clase(s) de los próximos 7 días aún no tienen planeación.</p>
+      <ul class="lista-simple">${Object.values(combos).map((xs) => `<li><div><b>${esc(nombreGrupoId(xs[0].c.grupoId))}</b> · ${esc(nombreArea(xs[0].c.areaId))}<br>
+        <span class="ayuda">${xs.map((x) => esc(fechaLarga(x.fecha)) + ' ' + esc(x.b.inicio)).join(' · ')}</span></div>
+        <button class="btn pequeno" onclick="planearClaseDe('${xs[0].c.grupoId}','${xs[0].c.areaId}','${xs[0].fecha}')">＋ Planear</button></li>`).join('')}</ul>`
+      : '<p class="ayuda">✔ Todas tus clases de los próximos 7 días tienen planeación.</p>'}</div>`;
+}
+
 // ---------- Tarjeta "Mis clases de hoy" para Inicio ----------
 function tarjetaClasesHoy() {
   const hoy = hoyISO();
@@ -91,10 +119,15 @@ function tarjetaClasesHoy() {
     ${esDiaSinClase(hoy) ? '<p class="ayuda">Hoy no hay clases (festivo o receso).</p>' : clases.length ? `<ul class="lista-simple">${clases.map(({ b, c }) => {
       const plan = S.planeaciones.find((p) => p.grupoId === c.grupoId && p.areaId === c.areaId && (p.sesiones || []).some((s) => s.fecha === hoy));
       const actual = ahora >= b.inicio && ahora < b.fin;
+      const dc = typeof entradaDiario === 'function' ? entradaDiario(c.grupoId, c.areaId, hoy) : null;
+      const pend = typeof pendienteAnterior === 'function' ? pendienteAnterior(c.grupoId, c.areaId, hoy) : null;
       return `<li style="${actual ? 'background:var(--azul-claro);border-radius:6px;padding:8px' : ''}"><div><b>${esc(b.inicio)}–${esc(b.fin)}</b> · ${esc(nombreGrupoId(c.grupoId))} · ${esc(nombreArea(c.areaId))} ${actual ? '<span class="chip sesion">Ahora</span>' : ''}
-        <br><span class="ayuda">${plan ? '📝 ' + esc(plan.titulo || 'Planeación sin título') : 'Sin planeación para hoy'}</span></div>
+        <br><span class="ayuda">${plan ? '📝 ' + esc(plan.titulo || 'Planeación sin título') : 'Sin planeación para hoy'}</span>
+        ${pend ? `<br><span class="ayuda">📓 Pendiente (${esc(fechaCorta(pend.fecha))}): ${esc(pend.pendiente)}</span>` : ''}</div>
         <div class="fila" style="flex-wrap:nowrap">${plan ? `<button class="btn pequeno" onclick="editarPlaneacion('${plan.id}')">Abrir</button>` : `<button class="btn pequeno" onclick="planearClaseDe('${c.grupoId}','${c.areaId}','${hoy}')">＋ Planear</button>`}
-          <button class="btn pequeno" onclick="asistenciaDe('${c.grupoId}','${c.areaId}','${hoy}')">✅ Asistencia</button></div></li>`;
+          <button class="btn pequeno" onclick="asistenciaDe('${c.grupoId}','${c.areaId}','${hoy}')">✅ Asistencia</button>
+          <button class="btn pequeno ${dc ? 'primario' : ''}" title="${dc ? 'Ya registraste esta clase' : 'Registrar cómo fue la clase'}" onclick="abrirDiario('${c.grupoId}','${c.areaId}','${hoy}')">📓 Diario${dc ? ' ✓' : ''}</button>
+          <button class="btn pequeno" title="Estudiante al azar, grupos, temporizador, proyector" onclick="abrirAula('${c.grupoId}','${c.areaId}')">🎲</button></div></li>`;
     }).join('')}</ul>` : '<p class="ayuda">No tienes clases hoy según tu horario.</p>'}
   </div>`;
 }

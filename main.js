@@ -2,7 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion, generarDocxApoyo, generarDocxPiar } = require('./exportar-word');
+const { generarDocxTabla, generarDocxComunicados, generarDocxPrueba, generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion, generarDocxApoyo, generarDocxPiar } = require('./exportar-word');
 const { sugerirConIA } = require('./ia');
 const { iniciarActualizaciones } = require('./actualizaciones');
 
@@ -59,7 +59,7 @@ function crearVentana() {
   ventana.webContents.session.setSpellCheckerLanguages(['es-ES']);
   ventana.loadFile(path.join(__dirname, 'src', 'index.html'));
   ventana.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    if (/^(https?:|mailto:|whatsapp:)/i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
 }
@@ -180,7 +180,7 @@ ipcMain.handle('word:planeacion', async (_e, payload) => {
   }
 });
 
-const GENERADORES = { malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula, programacion: generarDocxProgramacion, apoyo: generarDocxApoyo, piar: generarDocxPiar };
+const GENERADORES = { tabla: generarDocxTabla, comunicados: generarDocxComunicados, prueba: generarDocxPrueba, malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula, programacion: generarDocxProgramacion, apoyo: generarDocxApoyo, piar: generarDocxPiar };
 ipcMain.handle('word:curricular', async (_e, { tipo, nombreArchivo, payload }) => {
   const nombre = (nombreArchivo || tipo).replace(/[\\/:*?"<>|]+/g, '-');
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
@@ -294,6 +294,62 @@ ipcMain.handle('paquete:abrir', async () => {
     if (d?.formato !== 'paquete-planeador') throw new Error('El archivo no es un paquete del Planeador Docente.');
     return { ok: true, datos: d };
   } catch (e) { return { ok: false, error: e.message }; }
+});
+
+// ---------- Leer tablas (Excel o CSV) para importar notas ----------
+function valorCelda(v) {
+  if (v == null) return '';
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === 'object') {
+    if (v.richText) return v.richText.map((t) => t.text).join('');
+    if ('result' in v) return valorCelda(v.result);
+    if (v.text != null) return String(v.text);
+    if (v.hyperlink) return String(v.hyperlink);
+    return '';
+  }
+  return String(v);
+}
+function leerCSV(texto) {
+  texto = texto.replace(/^﻿/, '');
+  const primera = texto.split(/\r?\n/)[0] || '';
+  const sep = [';', ',', '\t'].map((d) => [d, primera.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const filas = []; let fila = [], campo = '', comillas = false;
+  for (let i = 0; i < texto.length; i++) {
+    const ch = texto[i];
+    if (comillas) {
+      if (ch === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else comillas = false; } else campo += ch;
+    } else if (ch === '"') comillas = true;
+    else if (ch === sep) { fila.push(campo); campo = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && texto[i + 1] === '\n') i++; fila.push(campo); filas.push(fila); fila = []; campo = ''; }
+    else campo += ch;
+  }
+  if (campo || fila.length) { fila.push(campo); filas.push(fila); }
+  return filas;
+}
+async function leerTabla(ruta) {
+  if (/\.xlsx$/i.test(ruta)) {
+    const ExcelJS = require('exceljs');
+    const libro = new ExcelJS.Workbook();
+    await libro.xlsx.readFile(ruta);
+    const hoja = libro.worksheets.find((h) => h.rowCount > 0) || libro.worksheets[0];
+    const filas = [];
+    hoja.eachRow({ includeEmpty: true }, (row, n) => { const f = []; row.eachCell({ includeEmpty: true }, (cell, col) => { f[col - 1] = valorCelda(cell.value).trim(); }); filas[n - 1] = Array.from(f, (x) => x || ''); });
+    return Array.from(filas, (f) => f || []);
+  }
+  let buf = fs.readFileSync(ruta);
+  let texto = buf.toString('utf8');
+  if (texto.includes('�')) texto = buf.toString('latin1'); // CSV guardado desde Excel en Windows
+  return leerCSV(texto).map((f) => f.map((x) => x.trim()));
+}
+ipcMain.handle('tabla:abrir', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(ventana, { title: 'Abrir archivo con notas', properties: ['openFile'],
+    filters: [{ name: 'Excel o CSV', extensions: ['xlsx', 'csv', 'txt'] }] });
+  if (canceled || !filePaths.length) return { ok: false };
+  try {
+    const filas = (await leerTabla(filePaths[0])).filter((f) => f.some((x) => x !== ''));
+    if (!filas.length) return { ok: false, error: 'El archivo está vacío.' };
+    return { ok: true, nombre: path.basename(filePaths[0]), filas };
+  } catch (e) { return { ok: false, error: 'No se pudo leer el archivo: ' + e.message + ' (si es .xls antiguo, guárdalo como .xlsx o .csv).' }; }
 });
 
 // ---------- IA ----------

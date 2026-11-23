@@ -56,6 +56,12 @@ function estadoInicial() {
     piar: [],
     instrumentosSemilla: 0,
     instrumentosEliminados: [],
+    observaciones: {},
+    diario: [],
+    pendientes: [],
+    pruebas: [],
+    alertasOcultas: [],
+    comunicadosEnviados: [],
   };
 }
 
@@ -234,18 +240,23 @@ const VISTAS = [
   { id: 'plantillas', ico: '📋', nombre: 'Plantillas de planeación' },
   { id: 'banco', ico: '🗂️', nombre: 'Banco de planeaciones' },
   { id: 'bancoPedagogico', ico: '📚', nombre: 'Banco pedagógico' },
+  { id: 'pruebas', ico: '🧪', nombre: 'Pruebas y talleres' },
+  { id: 'aula', ico: '🎲', nombre: 'Herramientas de aula' },
   { id: 'calendario', ico: '📅', nombre: 'Calendario' },
   { id: 'horario', ico: '🕒', nombre: 'Mi horario' },
   { id: 'cronograma', ico: '🧭', nombre: 'Cronograma' },
   { id: 'grupos', ico: '👥', nombre: 'Grupos y alumnos' },
   { id: 'piar', ico: '🤝', nombre: 'Inclusión (PIAR)' },
+  { id: 'diario', ico: '📓', nombre: 'Diario de campo' },
   { id: 'asistencia', ico: '✅', nombre: 'Asistencia' },
   { id: 'calificaciones', ico: '📊', nombre: 'Evaluación y notas' },
   { id: 'seguimiento', ico: '📈', nombre: 'Seguimiento del estudiante' },
+  { id: 'comunicados', ico: '✉️', nombre: 'Comunicados a padres' },
   { id: 'configuracion', ico: '⚙️', nombre: 'Configuración' },
 ];
 
 function ir(vista, params = {}) {
+  if (vista === 'aula') { abrirAula(); return; } // se abre encima, en pantalla completa
   ui.vista = vista;
   ui.params = params;
   render();
@@ -263,8 +274,9 @@ function vistasMenu(incluirOcultas = false) {
 }
 function vistaVisible(id) { return !(S.config.menu?.ocultos || []).includes(id); }
 function renderNav() {
+  const insignia = typeof numeroAlertas === 'function' ? numeroAlertas() : 0;
   document.getElementById('nav').innerHTML = vistasMenu().map((v) =>
-    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') ? 'activo' : ''}" onclick="ir('${v.id}')"><span class="ico">${v.ico}</span>${v.nombre}</button>`
+    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') || (ui.vista === 'pruebaEditor' && v.id === 'pruebas') ? 'activo' : ''}" onclick="ir('${v.id}')"><span class="ico">${v.ico}</span>${v.nombre}${v.id === 'inicio' && insignia ? `<span class="insignia" title="Alertas y pendientes">${insignia}</span>` : ''}</button>`
   ).join('');
   document.getElementById('marca-sub').textContent = S.config.institucion || 'Educación básica y media';
 }
@@ -301,6 +313,7 @@ RENDERS.inicio = () => {
   </div><div class="acciones">
     <button class="btn primario" onclick="nuevaPlaneacion()">＋ Nueva planeación</button>
     <button class="btn" onclick="ir('asistencia')">✅ Tomar asistencia</button>
+    <button class="btn" onclick="abrirAula()">🎲 Herramientas de aula</button>
   </div></div>
 
   ${!configurado ? `<div class="alerta info"><b>Primeros pasos:</b> 1) Completa los datos en <a href="#" onclick="ir('configuracion')">Configuración</a> (institución, docente, periodos).
@@ -313,6 +326,8 @@ RENDERS.inicio = () => {
     <div class="estadistica"><div class="num">${borradores}</div><div class="eti">En borrador</div></div>
     <div class="estadistica"><div class="num">${S.planeaciones.filter((p) => p.enBanco).length}</div><div class="eti">En el banco</div></div>
   </div>
+
+  ${tarjetaAlertas()}
 
   ${tarjetaClasesHoy()}
 

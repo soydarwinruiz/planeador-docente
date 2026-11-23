@@ -5,9 +5,9 @@ Funciona **sin internet**: todos los datos quedan guardados en tu computador.
 
 ## Cómo abrirla
 
-- **Instalador** (`PlaneadorDocente-Setup-1.7.1.exe`, recomendado): instala la app con acceso directo en el escritorio
+- **Instalador** (`PlaneadorDocente-Setup-1.8.0.exe`, recomendado): instala la app con acceso directo en el escritorio
   y **se actualiza sola** (Configuración → *Actualizaciones*).
-- **Versión portable** (`PlaneadorDocente-portable-1.7.1.exe`): haz doble clic y listo. No necesita instalación.
+- **Versión portable** (`PlaneadorDocente-portable-1.8.0.exe`): haz doble clic y listo. No necesita instalación.
   Puedes llevarla en una memoria USB. Avisa cuando hay versión nueva, pero se descarga a mano.
 - La primera vez, Windows puede mostrar *"Windows protegió su PC"* (el programa no tiene firma digital comercial).
   Haz clic en **Más información → Ejecutar de todas formas**.
@@ -39,20 +39,27 @@ Al abrir la app por primera vez aparece el **asistente de configuración** (inst
 | Planeaciones de clase | Estructura de orientaciones didácticas: identificación, diversidad del aula (desde el perfil del grupo), fundamentación, criterios de evaluación por niveles y acciones metodológicas (exploración, estructuración, práctica, transferencia y valoración, con mediaciones). Crear, buscar, filtrar, duplicar y exportar a Word. Se vinculan a la malla: al elegir un eje se copian sus estándares, DBA, competencias y desempeños |
 | Banco pedagógico | Incluye de fábrica **52 estrategias** (Radar 360°: generales y específicas de sesión), **60 técnicas** (búsqueda, comprensión, representación y comunicación) y los **9 métodos universales**, con código, clasificación y pasos. Estrategias, metodologías y técnicas con clasificación, momentos de la clase, descripción y pasos. Se agregan a mano o se importan desde Excel, y se insertan con el botón **📚 Banco** en la planeación de clase, el plan de periodo, el plan de aula y el plan de área |
 | Plantillas de planeación | Una plantilla por grado o por grupo (y opcionalmente por área) con duración, minutos por sesión, número de estudiantes, locativos, recursos, estilos de aprendizaje, gustos, barreras, ajustes y datos de fundamentación. Al crear una planeación se aplica sola la plantilla más específica |
-| Banco de planeaciones | Reutilizar planeaciones en otro grupo o en el siguiente año (las fechas se ajustan solas). **Compartir con otros docentes** mediante un archivo `.planeador` (planeaciones, mallas, planes de área, plantillas, instrumentos y estrategias; nunca datos de estudiantes) |
+| Planear varios grupos | Al crear una planeación puedes crearla también para los demás grupos del área: cada copia toma las fechas del horario de su grupo y su plantilla de diversidad. Si luego cambias la original, actualizas las copias con un clic. En *Mi horario*, **Planear la semana** muestra las clases que aún no tienen planeación |
+| Banco de planeaciones | Reutilizar planeaciones en otro grupo o en el siguiente año (las fechas se ajustan solas). **Compartir con otros docentes** mediante un archivo `.planeador` (planeaciones, mallas, planes de área, plantillas, instrumentos, estrategias y pruebas; nunca datos de estudiantes) |
 | Mi horario | Horario semanal por franjas. Muestra *Mis clases de hoy* en Inicio, propone las fechas de las sesiones al planear y abre la asistencia del grupo correcto |
 | Inclusión (PIAR) | PIAR completo según el Decreto 1421 de 2017: valoración pedagógica, ajustes razonables por área y periodo, recomendaciones, acta de acuerdo y seguimiento. Exportable a Word |
 | Perfil de aprendizaje | Tests con calificación automática: estilos **VAK**, estilos de **Kolb** e **inteligencias múltiples**. El resumen del grupo se puede pasar a la plantilla de planeación |
 | DUA y flexibilización | 36 consideraciones del **DUA 3.0** y 10 estrategias de flexibilización curricular dentro del banco pedagógico, que se insertan en *ajustes razonables* y *apoyos* |
+| Pruebas y talleres | Pruebas **tipo Saber** (selección múltiple con única respuesta, contextos compartidos) y talleres con preguntas abiertas, escritas a mano o **generadas con IA** desde tu malla. Word del estudiante con **hoja de respuestas** y Word del docente con la **clave**. Se califican digitando las letras (ej.: ABDC…), muestran el **% de acierto por pregunta** y la opción errada más elegida, y las notas se **envían a la planilla** con un clic |
+| Herramientas de aula | En pantalla completa para el video beam: **estudiante al azar** (sin repetir y sin ausentes), **grupos de trabajo** aleatorios (equilibrados por desempeño y con roles), **temporizador** grande con alarma y **modo proyector** que muestra los momentos de la clase o las preguntas de una prueba |
+| Diario de campo | Al terminar la clase registras en segundos qué se alcanzó, qué quedó pendiente y las novedades. Lo pendiente aparece al planear la siguiente clase. Exportable a Word y Excel como evidencia para la evaluación de desempeño |
+| Comunicados a padres | Mensajes listos (bajo desempeño, inasistencias, actividades pendientes, plan de apoyo, citación, felicitación o los tuyos) con los datos de cada estudiante. Se envían por **WhatsApp** o **correo** con un clic, o se imprimen en Word con **desprendible** para firma del acudiente. Sugiere a quién enviar y guarda el historial |
 | Calendario | Vista mensual con clases planeadas, periodos, festivos y eventos |
 | Cronograma | Temas previstos semana a semana por área, grado y periodo |
-| Grupos y alumnos | Áreas, grupos, intensidad horaria, listas, PIAR, retiros y traslados |
-| Evaluación y notas | **Programación evaluativa** por grupo, área y periodo: componentes con porcentaje (Evaluaciones, Consultas o investigaciones, Actividades de aplicación, Actitudinal con auto/co/heteroevaluación y Prueba final) y sus actividades con fecha, técnica e instrumento; exportable a Word para los padres y copiable a otros grupos. Planilla de notas, consolidado anual, **planes de apoyo** (para quienes están en Bajo, con actividades, criterios y firmas; sugeridos con IA) y **banco de instrumentos**: rúbricas, escalas de valoración y listas de cotejo |
+| Grupos y alumnos | Áreas, grupos, intensidad horaria, listas con **acudiente, celular y correo**, PIAR, retiros y traslados |
+| Evaluación y notas | **Programación evaluativa** por grupo, área y periodo: componentes con porcentaje (Evaluaciones, Consultas o investigaciones, Actividades de aplicación, Actitudinal con auto/co/heteroevaluación y Prueba final) y sus actividades con fecha, técnica e instrumento; exportable a Word para los padres y copiable a otros grupos. Planilla de notas, consolidado anual, **planes de apoyo** (para quienes están en Bajo, con actividades, criterios y firmas; sugeridos con IA), **observaciones del boletín** (redactadas con un banco de frases editable o con IA a partir de notas, componentes, pendientes, asistencia y planes de apoyo; se copian a la plataforma o se exportan a Word y Excel), **importación de notas** desde Excel, Google Forms o Classroom (convierte puntajes como 8/10 a la escala) y **banco de instrumentos**: rúbricas, escalas de valoración y listas de cotejo |
 | Seguimiento del estudiante | Tablero por grupo (quién requiere atención) y por estudiante: promedio por periodo, componentes, notas por área, asistencia y actividades pendientes |
 | Asistencia | Presente / ausente / tarde / excusa por clase, con resumen y % de asistencia |
 | Configuración | Datos institucionales, **hoja membrete** (logos, color, lema y pie de página para todos los Word), SIEE, periodos, IA, apariencia (modo oscuro y tamaño de letra), actualizaciones, respaldos y cambio de año lectivo |
 
 Las listas, la asistencia, las planillas, la programación evaluativa y el cronograma se exportan a **Excel (.xlsx)** con el encabezado de la institución.
+
+**Alertas y pendientes**: Inicio muestra lo que requiere atención (cierre de periodo, actividades sin calificar, asistencia sin registrar, estudiantes con muchas faltas, planes de apoyo vencidos, observaciones del boletín por redactar, clases sin planear) y tu lista de **pendientes** con fecha. El número rojo en *Inicio* indica cuántas hay.
 
 **Menú a tu medida**: en Configuración → *Menú lateral* (o el botón ☰ abajo en el menú) ocultas los módulos que no usas, por ejemplo PIAR o Cronograma, y los ordenas arrastrándolos. Ocultar no borra datos.
 

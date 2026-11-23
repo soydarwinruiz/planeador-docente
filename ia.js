@@ -175,6 +175,18 @@ async function sugerirConIA({ ia, contexto, campos = [], numSesiones = 0, tarea 
     : tarea === 'planArea' ? promptPlanArea(contexto, campos)
     : tarea === 'apoyo' ? `Datos del plan de apoyo (Decreto 1290) para un estudiante con desempeño bajo:\n${contexto}\n\nPropón un plan de apoyo realizable en casa y en clase en 2 a 3 semanas. Devuelve un JSON con:\n- "actividades": 3 a 5 actividades numeradas, concretas y graduales (de repaso a aplicación), con lo que debe entregar en cada una y una sustentación final.\n- "recursos": materiales y recursos accesibles.\n- "criterios": criterios de evaluación observables del plan.`
     : tarea === 'prueba' ? 'Responde exactamente con este JSON: {"ok": true}'
+    : tarea === 'boletin' ? `Redacta la observación del boletín de periodo para cada estudiante (identificados como E1, E2…; no conoces sus nombres).
+${contexto}
+
+Reglas: 2 a 3 oraciones (máximo 55 palabras) por estudiante, en tercera persona, tono respetuoso y motivador, sin repetir la nota numérica.
+Empieza con el marcador {nombre} (se reemplazará por el nombre real). Incluye una fortaleza concreta del área, un aspecto por mejorar si lo hay y una recomendación práctica para el estudiante y su familia.
+Varía la redacción entre estudiantes. Devuelve un JSON: {"observaciones": {"E1": "...", "E2": "..."}}`
+    : tarea === 'saber' ? `Diseña preguntas para evaluar en el aula con el estilo de las pruebas Saber del ICFES.
+${contexto}
+
+Cada pregunta de selección múltiple con única respuesta debe tener: un "contexto" (situación, texto corto, tabla descrita en texto o caso; puede repetirse exactamente igual en varias preguntas si comparten el mismo contexto), un "enunciado" claro, 4 "opciones" plausibles sin "todas/ninguna de las anteriores", la letra "correcta" (A, B, C o D, variando la posición), la "competencia" o evidencia que evalúa y una "explicacion" breve de por qué es correcta y por qué fallan los distractores.
+Las preguntas abiertas tienen "contexto", "enunciado" y "respuesta" (respuesta esperada o criterios de calificación).
+Devuelve un JSON: {"instrucciones": "instrucciones para el estudiante", "preguntas": [{"tipo": "multiple" o "abierta", "contexto": "", "enunciado": "", "opciones": ["", "", "", ""], "correcta": "A", "competencia": "", "explicacion": "", "respuesta": ""}]}`
     : promptClase(contexto, campos, numSesiones);
   try {
     const texto = await llamarModelo(ia, SISTEMA, prompt);

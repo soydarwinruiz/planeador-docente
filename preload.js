@@ -26,4 +26,5 @@ contextBridge.exposeInMainWorld('api', {
   guardarExcel: (datos) => ipcRenderer.invoke('excel:guardar', datos),
   guardarCSV: (nombre, contenido) => ipcRenderer.invoke('csv:guardar', { nombre, contenido }),
   sugerirIA: (payload) => ipcRenderer.invoke('ia:sugerir', payload),
+  abrirTabla: () => ipcRenderer.invoke('tabla:abrir'),
 });

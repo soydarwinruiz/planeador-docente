@@ -79,7 +79,7 @@ RENDERS.configuracion = () => {
   </div>
 
   <div class="tarjeta"><h2>Nuevo año lectivo</h2>
-    <p class="ayuda">Prepara la aplicación para un nuevo año: conserva áreas, rúbricas, configuración, planes de área, mallas, planes de periodo y todas las planeaciones (para reutilizarlas desde el banco), y elimina grupos, estudiantes, asistencia, notas, eventos y cronograma.
+    <p class="ayuda">Prepara la aplicación para un nuevo año: conserva áreas, rúbricas, configuración, planes de área, mallas, planes de periodo, todas las planeaciones (para reutilizarlas desde el banco) y las pruebas (sin resultados), y elimina grupos, estudiantes, asistencia, notas, observaciones, diario de campo, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario (se conservan las franjas).
     <b>Antes se crea un respaldo automático.</b></p>
     <button class="btn peligro" onclick="nuevoAnio()">Iniciar nuevo año lectivo…</button>
   </div>`;
@@ -139,11 +139,15 @@ async function restaurarAuto(nombre) {
   aviso('Respaldo restaurado', 'ok');
 }
 async function nuevoAnio() {
-  if (!(await confirmar('Se eliminarán grupos, estudiantes, asistencia, notas, eventos y cronograma. Las planeaciones, áreas, rúbricas, planes de área, mallas y planes de periodo se conservan. ¿Continuar?', { boton: 'Iniciar nuevo año' }))) return;
+  if (!(await confirmar('Se eliminarán grupos, estudiantes, asistencia, notas, observaciones, diario, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario. Las planeaciones, pruebas, áreas, rúbricas, planes de área, mallas y planes de periodo se conservan. ¿Continuar?', { boton: 'Iniciar nuevo año' }))) return;
   await api.exportarRespaldo(S);
   const anio = (+S.config.anio || new Date().getFullYear()) + 1;
   S.planeaciones.forEach((p) => { const g = porId(S.grupos, p.grupoId); if (g) p.gradoOrigen = g.grado; });
-  Object.assign(S, { grupos: [], alumnos: [], asistencia: {}, planillas: [], notas: {}, notasRubrica: {}, eventos: [], cronograma: {}, planesAula: [] });
+  Object.assign(S, { grupos: [], alumnos: [], asistencia: {}, planillas: [], notas: {}, notasRubrica: {}, eventos: [], cronograma: {}, planesAula: [],
+    observaciones: {}, diario: [], comunicadosEnviados: [], alertasOcultas: [], planesApoyo: [], piar: [] });
+  S.pendientes = (S.pendientes || []).filter((p) => !p.hecho);
+  (S.pruebas || []).forEach((p) => { p.grupoId = ''; p.respuestas = {}; p.abiertas = {}; p.actividadId = ''; p.periodoId = ''; });
+  if (S.horario) S.horario.celdas = {};
   S.planeaciones.forEach((p) => { p.enBanco = true; p.grupoId = ''; });
   S.config.anio = anio;
   S.config.periodos.forEach((p) => {

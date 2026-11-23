@@ -17,6 +17,9 @@ function fuentesBusqueda() {
     texto: [nombreAlumno(porId(S.alumnos, p.alumnoId) || { apellidos: '', nombres: '' }), 'plan de apoyo', p.actividades].join(' '), ir: () => { ui.cal = { grupoId: p.grupoId, areaId: p.areaId, periodoId: p.periodoId, pestana: 'apoyo' }; ir('calificaciones'); editarPlanApoyo(p.id); } });
   for (const p of S.piar) { const a = porId(S.alumnos, p.alumnoId); if (a) r.push({ tipo: '🤝 PIAR', titulo: nombreAlumno(a), detalle: nombreGrupoId(a.grupoId), texto: nombreAlumno(a) + ' piar ' + (p.diagnostico || ''), ir: () => ir('piarEditor', { alumnoId: a.id }) }); }
   for (const e of S.eventos) r.push({ tipo: '📅 Evento', titulo: e.titulo, detalle: fechaCorta(e.fecha), texto: e.titulo, ir: () => { const d = deISO(e.fecha); ui.calMes = { anio: d.getFullYear(), mes: d.getMonth(), grupoId: '' }; ir('calendario'); } });
+  for (const d of S.diario || []) r.push({ tipo: '📓 Diario', titulo: `${fechaCorta(d.fecha)} · ${nombreGrupoId(d.grupoId)}`, detalle: nombreArea(d.areaId), texto: [d.logrado, d.pendiente, d.novedades].join(' '), ir: () => abrirDiario('', '', '', d.id) });
+  for (const p of S.pruebas || []) r.push({ tipo: p.tipo === 'taller' ? '📄 Taller' : '🧪 Prueba', titulo: p.titulo || 'Sin título', detalle: `${nombreArea(p.areaId)} · ${p.preguntas.length} preguntas`,
+    texto: [p.titulo, p.tema, ...p.preguntas.flatMap((q) => [q.enunciado, q.contexto])].join(' '), ir: () => { ui.pruebaPest = 'preguntas'; ir('pruebaEditor', { id: p.id }); } });
   for (const v of vistasMenu()) r.push({ tipo: '➡️ Ir a', titulo: v.nombre, detalle: '', texto: v.nombre, ir: () => ir(v.id) });
   return r;
 }

@@ -97,6 +97,7 @@ function nuevaPlaneacion(fecha) {
       <div class="campo"><label>Fecha de inicio</label><input type="date" id="m-fecha" value="${fecha || hoyISO()}"></div>
       <div class="campo"><label>Tema / título</label><input id="m-titulo" placeholder="Ej.: Números enteros en la recta"></div>
     </div>
+    <div class="campo" id="m-otros-grupos"></div>
     ${!S.grupos.length ? '<p class="alerta">Consejo: crea primero tus grupos y áreas en "Grupos y alumnos".</p>' : ''}
     <div class="botones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" onclick="crearPlaneacion()">Crear</button></div>`);
   actualizarAreasModal();
@@ -106,6 +107,18 @@ function actualizarAreasModal() {
   const lista = g && areasDeGrupo(g).length ? areasDeGrupo(g) : S.areas;
   document.getElementById('m-area').innerHTML = opcionesAreas(lista[0]?.id, '(sin área)', lista);
   actualizarPlantillaModal();
+}
+// Otros grupos que también tienen el área elegida (para crear la misma planeación en todos)
+function gruposConArea(areaId, excepto) {
+  return [...S.grupos].sort(ordenGrupos).filter((g) => g.id !== excepto && (g.areas || []).some((a) => a.areaId === areaId));
+}
+function pintarOtrosGruposModal() {
+  const cont = document.getElementById('m-otros-grupos');
+  if (!cont) return;
+  const g = porId(S.grupos, document.getElementById('m-grupo').value), a = document.getElementById('m-area').value;
+  const otros = g && a ? gruposConArea(a, g.id) : [];
+  cont.innerHTML = otros.length ? `<label>Crear también para (misma planeación, cada grupo con sus fechas del horario)</label><div class="fila">${otros.map((o) =>
+    `<label class="chip" style="font-weight:normal;cursor:pointer;font-size:13px;padding:4px 10px"><input type="checkbox" class="m-otro" value="${o.id}" ${+o.grado === +g.grado ? 'checked' : ''}> ${esc(nombreGrupo(o))}</label>`).join('')}</div>` : '';
 }
 function actualizarPlantillaModal() {
   const g = document.getElementById('m-grupo').value, a = document.getElementById('m-area').value;
@@ -117,6 +130,7 @@ function actualizarPlantillaModal() {
   document.getElementById('m-plantilla-ayuda').innerHTML = S.plantillas.length ? (sug.length ? 'Se llenarán la identificación, la diversidad del aula y los demás datos de la plantilla.' : 'No hay plantilla para este grupo o grado.')
     : 'Aún no tienes plantillas. <a href="#" onclick="cerrarModal();ir(\'plantillas\');return false">Crear plantillas</a>';
   tipoDesdePlantillaModal();
+  pintarOtrosGruposModal();
 }
 function tipoDesdePlantillaModal() {
   const t = porId(S.plantillas, document.getElementById('m-plantilla').value);
@@ -153,7 +167,11 @@ function crearPlaneacion() {
   p.criterios = [];
   aplicarPlantilla(p, porId(S.plantillas, document.getElementById('m-plantilla').value));
   S.planeaciones.push(p);
+  const otros = [...document.querySelectorAll('.m-otro:checked')].map((x) => x.value);
+  p.vinculadas = otros.length ? [] : undefined;
+  for (const gid of otros) p.vinculadas.push(clonarParaGrupo(p, gid).id);
   guardar(); cerrarModal();
+  if (otros.length) aviso(`Se creó la planeación para ${otros.length + 1} grupos. Lo que escribas aquí lo puedes copiar a los demás con "👥 Otros grupos".`, 'ok');
   editarPlaneacion(p.id);
 }
 
@@ -197,9 +215,12 @@ RENDERS.editor = ({ id }) => {
   </div><div class="acciones">
     <button class="btn" onclick="ir('planeaciones')">← Volver</button>
     <button class="btn ia" onclick="dialogoIA('${p.id}')">✨ Sugerir con IA</button>
+    <button class="btn" title="Mostrar los momentos de la clase en el video beam" onclick="aula.proy={tipo:'plan',id:'${p.id}',i:0,mostrar:false};abrirAula('${p.grupoId}','${p.areaId}','proyector')">📽️ Proyectar</button>
+    <button class="btn" onclick="dialogoOtrosGrupos('${p.id}')">👥 Otros grupos${p.vinculadas?.length ? ` (${p.vinculadas.length})` : ''}</button>
     <button class="btn" onclick="dialogoReutilizar('${p.id}')">📑 Duplicar</button>
     <button class="btn primario" onclick="exportarPlanWord('${p.id}')">📄 Exportar a Word</button>
   </div></div>
+  ${avisoPendienteEnPlan(p)}
 
   <div class="tarjeta"><h2>1. Identificación</h2>
     <div class="rejilla r4">
@@ -354,6 +375,77 @@ async function exportarPlanWord(id) {
   });
   if (r.ok) aviso('Documento de Word creado', 'ok');
   else if (r.error) aviso('No se pudo exportar: ' + r.error, 'error');
+}
+
+// ---------- Varios grupos a la vez ----------
+// Crea una copia de la planeación para otro grupo: fechas según el horario de ese grupo y su plantilla de diversidad
+function clonarParaGrupo(o, grupoId, { fechas = 'horario', plantilla = true, destino = null } = {}) {
+  const c = destino || structuredClone(o);
+  if (destino) {
+    // Actualiza una copia existente con el contenido de la original, sin tocar grupo, fechas ni diversidad
+    const conservar = { id: c.id, grupoId: c.grupoId, fechaInicio: c.fechaInicio, fechaFin: c.fechaFin, periodoId: c.periodoId, estado: c.estado, observaciones: c.observaciones, plantillaId: c.plantillaId };
+    const div = Object.fromEntries(CAMPOS_DIVERSIDAD.map((x) => [x.k, c[x.k]]));
+    const fechasSes = c.sesiones.map((s) => s.fecha);
+    Object.assign(c, structuredClone(o), conservar, div);
+    c.sesiones = c.sesiones.map((s, i) => ({ ...s, id: uid(), fecha: fechasSes[i] || '' }));
+    delete c.vinculadas; c.origenId = o.id; c.modificada = new Date().toISOString();
+    return c;
+  }
+  c.id = uid(); c.grupoId = grupoId; c.estado = 'borrador'; c.enBanco = false; c.observaciones = ''; c.origenId = o.id;
+  delete c.vinculadas;
+  const n = c.sesiones.length;
+  let nuevas = [];
+  if (fechas === 'horario') {
+    if (o.tipo === 'semanal') { const l = lunesDe(o.fechaInicio || hoyISO()); nuevas = proximasClases(grupoId, c.areaId, l, 10).filter((f) => f <= sumarDias(l, 6)); }
+    else nuevas = proximasClases(grupoId, c.areaId, o.fechaInicio || hoyISO(), n);
+  }
+  if (nuevas.length) {
+    while (c.sesiones.length < nuevas.length) { const s = structuredClone(c.sesiones[c.sesiones.length - 1] || nuevaSesion()); c.sesiones.push(s); }
+    c.sesiones = c.sesiones.map((s, i) => ({ ...s, id: uid(), fecha: nuevas[i] || '' }));
+    c.fechaInicio = nuevas[0]; c.fechaFin = nuevas[nuevas.length - 1];
+  } else c.sesiones = c.sesiones.map((s) => ({ ...s, id: uid() }));
+  c.periodoId = periodoDeFecha(c.fechaInicio || hoyISO())?.id || c.periodoId;
+  if (plantilla) { const t = plantillaSugerida(grupoId, c.areaId); if (t && t.id !== o.plantillaId) aplicarPlantilla(c, t, true); }
+  c.creada = c.modificada = new Date().toISOString();
+  S.planeaciones.push(c);
+  return c;
+}
+function dialogoOtrosGrupos(id) {
+  const p = porId(S.planeaciones, id);
+  const g = porId(S.grupos, p.grupoId);
+  const vinc = (p.vinculadas || []).map((x) => porId(S.planeaciones, x)).filter(Boolean);
+  const yaTiene = new Set(vinc.map((x) => x.grupoId));
+  const otros = gruposConArea(p.areaId, p.grupoId).filter((o) => !yaTiene.has(o.id));
+  const hayHorario = Object.keys(horario().celdas).length > 0;
+  abrirModal(`<h2>👥 Esta planeación en otros grupos</h2>
+    ${vinc.length ? `<h3 style="margin-bottom:4px">Copias vinculadas</h3><p class="ayuda" style="margin-top:0">Si cambiaste el contenido aquí, actualiza las copias (conservan su grupo, fechas, diversidad y observaciones).</p>
+      <ul class="lista-simple">${vinc.map((v) => `<li><span><b>${esc(nombreGrupoId(v.grupoId))}</b> · ${esc(fechaCorta(v.fechaInicio))}</span><span><button class="btn pequeno" onclick="cerrarModal();editarPlaneacion('${v.id}')">Abrir</button></span></li>`).join('')}</ul>
+      <button class="btn" onclick="actualizarVinculadas('${p.id}')">🔄 Actualizar las ${vinc.length} copias con este contenido</button>` : ''}
+    ${otros.length ? `<h3 style="margin:16px 0 4px">Crear para otros grupos</h3><p class="ayuda" style="margin-top:0">Grupos que tienen ${esc(nombreArea(p.areaId))}.</p>
+      <div class="fila">${otros.map((o) => `<label class="chip" style="font-weight:normal;cursor:pointer;font-size:13px;padding:4px 10px"><input type="checkbox" class="m-otro" value="${o.id}" ${g && +o.grado === +g.grado ? 'checked' : ''}> ${esc(nombreGrupo(o))}</label>`).join('')}</div>
+      <div class="campo" style="margin-top:10px"><label style="font-weight:normal;color:inherit"><input type="radio" name="m-fechas" value="horario" ${hayHorario ? 'checked' : 'disabled'}> Fechas según el horario de cada grupo ${hayHorario ? '' : '<span class="ayuda">(registra tu horario para usar esta opción)</span>'}</label>
+        <label style="font-weight:normal;color:inherit"><input type="radio" name="m-fechas" value="mismas" ${hayHorario ? '' : 'checked'}> Las mismas fechas de esta planeación</label>
+        <label style="font-weight:normal;color:inherit"><input type="checkbox" id="m-plant" checked> Usar la plantilla de diversidad de cada grupo (estilos, gustos, ajustes…)</label></div>
+      <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="crearEnOtrosGrupos('${p.id}')">Crear copias</button></div>`
+      : `<p class="ayuda">${vinc.length ? 'No hay más grupos con esta área.' : 'No hay otros grupos con esta área. Asigna el área a tus grupos en "Grupos y alumnos".'}</p><div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button></div>`}`);
+}
+function crearEnOtrosGrupos(id) {
+  const p = porId(S.planeaciones, id);
+  const ids = [...document.querySelectorAll('.m-otro:checked')].map((x) => x.value);
+  if (!ids.length) return aviso('Elige al menos un grupo', 'error');
+  const fechas = document.querySelector('input[name=m-fechas]:checked')?.value || 'mismas';
+  const plantilla = document.getElementById('m-plant').checked;
+  p.vinculadas ||= [];
+  for (const gid of ids) p.vinculadas.push(clonarParaGrupo(p, gid, { fechas, plantilla }).id);
+  guardar(); cerrarModal(); render();
+  aviso(`Se crearon ${ids.length} copia(s): ${ids.map(nombreGrupoId).join(', ')}`, 'ok');
+}
+function actualizarVinculadas(id) {
+  const p = porId(S.planeaciones, id);
+  const vinc = (p.vinculadas || []).map((x) => porId(S.planeaciones, x)).filter(Boolean);
+  vinc.forEach((v) => clonarParaGrupo(p, v.grupoId, { destino: v }));
+  guardar(); cerrarModal(); render();
+  aviso(`Se actualizaron ${vinc.length} copia(s).`, 'ok');
 }
 
 // ---------- Duplicar / reutilizar ----------

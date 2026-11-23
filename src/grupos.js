@@ -125,14 +125,17 @@ RENDERS.alumnos = ({ grupoId }) => {
     <button class="btn" onclick="exportarAlumnos('${grupoId}')">⬇️ Exportar a Excel</button>
     <button class="btn primario" onclick="agregarAlumno('${grupoId}')">＋ Estudiante</button>
   </div></div>
-  ${lista.length ? `<div class="envoltura-tabla"><table class="tabla"><thead><tr><th class="num">#</th><th>Apellidos</th><th>Nombres</th><th>Documento</th><th class="num">PIAR</th><th>Observaciones / ajustes</th><th></th></tr></thead><tbody>
+  ${lista.length ? `<div class="envoltura-tabla"><table class="tabla"><thead><tr><th class="num">#</th><th>Apellidos</th><th>Nombres</th><th>Documento</th><th class="num">PIAR</th><th>Acudiente</th><th>Celular</th><th>Correo</th><th>Observaciones / ajustes</th><th></th></tr></thead><tbody>
   ${lista.map((a, i) => `<tr>
     <td class="num">${i + 1}</td>
     <td><input value="${esc(a.apellidos)}" onchange="cambiarAlumno('${a.id}','apellidos',this.value)"></td>
     <td><input value="${esc(a.nombres)}" onchange="cambiarAlumno('${a.id}','nombres',this.value)"></td>
     <td><input value="${esc(a.documento || '')}" onchange="cambiarAlumno('${a.id}','documento',this.value)" style="width:130px"></td>
     <td class="num"><input type="checkbox" ${a.piar ? 'checked' : ''} onchange="cambiarAlumno('${a.id}','piar',this.checked);render()" title="Estudiante con PIAR"></td>
-    <td><input value="${esc(a.observaciones || '')}" onchange="cambiarAlumno('${a.id}','observaciones',this.value)" placeholder="Ej.: diagnóstico, apoyos, acudiente…"></td>
+    <td><input value="${esc(a.acudiente || '')}" onchange="cambiarAlumno('${a.id}','acudiente',this.value)" placeholder="Nombre" style="min-width:140px"></td>
+    <td><input value="${esc(a.celular || '')}" onchange="cambiarAlumno('${a.id}','celular',this.value)" placeholder="300…" style="width:115px"></td>
+    <td><input type="email" value="${esc(a.correo || '')}" onchange="cambiarAlumno('${a.id}','correo',this.value.trim())" placeholder="correo@…" style="min-width:150px"></td>
+    <td><input value="${esc(a.observaciones || '')}" onchange="cambiarAlumno('${a.id}','observaciones',this.value)" placeholder="Ej.: diagnóstico, apoyos…" style="min-width:160px"></td>
     <td style="white-space:nowrap">${a.piar && vistaVisible('piar') ? `<button class="btn pequeno" onclick="ir('piarEditor',{alumnoId:'${a.id}'})">📝 PIAR</button>` : ''}<button class="icono" title="Mover a otro grupo" onclick="moverAlumno('${a.id}')">↔️</button><button class="icono" title="Retirar" onclick="retirarAlumno('${a.id}')">🚪</button></td>
   </tr>`).join('')}</tbody></table></div>` : `<div class="tarjeta vacio"><div class="grande">🧑‍🎓</div>Agrega estudiantes uno a uno o pega la lista copiada desde Excel o el SIMAT.</div>`}
   ${retirados.length ? `<h2>Retirados (${retirados.length})</h2><ul class="lista-simple tarjeta">${retirados.map((a) => `<li>${esc(nombreAlumno(a))}<div><button class="btn pequeno" onclick="cambiarAlumno('${a.id}','activo',true);render()">Reintegrar</button> <button class="btn pequeno peligro" onclick="eliminarAlumno('${a.id}')">Eliminar definitivamente</button></div></li>`).join('')}</ul>` : ''}`;
@@ -180,7 +183,7 @@ function moverAlumno(id) {
 function pegarLista(grupoId) {
   abrirModal(`<h2>Pegar lista de estudiantes</h2>
     <p class="ayuda">Copia las columnas desde Excel o el SIMAT y pégalas aquí. Formatos aceptados por línea:<br>
-    • <b>Apellidos [TAB] Nombres [TAB] Documento</b> (columnas de Excel)<br>
+    • <b>Apellidos [TAB] Nombres [TAB] Documento [TAB] Acudiente [TAB] Celular [TAB] Correo</b> (columnas de Excel; las últimas son opcionales)<br>
     • <b>APELLIDO1 APELLIDO2 NOMBRES</b> (texto: se toman las dos primeras palabras como apellidos)</p>
     <textarea id="m-lista" style="min-height:220px" placeholder="GÓMEZ PÉREZ&#9;ANA MARÍA&#9;1012345678"></textarea>
     <div class="botones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" onclick="procesarLista('${grupoId}')">Agregar estudiantes</button></div>`, { ancho: true });
@@ -189,28 +192,29 @@ function procesarLista(grupoId) {
   const lineas = document.getElementById('m-lista').value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   let n = 0;
   for (const l of lineas) {
-    let apellidos, nombres, documento = '';
+    let apellidos, nombres, documento = '', acudiente = '', celular = '', correo = '';
     if (l.includes('\t') || l.includes(';')) {
       const c = l.split(/\t|;/).map((x) => x.trim());
       // Si la primera columna es numérica (n.º de lista o documento) la saltamos
       if (/^\d+$/.test(c[0]) && c.length > 2) { if (c[0].length > 4) documento = c[0]; c.shift(); }
       [apellidos, nombres] = c;
       if (c[2] && !documento) documento = c[2];
+      [acudiente = '', celular = '', correo = ''] = c.slice(3);
     } else {
       const p = l.replace(/^\d+[.)-]?\s+/, '').split(/\s+/);
       apellidos = p.slice(0, Math.min(2, p.length - 1)).join(' ');
       nombres = p.slice(Math.min(2, p.length - 1)).join(' ');
     }
     if (!apellidos && !nombres) continue;
-    S.alumnos.push({ id: uid(), grupoId, apellidos: apellidos || '', nombres: nombres || '', documento, piar: false, observaciones: '', activo: true });
+    S.alumnos.push({ id: uid(), grupoId, apellidos: apellidos || '', nombres: nombres || '', documento, acudiente, celular, correo, piar: false, observaciones: '', activo: true });
     n++;
   }
   guardar(); cerrarModal(); render();
   aviso(`Se agregaron ${n} estudiante(s). Revisa que apellidos y nombres hayan quedado bien.`, 'ok');
 }
 function exportarAlumnos(grupoId) {
-  const filas = [['#', 'Apellidos', 'Nombres', 'Documento', 'PIAR', 'Observaciones']];
-  alumnosDe(grupoId).forEach((a, i) => filas.push([i + 1, a.apellidos, a.nombres, a.documento, a.piar ? 'Sí' : '', a.observaciones]));
+  const filas = [['#', 'Apellidos', 'Nombres', 'Documento', 'PIAR', 'Acudiente', 'Celular', 'Correo', 'Observaciones']];
+  alumnosDe(grupoId).forEach((a, i) => filas.push([i + 1, a.apellidos, a.nombres, a.documento, a.piar ? 'Sí' : '', a.acudiente || '', a.celular || '', a.correo || '', a.observaciones]));
   exportarExcel(`Lista ${nombreGrupoId(grupoId)}`, filas);
 }
 

@@ -44,11 +44,11 @@ function graficaLinea(puntos, { ref, titulo }) {
     ${!validos.length ? `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="13" style="fill:var(--suave)">Aún no hay notas registradas</text>` : ''}
   </svg>`;
 }
-function graficaBarras(filas, { ref }) {
+function graficaBarras(filas, { ref, min: minO, max: maxO, fmt = fmtNota, etiquetaRef = 'Aprobación' }) {
   // filas: [{nombre, v, detalle}] barras horizontales
   const W = 620, fila = 34, m = { l: 190, r: 56, t: 6 };
   const H = m.t + filas.length * fila + 22;
-  const min = +S.config.escalaMin, max = +S.config.escalaMax;
+  const min = minO ?? +S.config.escalaMin, max = maxO ?? +S.config.escalaMax;
   const ancho = (v) => ((v - min) / (max - min)) * (W - m.l - m.r);
   const xRef = m.l + ancho(ref);
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Promedio por componente" style="max-width:${W}px;font-family:inherit">
@@ -56,13 +56,13 @@ function graficaBarras(filas, { ref }) {
       const yy = m.t + i * fila;
       const w = f.v == null ? 0 : Math.max(4, ancho(f.v));
       return `<g><text x="${m.l - 10}" y="${yy + 21}" text-anchor="end" font-size="12" style="fill:var(--texto)">${esc(f.nombre.length > 28 ? f.nombre.slice(0, 27) + '…' : f.nombre)}</text>
-        <rect x="${m.l}" y="${yy + 8}" width="${W - m.l - m.r}" height="18" fill="transparent"><title>${esc(f.nombre)}: ${f.v == null ? 'sin notas' : fmtNota(f.v)}${f.detalle ? ' · ' + esc(f.detalle) : ''}</title></rect>
+        <rect x="${m.l}" y="${yy + 8}" width="${W - m.l - m.r}" height="18" fill="transparent"><title>${esc(f.nombre)}: ${f.v == null ? 'sin notas' : fmt(f.v)}${f.detalle ? ' · ' + esc(f.detalle) : ''}</title></rect>
         ${f.v != null ? `<rect x="${m.l}" y="${yy + 8}" width="${w}" height="18" rx="4" fill="${COLOR_SERIE}" pointer-events="none"/>
-        <text x="${m.l + w + 6}" y="${yy + 21}" font-size="12" font-weight="600" style="fill:var(--texto)" pointer-events="none">${fmtNota(f.v)}</text>`
+        <text x="${m.l + w + 6}" y="${yy + 21}" font-size="12" font-weight="600" style="fill:var(--texto)" pointer-events="none">${fmt(f.v)}</text>`
         : `<text x="${m.l}" y="${yy + 21}" font-size="12" style="fill:var(--suave)">sin notas</text>`}</g>`;
     }).join('')}
     <line x1="${xRef}" x2="${xRef}" y1="${m.t}" y2="${H - 18}" stroke="#c62828" stroke-dasharray="4 4"/>
-    <text x="${xRef}" y="${H - 4}" text-anchor="middle" font-size="11" style="fill:var(--suave)">Aprobación ${fmtNota(ref)}</text>
+    <text x="${xRef}" y="${H - 4}" text-anchor="middle" font-size="11" style="fill:var(--suave)">${esc(etiquetaRef)} ${fmt(ref)}</text>
   </svg>`;
 }
 function tarjetaDato(valor, etiqueta, extra = '') {
@@ -149,7 +149,7 @@ function vistaAlumno(c) {
     <div><h2 style="margin:0">${esc(nombreAlumno(al))} ${al.piar ? '<span class="chip piar">PIAR</span>' : ''}</h2>
       <span class="ayuda">${esc(nombreGrupoId(c.grupoId))}${al.documento ? ' · Doc. ' + esc(al.documento) : ''}${al.observaciones ? ' · ' + esc(al.observaciones) : ''}</span>
       ${al.perfil ? `<div class="ayuda">🧠 ${[al.perfil.vak ? 'Canal: ' + canalPredominante(al.perfil.vak) : '', al.perfil.kolb ? 'Kolb: ' + estiloKolb(al.perfil.kolb) : '', al.perfil.im ? 'Inteligencias: ' + (inteligenciasDestacadas(al.perfil.im).join(', ') || '—') : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>
-    <button class="btn" onclick="ui.seg.alumnoId='';render()">← Resumen del grupo</button></div>
+    <span class="fila"><button class="btn" onclick="comunicadoPara('${al.id}')">✉️ Comunicado al acudiente</button><button class="btn" onclick="ui.seg.alumnoId='';render()">← Resumen del grupo</button></span></div>
   <div class="estadisticas">
     ${tarjetaDato(fmtNota(prom), `Promedio – ${esc(per?.nombre || '')}`, chipDesempeno(prom))}
     ${tarjetaDato(asis ? asis.pct + '%' : '—', 'Asistencia del periodo', asis ? `<div class="ayuda">${asis.faltas} falta(s) / ${asis.total} clases</div>` : '')}

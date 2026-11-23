@@ -87,12 +87,14 @@ const PARTES_PAQUETE = [
   ['plantillas', '📋 Plantillas de planeación'],
   ['rubricas', '📋 Instrumentos de evaluación'],
   ['banco', '📚 Entradas propias del banco pedagógico'],
+  ['pruebas', '🧪 Pruebas y talleres (sin resultados)'],
 ];
 function dialogoExportarPaquete() {
   const n = {
     planeaciones: S.planeaciones.length, mallas: S.mallas.filter((m) => Object.values(m.periodos).some((p) => p.items.length)).length,
     planesArea: S.planesArea.length, plantillas: S.plantillas.length, rubricas: S.rubricas.filter((r) => !r.predeterminado).length,
     banco: S.bancoPedagogico.filter((x) => !x.predeterminado).length,
+    pruebas: (S.pruebas || []).filter((p) => p.preguntas.length).length,
   };
   abrirModal(`<h2>📤 Compartir con otros docentes</h2>
     <p class="ayuda">Crea un archivo <b>.planeador</b> que puedes enviar por correo, WhatsApp o USB. Nunca incluye estudiantes, notas, asistencia ni PIAR.</p>
@@ -120,6 +122,11 @@ async function exportarPaquete() {
   if (partes.includes('plantillas')) d.plantillas = S.plantillas.map((t) => { const c = structuredClone(t); if (c.alcance === 'grupo') { c.alcance = 'grado'; c.grupoId = ''; } usarArea(c.areaId); ['estilos', 'gustos', 'caracteristicas', 'numEstudiantes'].forEach((k) => { c[k] = ''; }); return c; });
   if (partes.includes('rubricas')) d.rubricas = structuredClone(S.rubricas.filter((r) => !r.predeterminado));
   if (partes.includes('banco')) d.banco = structuredClone(S.bancoPedagogico.filter((x) => !x.predeterminado));
+  if (partes.includes('pruebas')) d.pruebas = S.pruebas.filter((p) => p.preguntas.length && (!area || p.areaId === area)).map((p) => {
+    usarArea(p.areaId);
+    const g = porId(S.grupos, p.grupoId);
+    return { ...structuredClone(p), grado: g ? g.grado : p.grado, grupoId: '', periodoId: '', respuestas: {}, abiertas: {}, actividadId: '' };
+  });
   d.areas = [...areasUsadas].map((id) => ({ id, nombre: nombreArea(id) }));
   const r = await api.exportarPaquete(`Paquete ${S.config.docente || 'Planeador'} ${hoyISO()}`, d);
   if (r.ok) { cerrarModal(); aviso('Paquete creado. Envíalo al otro docente.', 'ok'); }
@@ -169,11 +176,14 @@ function ejecutarImportacion() {
   if (partes.includes('plantillas')) for (const t of d.plantillas || []) { S.plantillas.push({ ...t, id: uid(), areaId: area(t.areaId), nombre: t.nombre + (d.autor ? ` (de ${d.autor})` : '') }); n++; }
   if (partes.includes('rubricas')) for (const r of d.rubricas || []) { S.rubricas.push({ ...r, id: uid(), nombre: r.nombre + (d.autor ? ` (de ${d.autor})` : '') }); n++; }
   if (partes.includes('banco')) for (const x of d.banco || []) { S.bancoPedagogico.push({ ...x, id: uid() }); n++; }
+  if (partes.includes('pruebas')) for (const p of d.pruebas || []) {
+    S.pruebas.push({ ...p, id: uid(), areaId: area(p.areaId), titulo: p.titulo + (d.autor ? ` (de ${d.autor})` : ''), preguntas: (p.preguntas || []).map((q) => ({ ...q, id: uid() })), modificada: new Date().toISOString() }); n++;
+  }
   guardar(); cerrarModal(); render();
   aviso(`Se importaron ${n} elemento(s).`, 'ok');
 }
 function tarjetaCompartir() {
   return `<div class="tarjeta"><h2>🤝 Compartir con otros docentes</h2>
-    <p class="ayuda">Intercambia planeaciones, mallas, planes de área, plantillas, instrumentos y estrategias con colegas mediante un archivo <b>.planeador</b>. Nunca se comparten datos de estudiantes.</p>
+    <p class="ayuda">Intercambia planeaciones, mallas, planes de área, plantillas, instrumentos, estrategias y pruebas con colegas mediante un archivo <b>.planeador</b>. Nunca se comparten datos de estudiantes.</p>
     <div class="fila"><button class="btn primario" onclick="dialogoExportarPaquete()">📤 Crear paquete para compartir</button><button class="btn" onclick="importarPaquete()">📥 Importar paquete recibido</button></div></div>`;
 }

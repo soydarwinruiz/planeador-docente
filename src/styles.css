@@ -226,3 +226,50 @@ body.oscuro .planilla th.alumno { background: var(--azul-claro); }
 .lista-menu li { padding: 4px 6px; }
 .lista-menu li.oculto { opacity: .5; }
 .lista-menu .icono[disabled] { opacity: .25; cursor: default; }
+
+/* Alertas */
+.insignia { display: inline-block; min-width: 20px; padding: 1px 6px; margin-left: auto; border-radius: 10px; background: #d9534f; color: #fff; font-size: 11px; font-weight: 700; text-align: center; line-height: 16px; }
+h2 .insignia { margin-left: 4px; vertical-align: middle; }
+.alertas li { border-left: 4px solid var(--borde); padding-left: 10px !important; gap: 10px; }
+.alertas li.alerta-urgente { border-left-color: #d9534f; }
+.alertas li.alerta-aviso { border-left-color: #f0ad4e; }
+.alertas li.alerta-info { border-left-color: var(--azul-2); }
+
+/* Pruebas */
+.aciertos { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; }
+.aciertos span { font-size: 9px; min-width: 16px; text-align: center; border-radius: 3px; padding: 0 2px; color: #fff; }
+.aciertos span.ok { background: #2e7d32; }
+.aciertos span.mal { background: #c62828; }
+.pregunta .opciones-pregunta input[type=radio] { width: auto; }
+
+/* Herramientas de aula (pantalla completa) */
+#aula { position: fixed; inset: 0; z-index: 900; background: var(--fondo, #f4f6fb); display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+#aula.oculto { display: none; }
+.aula-barra { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 18px; background: var(--superficie, #fff); border-bottom: 1px solid var(--borde); flex-wrap: wrap; }
+.aula-cuerpo { flex: 1; padding: 24px 32px; display: flex; flex-direction: column; gap: 14px; }
+.aula-controles { justify-content: center; }
+.aula-controles select, .aula-controles input { width: auto; }
+.aula-vacio, .aula-ayuda { text-align: center; color: var(--suave); font-size: 15px; }
+.aula-nombre { text-align: center; font-size: clamp(40px, 8vw, 110px); font-weight: 800; color: var(--azul); margin: 40px 0 20px; min-height: 1.3em; }
+.aula-nombre.destacar { animation: aula-pop .5s ease; }
+@keyframes aula-pop { 0% { transform: scale(.7); opacity: .3; } 70% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+.aula-boton { font-size: 20px; padding: 12px 26px; }
+.aula-equipos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.aula-equipo { background: var(--superficie, #fff); border: 1px solid var(--borde); border-radius: 12px; padding: 12px 16px; }
+.aula-equipo h3 { margin: 0 0 6px; color: var(--azul); }
+.aula-equipo ol { margin: 0; padding-left: 20px; font-size: 17px; line-height: 1.6; }
+.aula-rol { font-size: 12px; color: var(--suave); }
+.aula-reloj { text-align: center; font-size: clamp(90px, 20vw, 260px); font-weight: 800; font-variant-numeric: tabular-nums; color: var(--azul); line-height: 1.1; margin: 20px 0; }
+.aula-reloj.amarillo, .aula-mini-reloj.amarillo { color: #e0a000; }
+.aula-reloj.rojo, .aula-mini-reloj.rojo, .aula-reloj.fin, .aula-mini-reloj.fin { color: #d32f2f; }
+.aula-reloj.fin { animation: aula-parpadeo 1s infinite; }
+@keyframes aula-parpadeo { 50% { opacity: .2; } }
+.aula-mini-reloj { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 18px; cursor: pointer; padding: 4px 10px; border-radius: 8px; background: var(--azul-claro); }
+.aula-diapositiva { flex: 1; background: var(--superficie, #fff); border: 1px solid var(--borde); border-radius: 16px; padding: 4vh 5vw; max-width: 1400px; width: 100%; margin: 0 auto; }
+.aula-diapositiva h2 { font-size: clamp(26px, 3.6vw, 52px); color: var(--azul); margin: 10px 0 20px; }
+.aula-etiqueta { font-size: 16px; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; }
+.aula-texto { font-size: clamp(20px, 2.4vw, 34px); line-height: 1.45; white-space: pre-wrap; }
+.aula-contexto { font-size: clamp(18px, 2vw, 28px); line-height: 1.4; background: var(--azul-claro); border-radius: 10px; padding: 14px 20px; white-space: pre-wrap; margin-bottom: 10px; }
+.aula-opciones { font-size: clamp(20px, 2.4vw, 34px); line-height: 1.6; padding-left: 1.6em; }
+.aula-opciones li::marker { font-weight: 800; color: var(--azul); }
+.aula-opciones li.correcta { color: #2e7d32; font-weight: 700; }
