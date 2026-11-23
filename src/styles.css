@@ -115,7 +115,10 @@ button.icono:hover { background: var(--hover); }
 
 table.tabla { width: 100%; border-collapse: collapse; background: var(--superficie); }
 .tabla th, .tabla td { border-bottom: 1px solid var(--borde); padding: 8px 10px; text-align: left; vertical-align: middle; }
-.tabla th { background: var(--azul-claro); color: var(--azul); font-size: 12px; text-transform: uppercase; letter-spacing: .02em; position: sticky; top: 0; z-index: 1; }
+.tabla th { background: var(--azul-claro); color: var(--azul); font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
+/* Encabezado fijo solo en tablas con desplazamiento propio (planillas, asistencia, horario…) */
+.envoltura-tabla .tabla thead th { position: sticky; top: 0; z-index: 1; }
+.envoltura-tabla .planilla thead th.alumno { z-index: 3; }
 .tabla tr:hover td { background: var(--hover); }
 .tabla td.num, .tabla th.num { text-align: center; }
 .tabla input { padding: 5px 7px; }
