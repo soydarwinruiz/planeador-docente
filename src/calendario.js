@@ -70,6 +70,7 @@ function dialogoDia(iso) {
   const ses = sesionesDelDia(iso);
   abrirModal(`<h2 style="text-transform:capitalize">${esc(fechaLarga(iso))}</h2>
     ${ses.length ? `<h3>Clases planeadas</h3><ul class="lista-simple">${ses.map(({ p, s, i }) => `<li><div><b>${esc(nombreGrupoId(p.grupoId))}</b> · ${esc(nombreArea(p.areaId))}<br><span class="ayuda">Sesión ${i + 1}: ${esc(s.titulo || p.titulo || '')}</span></div><button class="btn pequeno" onclick="cerrarModal();editarPlaneacion('${p.id}')">Abrir</button></li>`).join('')}</ul>` : ''}
+    ${clasesDelDia(iso).length ? `<h3>Clases según tu horario</h3><ul class="lista-simple">${clasesDelDia(iso).map(({ b, c }) => `<li><span><b>${esc(b.inicio)}</b> · ${esc(nombreGrupoId(c.grupoId))} · ${esc(nombreArea(c.areaId))}</span><button class="btn pequeno" onclick="cerrarModal();planearClaseDe('${c.grupoId}','${c.areaId}','${iso}')">＋ Planear</button></li>`).join('')}</ul>` : ''}
     ${evs.length ? `<h3>Eventos</h3><ul class="lista-simple">${evs.map((e) => `<li><div><span class="item ${esc(e.tipo)}" style="display:inline-block">${esc(TIPOS_EVENTO[e.tipo])}</span> ${esc(e.titulo)}</div><button class="icono" title="Eliminar" onclick="eliminarEvento('${e.id}','${iso}')">🗑️</button></li>`).join('')}</ul>` : ''}
     <h3>Agregar evento</h3>
     <div class="rejilla r2">
@@ -208,5 +209,5 @@ function exportarCronograma() {
     const e = S.cronograma[claveCrono(c, l)] || {};
     filas.push([n, fechaCorta(l), fechaCorta(sumarDias(l, 4)), e.tema || '', e.hecho ? 'Sí' : '']);
   }
-  api.guardarCSV(`Cronograma ${nombreArea(c.areaId)} ${c.grado} ${per.nombre}`, aCSV(filas));
+  exportarExcel(`Cronograma ${nombreArea(c.areaId)} ${c.grado} ${per.nombre}`, filas);
 }

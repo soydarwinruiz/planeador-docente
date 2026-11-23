@@ -22,6 +22,18 @@ RENDERS.configuracion = () => {
     </div>
   </div>
 
+  ${tarjetaMembrete()}
+
+  ${tarjetaApariencia()}
+
+  ${tarjetaMenu()}
+
+  ${tarjetaActualizaciones()}
+
+  ${tarjetaNube()}
+
+  ${tarjetaCompartir()}
+
   <div class="tarjeta"><h2>Escala de valoración (SIEE)</h2>
     <div class="rejilla r4">
       ${campoConfig('escalaMin', 'Nota mínima', 'number', 'step="0.1"')}
@@ -102,6 +114,7 @@ async function restaurarRespaldo() {
   if (!r.ok) { if (r.error) aviso(r.error, 'error'); return; }
   if (!(await confirmar('Se reemplazarán TODOS los datos actuales por los del respaldo. (Los datos actuales quedan en los respaldos automáticos.) ¿Continuar?', { boton: 'Restaurar' }))) return;
   S = migrar(r.datos);
+  aplicarApariencia();
   sembrarBanco();
   migrarPlantillas();
   sembrarInstrumentos();
@@ -118,6 +131,7 @@ async function restaurarAuto(nombre) {
   cerrarModal();
   if (!(await confirmar('Se reemplazarán los datos actuales por este respaldo. ¿Continuar?', { boton: 'Restaurar' }))) return;
   S = migrar(await api.restaurarRespaldoAuto(nombre));
+  aplicarApariencia();
   sembrarBanco();
   migrarPlantillas();
   sembrarInstrumentos();
@@ -290,4 +304,66 @@ function dibujarAsistente() {
     <div class="botones">${w.paso > 0 ? '<button class="btn" style="margin-right:auto" onclick="ui.wiz.paso--;dibujarAsistente()">← Anterior</button>' : ''}
       ${w.paso < PASOS_ASISTENTE.length - 1 ? `<button class="btn" onclick="cerrarModal();render()">Terminar después</button><button class="btn primario" onclick="ui.wiz.paso++;dibujarAsistente()">Siguiente →</button>`
         : `<button class="btn" onclick="S.config.configurado=true;guardar();cerrarModal();render()">Cerrar</button><button class="btn primario" onclick="S.config.configurado=true;guardar();cerrarModal();ir('grupos')">Ir a Grupos y alumnos</button>`}</div>`, { ancho: true });
+}
+
+// ---------- Membrete institucional ----------
+function tarjetaMembrete() {
+  const mb = S.config.membrete ||= { logo: null, logo2: null, lineas: '', lema: '', pie: '', color: '#1f4e79' };
+  const img = (k, t) => `<div class="campo"><label>${t}</label>
+    <div class="fila" style="flex-wrap:nowrap">${mb[k] ? `<img src="${mb[k].data}" style="height:56px;max-width:140px;object-fit:contain;border:1px solid var(--borde);border-radius:6px;padding:3px;background:#fff">` : '<span class="ayuda">Sin imagen</span>'}
+      <label class="btn pequeno" style="margin:0;cursor:pointer;font-weight:normal;color:inherit">📁 Elegir…<input type="file" accept="image/png,image/jpeg" style="display:none" onchange="cargarLogo('${k}',this.files[0])"></label>
+      ${mb[k] ? `<button class="btn pequeno peligro" onclick="S.config.membrete['${k}']=null;guardar();render()">Quitar</button>` : ''}</div></div>`;
+  return `<div class="tarjeta"><h2>🏫 Membrete de los documentos</h2>
+    <p class="ayuda">Aparece en el encabezado de todas las páginas de los documentos de Word (planeaciones, mallas, planes de área, programación evaluativa, planes de apoyo, PIAR…).</p>
+    <div class="rejilla" style="grid-template-columns: 1fr 1fr 1fr">
+      ${img('logo', 'Escudo o logo (izquierda)')}
+      ${img('logo2', 'Segundo logo (derecha, opcional)')}
+      <div class="campo"><label>Color del membrete</label><input type="color" value="${esc(mb.color || '#1f4e79')}" style="width:80px;height:38px;padding:2px" onchange="S.config.membrete.color=this.value;guardar();render()"></div>
+    </div>
+    <div class="rejilla r2">
+      <div class="campo"><label>Líneas bajo el nombre (una por línea)</label><textarea placeholder="Aprobada por Resolución N.° … de …\nNIT: … · DANE: …" oninput="S.config.membrete.lineas=this.value;guardar();actualizarVistaMembrete()">${esc(mb.lineas || '')}</textarea></div>
+      <div><div class="campo"><label>Lema (opcional)</label><input value="${esc(mb.lema || '')}" placeholder="Ej.: Educamos para la vida" oninput="S.config.membrete.lema=this.value;guardar();actualizarVistaMembrete()"></div>
+        <div class="campo"><label>Pie de página (dirección, teléfono, correo…)</label><textarea style="min-height:48px" placeholder="Calle … · Tel. … · correo@…" oninput="S.config.membrete.pie=this.value;guardar();actualizarVistaMembrete()">${esc(mb.pie || '')}</textarea></div></div>
+    </div>
+    <label>Vista previa</label><div id="vista-membrete">${vistaMembreteHTML()}</div>
+  </div>`;
+}
+function vistaMembreteHTML() {
+  const c = S.config, mb = c.membrete || {};
+  const col = mb.color || '#1f4e79';
+  const lin = String(mb.lineas || '').split('\n').filter((l) => l.trim());
+  return `<div style="background:#fff;border:1px solid var(--borde);border-radius:6px;padding:12px 16px;color:#222">
+    <div style="display:grid;grid-template-columns:90px 1fr 90px;align-items:center;gap:8px;border-bottom:2px solid ${esc(col)};padding-bottom:8px">
+      <div style="text-align:center">${mb.logo ? `<img src="${mb.logo.data}" style="max-height:60px;max-width:88px">` : ''}</div>
+      <div style="text-align:center;font-family:Arial;line-height:1.3">
+        <div style="font-weight:700;color:${esc(col)};font-size:15px">${esc((c.institucion || 'INSTITUCIÓN EDUCATIVA').toUpperCase())}</div>
+        ${lin.map((l) => `<div style="font-size:11px">${esc(l)}</div>`).join('')}
+        ${[c.sede, c.municipio].filter(Boolean).length ? `<div style="font-size:11px">${esc([c.sede, c.municipio].filter(Boolean).join(' – '))}</div>` : ''}
+        ${mb.lema ? `<div style="font-size:11px;font-style:italic;color:${esc(col)}">${esc(mb.lema)}</div>` : ''}</div>
+      <div style="text-align:center">${mb.logo2 ? `<img src="${mb.logo2.data}" style="max-height:60px;max-width:88px">` : ''}</div>
+    </div>
+    <div style="height:40px"></div>
+    ${mb.pie ? `<div style="border-top:1px solid ${esc(col)};font-size:10px;color:#666;text-align:center;padding-top:4px;font-family:Arial">${esc(mb.pie).replace(/\n/g, '<br>')}</div>` : ''}
+  </div>`;
+}
+function actualizarVistaMembrete() { const v = document.getElementById('vista-membrete'); if (v) v.innerHTML = vistaMembreteHTML(); }
+function cargarLogo(clave, archivo) {
+  if (!archivo) return;
+  const lector = new FileReader();
+  lector.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      // Se reduce a máximo 400 px para que los datos no crezcan demasiado
+      const escala = Math.min(1, 400 / Math.max(im.width, im.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(im.width * escala); cv.height = Math.round(im.height * escala);
+      cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+      S.config.membrete[clave] = { data: cv.toDataURL('image/png'), ancho: cv.width, alto: cv.height };
+      guardar(); render();
+      aviso('Imagen cargada', 'ok');
+    };
+    im.onerror = () => aviso('No se pudo leer la imagen', 'error');
+    im.src = lector.result;
+  };
+  lector.readAsDataURL(archivo);
 }

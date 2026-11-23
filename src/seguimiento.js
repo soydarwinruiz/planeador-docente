@@ -33,15 +33,15 @@ function graficaLinea(puntos, { ref, titulo }) {
   const validos = puntos.map((p, i) => ({ ...p, i })).filter((p) => p.v != null);
   const ruta = validos.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(titulo)}" style="max-width:${W}px;font-family:inherit">
-    ${ticks.map((t) => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" stroke="#e6eaf0"/><text x="${m.l - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="#5f6b7d">${fmtNota(t)}</text>`).join('')}
+    ${ticks.map((t) => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}" style="stroke:var(--borde)"/><text x="${m.l - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" style="fill:var(--suave)">${fmtNota(t)}</text>`).join('')}
     ${ref != null ? `<line x1="${m.l}" x2="${W - m.r}" y1="${y(ref)}" y2="${y(ref)}" stroke="#c62828" stroke-dasharray="4 4" stroke-width="1"/>
-      <text x="${W - m.r}" y="${y(ref) - 5}" text-anchor="end" font-size="11" fill="#5f6b7d">Aprobación ${fmtNota(ref)}</text>` : ''}
-    ${puntos.map((p, i) => `<text x="${x(i)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="#5f6b7d">${esc(p.etiqueta)}</text>`).join('')}
+      <text x="${W - m.r}" y="${y(ref) - 5}" text-anchor="end" font-size="11" style="fill:var(--suave)">Aprobación ${fmtNota(ref)}</text>` : ''}
+    ${puntos.map((p, i) => `<text x="${x(i)}" y="${H - 10}" text-anchor="middle" font-size="11" style="fill:var(--suave)">${esc(p.etiqueta)}</text>`).join('')}
     ${ruta ? `<path d="${ruta}" fill="none" stroke="${COLOR_SERIE}" stroke-width="2" stroke-linejoin="round"/>` : ''}
     ${validos.map((p) => `<g><circle cx="${x(p.i)}" cy="${y(p.v)}" r="14" fill="transparent"><title>${esc(p.nombre)}: ${fmtNota(p.v)} (${desempeno(p.v)})</title></circle>
-      <circle cx="${x(p.i)}" cy="${y(p.v)}" r="4.5" fill="${COLOR_SERIE}" stroke="#fff" stroke-width="2" pointer-events="none"/>
-      <text x="${x(p.i)}" y="${y(p.v) - 10}" text-anchor="middle" font-size="12" font-weight="600" fill="#1d2533" pointer-events="none">${fmtNota(p.v)}</text></g>`).join('')}
-    ${!validos.length ? `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="13" fill="#5f6b7d">Aún no hay notas registradas</text>` : ''}
+      <circle cx="${x(p.i)}" cy="${y(p.v)}" r="4.5" fill="${COLOR_SERIE}" style="stroke:var(--superficie)" stroke-width="2" pointer-events="none"/>
+      <text x="${x(p.i)}" y="${y(p.v) - 10}" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--texto)" pointer-events="none">${fmtNota(p.v)}</text></g>`).join('')}
+    ${!validos.length ? `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="13" style="fill:var(--suave)">Aún no hay notas registradas</text>` : ''}
   </svg>`;
 }
 function graficaBarras(filas, { ref }) {
@@ -55,14 +55,14 @@ function graficaBarras(filas, { ref }) {
     ${filas.map((f, i) => {
       const yy = m.t + i * fila;
       const w = f.v == null ? 0 : Math.max(4, ancho(f.v));
-      return `<g><text x="${m.l - 10}" y="${yy + 21}" text-anchor="end" font-size="12" fill="#1d2533">${esc(f.nombre.length > 28 ? f.nombre.slice(0, 27) + '…' : f.nombre)}</text>
+      return `<g><text x="${m.l - 10}" y="${yy + 21}" text-anchor="end" font-size="12" style="fill:var(--texto)">${esc(f.nombre.length > 28 ? f.nombre.slice(0, 27) + '…' : f.nombre)}</text>
         <rect x="${m.l}" y="${yy + 8}" width="${W - m.l - m.r}" height="18" fill="transparent"><title>${esc(f.nombre)}: ${f.v == null ? 'sin notas' : fmtNota(f.v)}${f.detalle ? ' · ' + esc(f.detalle) : ''}</title></rect>
         ${f.v != null ? `<rect x="${m.l}" y="${yy + 8}" width="${w}" height="18" rx="4" fill="${COLOR_SERIE}" pointer-events="none"/>
-        <text x="${m.l + w + 6}" y="${yy + 21}" font-size="12" font-weight="600" fill="#1d2533" pointer-events="none">${fmtNota(f.v)}</text>`
-        : `<text x="${m.l}" y="${yy + 21}" font-size="12" fill="#5f6b7d">sin notas</text>`}</g>`;
+        <text x="${m.l + w + 6}" y="${yy + 21}" font-size="12" font-weight="600" style="fill:var(--texto)" pointer-events="none">${fmtNota(f.v)}</text>`
+        : `<text x="${m.l}" y="${yy + 21}" font-size="12" style="fill:var(--suave)">sin notas</text>`}</g>`;
     }).join('')}
     <line x1="${xRef}" x2="${xRef}" y1="${m.t}" y2="${H - 18}" stroke="#c62828" stroke-dasharray="4 4"/>
-    <text x="${xRef}" y="${H - 4}" text-anchor="middle" font-size="11" fill="#5f6b7d">Aprobación ${fmtNota(ref)}</text>
+    <text x="${xRef}" y="${H - 4}" text-anchor="middle" font-size="11" style="fill:var(--suave)">Aprobación ${fmtNota(ref)}</text>
   </svg>`;
 }
 function tarjetaDato(valor, etiqueta, extra = '') {
@@ -147,7 +147,8 @@ function vistaAlumno(c) {
   return `
   <div class="tarjeta" style="display:flex;justify-content:space-between;align-items:center">
     <div><h2 style="margin:0">${esc(nombreAlumno(al))} ${al.piar ? '<span class="chip piar">PIAR</span>' : ''}</h2>
-      <span class="ayuda">${esc(nombreGrupoId(c.grupoId))}${al.documento ? ' · Doc. ' + esc(al.documento) : ''}${al.observaciones ? ' · ' + esc(al.observaciones) : ''}</span></div>
+      <span class="ayuda">${esc(nombreGrupoId(c.grupoId))}${al.documento ? ' · Doc. ' + esc(al.documento) : ''}${al.observaciones ? ' · ' + esc(al.observaciones) : ''}</span>
+      ${al.perfil ? `<div class="ayuda">🧠 ${[al.perfil.vak ? 'Canal: ' + canalPredominante(al.perfil.vak) : '', al.perfil.kolb ? 'Kolb: ' + estiloKolb(al.perfil.kolb) : '', al.perfil.im ? 'Inteligencias: ' + (inteligenciasDestacadas(al.perfil.im).join(', ') || '—') : ''].filter(Boolean).map(esc).join(' · ')}</div>` : ''}</div>
     <button class="btn" onclick="ui.seg.alumnoId='';render()">← Resumen del grupo</button></div>
   <div class="estadisticas">
     ${tarjetaDato(fmtNota(prom), `Promedio – ${esc(per?.nombre || '')}`, chipDesempeno(prom))}
@@ -174,5 +175,8 @@ function vistaAlumno(c) {
     ${plArea.criterios.flatMap((cr) => cr.actividades.map((a) => { const n = nota(a.id, al.id); return `<tr><td>${esc(cr.nombre)}</td><td>${esc(a.nombre)}</td><td>${a.fecha ? esc(fechaCorta(a.fecha)) : '—'}</td>
       <td class="num ${claseNota(n)}"><b>${n == null ? (a.fecha && a.fecha <= hoy ? '<span class="chip borrador">Pendiente</span>' : '—') : fmtNota(n)}</b></td><td>${chipDesempeno(n)}</td></tr>`; })).join('')}
     </tbody></table></div>` : ''}
+  ${(() => { const pa = S.planesApoyo.filter((x) => x.alumnoId === al.id); return pa.length ? `<div class="tarjeta"><h3>Planes de apoyo</h3><table class="tabla"><thead><tr><th>Área</th><th>Periodo</th><th class="num">Nota del periodo</th><th>Entrega</th><th>Estado</th><th class="num">Nota del plan</th></tr></thead><tbody>
+    ${pa.map((x) => `<tr><td>${esc(nombreArea(x.areaId))}</td><td>${esc(nombrePeriodo(x.periodoId))}</td><td class="num ${claseNota(x.notaInicial)}">${fmtNota(x.notaInicial)}</td><td>${x.fechaEntrega ? esc(fechaCorta(x.fechaEntrega)) : '—'}</td><td><span class="chip ${x.estado === 'superado' ? 'terminada' : x.estado === 'no_superado' ? 'Bajo' : 'borrador'}">${esc(ESTADOS_APOYO[x.estado])}</span></td><td class="num">${esc(x.notaFinal || '—')}</td></tr>`).join('')}
+    </tbody></table></div>` : ''; })()}
   ${pendientes.length ? `<div class="tarjeta"><h3>Actividades pendientes en todas las áreas</h3><ul class="lista-simple">${pendientes.map((p) => `<li><span><b>${esc(p.ar.nombre)}</b> · ${esc(p.a.nombre)}</span><span class="ayuda">${esc(fechaCorta(p.a.fecha))}</span></li>`).join('')}</ul></div>` : ''}`;
 }

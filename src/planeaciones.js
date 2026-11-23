@@ -127,16 +127,25 @@ function crearPlaneacion() {
   const fecha = document.getElementById('m-fecha').value || hoyISO();
   const n = tipo === 'secuencia' ? 3 : 1;
   let sesiones;
+  // Si hay horario, las sesiones toman las fechas de las próximas clases del grupo y el área
+  const grupoSel = document.getElementById('m-grupo').value, areaSel = document.getElementById('m-area').value;
+  let fechasHorario = [];
   if (tipo === 'semanal') {
+    const lunes = lunesDe(fecha);
+    fechasHorario = proximasClases(grupoSel, areaSel, lunes, 10).filter((f) => f <= sumarDias(lunes, 6));
+  } else fechasHorario = proximasClases(grupoSel, areaSel, fecha, n);
+  if (fechasHorario.length) {
+    sesiones = fechasHorario.map((f) => nuevaSesion(f));
+  } else if (tipo === 'semanal') {
     sesiones = [nuevaSesion(fecha), nuevaSesion('')];
   } else {
     sesiones = Array.from({ length: n }, (_, i) => nuevaSesion(i === 0 ? fecha : ''));
   }
-  const fechaInicio = fecha;
+  const fechaInicio = sesiones[0].fecha || fecha;
   const p = {
     id: uid(), tipo, titulo: document.getElementById('m-titulo').value.trim(),
     grupoId: document.getElementById('m-grupo').value, areaId: document.getElementById('m-area').value,
-    periodoId: periodoDeFecha(fecha)?.id || '', fechaInicio, fechaFin: tipo === 'semanal' ? sumarDias(lunesDe(fecha), 4) : fecha,
+    periodoId: periodoDeFecha(fechaInicio)?.id || '', fechaInicio, fechaFin: fechasHorario.length ? fechasHorario[fechasHorario.length - 1] : (tipo === 'semanal' ? sumarDias(lunesDe(fecha), 4) : fecha),
     estado: 'borrador', enBanco: false, sesiones, observaciones: '',
     creada: new Date().toISOString(), modificada: new Date().toISOString(),
   };
@@ -305,7 +314,8 @@ function cambiarSesion(id, i, campo, valor) {
 function agregarSesion(id) {
   const p = porId(S.planeaciones, id);
   const ultima = [...p.sesiones].reverse().find((s) => s.fecha);
-  const s = nuevaSesion(ultima ? sumarDias(ultima.fecha, 1) : '');
+  const sig = ultima ? (proximasClases(p.grupoId, p.areaId, sumarDias(ultima.fecha, 1), 1)[0] || sumarDias(ultima.fecha, 1)) : '';
+  const s = nuevaSesion(sig);
   s.duracion = p.sesiones[0]?.duracion || 55;
   p.sesiones.push(s);
   tocarPlan(p); render();
@@ -393,7 +403,8 @@ RENDERS.banco = () => {
       (!q || normalizar([p.titulo, p.competencias, p.dba, p.estandares].join(' ')).includes(q));
   }).sort((a, b) => (a.titulo || '').localeCompare(b.titulo || '', 'es'));
   return `
-  <div class="cabecera"><div><h1>Banco de planeaciones</h1><p class="sub">Tus planeaciones guardadas para reutilizar en otros grupos o en el siguiente año lectivo.</p></div></div>
+  <div class="cabecera"><div><h1>Banco de planeaciones</h1><p class="sub">Tus planeaciones guardadas para reutilizar en otros grupos o en el siguiente año lectivo.</p></div>
+    <div class="acciones"><button class="btn" onclick="dialogoExportarPaquete()">📤 Compartir</button><button class="btn" onclick="importarPaquete()">📥 Importar de un colega</button></div></div>
   <div class="filtros tarjeta">
     <div style="flex:1;min-width:200px"><label>Buscar</label><input value="${esc(f.texto)}" onchange="ui.filtroBanco.texto=this.value;render()" placeholder="Tema, DBA, competencia… (Enter)"></div>
     <div><label>Área</label><select onchange="ui.filtroBanco.areaId=this.value;render()">${opcionesAreas(f.areaId, 'Todas')}</select></div>

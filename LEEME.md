@@ -5,8 +5,10 @@ Funciona **sin internet**: todos los datos quedan guardados en tu computador.
 
 ## Cómo abrirla
 
-- **Versión portable** (`PlaneadorDocente-portable-1.6.0.exe`): haz doble clic y listo. No necesita instalación.
-  Puedes llevarla en una memoria USB.
+- **Instalador** (`PlaneadorDocente-Setup-1.7.0.exe`, recomendado): instala la app con acceso directo en el escritorio
+  y **se actualiza sola** (Configuración → *Actualizaciones*).
+- **Versión portable** (`PlaneadorDocente-portable-1.7.0.exe`): haz doble clic y listo. No necesita instalación.
+  Puedes llevarla en una memoria USB. Avisa cuando hay versión nueva, pero se descarga a mano.
 - La primera vez, Windows puede mostrar *"Windows protegió su PC"* (el programa no tiene firma digital comercial).
   Haz clic en **Más información → Ejecutar de todas formas**.
 
@@ -37,20 +39,31 @@ Al abrir la app por primera vez aparece el **asistente de configuración** (inst
 | Planeaciones de clase | Estructura de orientaciones didácticas: identificación, diversidad del aula (desde el perfil del grupo), fundamentación, criterios de evaluación por niveles y acciones metodológicas (exploración, estructuración, práctica, transferencia y valoración, con mediaciones). Crear, buscar, filtrar, duplicar y exportar a Word. Se vinculan a la malla: al elegir un eje se copian sus estándares, DBA, competencias y desempeños |
 | Banco pedagógico | Incluye de fábrica **52 estrategias** (Radar 360°: generales y específicas de sesión), **60 técnicas** (búsqueda, comprensión, representación y comunicación) y los **9 métodos universales**, con código, clasificación y pasos. Estrategias, metodologías y técnicas con clasificación, momentos de la clase, descripción y pasos. Se agregan a mano o se importan desde Excel, y se insertan con el botón **📚 Banco** en la planeación de clase, el plan de periodo, el plan de aula y el plan de área |
 | Plantillas de planeación | Una plantilla por grado o por grupo (y opcionalmente por área) con duración, minutos por sesión, número de estudiantes, locativos, recursos, estilos de aprendizaje, gustos, barreras, ajustes y datos de fundamentación. Al crear una planeación se aplica sola la plantilla más específica |
-| Banco de planeaciones | Reutilizar planeaciones en otro grupo o en el siguiente año (las fechas se ajustan solas) |
+| Banco de planeaciones | Reutilizar planeaciones en otro grupo o en el siguiente año (las fechas se ajustan solas). **Compartir con otros docentes** mediante un archivo `.planeador` (planeaciones, mallas, planes de área, plantillas, instrumentos y estrategias; nunca datos de estudiantes) |
+| Mi horario | Horario semanal por franjas. Muestra *Mis clases de hoy* en Inicio, propone las fechas de las sesiones al planear y abre la asistencia del grupo correcto |
+| Inclusión (PIAR) | PIAR completo según el Decreto 1421 de 2017: valoración pedagógica, ajustes razonables por área y periodo, recomendaciones, acta de acuerdo y seguimiento. Exportable a Word |
+| Perfil de aprendizaje | Tests con calificación automática: estilos **VAK**, estilos de **Kolb** e **inteligencias múltiples**. El resumen del grupo se puede pasar a la plantilla de planeación |
+| DUA y flexibilización | 36 consideraciones del **DUA 3.0** y 10 estrategias de flexibilización curricular dentro del banco pedagógico, que se insertan en *ajustes razonables* y *apoyos* |
 | Calendario | Vista mensual con clases planeadas, periodos, festivos y eventos |
 | Cronograma | Temas previstos semana a semana por área, grado y periodo |
 | Grupos y alumnos | Áreas, grupos, intensidad horaria, listas, PIAR, retiros y traslados |
-| Evaluación y notas | **Programación evaluativa** por grupo, área y periodo: componentes con porcentaje (Evaluaciones, Consultas o investigaciones, Actividades de aplicación, Actitudinal con auto/co/heteroevaluación y Prueba final) y sus actividades con fecha, técnica e instrumento; exportable a Word para los padres y copiable a otros grupos. Planilla de notas, consolidado anual y **banco de instrumentos**: rúbricas, escalas de valoración y listas de cotejo |
+| Evaluación y notas | **Programación evaluativa** por grupo, área y periodo: componentes con porcentaje (Evaluaciones, Consultas o investigaciones, Actividades de aplicación, Actitudinal con auto/co/heteroevaluación y Prueba final) y sus actividades con fecha, técnica e instrumento; exportable a Word para los padres y copiable a otros grupos. Planilla de notas, consolidado anual, **planes de apoyo** (para quienes están en Bajo, con actividades, criterios y firmas; sugeridos con IA) y **banco de instrumentos**: rúbricas, escalas de valoración y listas de cotejo |
 | Seguimiento del estudiante | Tablero por grupo (quién requiere atención) y por estudiante: promedio por periodo, componentes, notas por área, asistencia y actividades pendientes |
 | Asistencia | Presente / ausente / tarde / excusa por clase, con resumen y % de asistencia |
-| Configuración | Datos institucionales, SIEE, periodos, IA, respaldos y cambio de año lectivo |
+| Configuración | Datos institucionales, **hoja membrete** (logos, color, lema y pie de página para todos los Word), SIEE, periodos, IA, apariencia (modo oscuro y tamaño de letra), actualizaciones, respaldos y cambio de año lectivo |
 
-Las listas, la asistencia, las planillas y el cronograma se pueden **exportar a Excel** (formato CSV).
+Las listas, la asistencia, las planillas, la programación evaluativa y el cronograma se exportan a **Excel (.xlsx)** con el encabezado de la institución.
+
+**Menú a tu medida**: en Configuración → *Menú lateral* (o el botón ☰ abajo en el menú) ocultas los módulos que no usas, por ejemplo PIAR o Cronograma, y los ordenas arrastrándolos. Ocultar no borra datos.
+
+**Buscador general**: con **Ctrl + K** (o el cuadro *Buscar* del menú) encuentras planeaciones, estudiantes, estrategias, mallas, plantillas, planes de apoyo, PIAR y eventos.
 
 ## Respaldos
 
 - **Automático**: cada vez que abres la aplicación se guarda una copia (se conservan las últimas 15).
+- **En la nube**: Configuración → *Respaldo en la nube* → elige la carpeta de **OneDrive** o de **Google Drive para escritorio**.
+  La app copia tus datos allí cada 20 minutos y al cerrar (conserva 14 días). Si se daña o se pierde el computador,
+  instala la app en otro y usa *Restaurar desde archivo…* con `planeador-ultimo.json`.
 - **Manual**: Configuración → *Crear respaldo…* y guárdalo en una USB o en OneDrive/Google Drive.
   Para pasar tus datos a otro computador, usa *Restaurar desde archivo…*.
 
@@ -80,4 +93,14 @@ npm run dist:portable  # generar el .exe portable
 npm run dist:win       # instalador + portable (ejecutar en Windows)
 ```
 
-El flujo `.github/workflows/compilar-windows.yml` genera el instalador en GitHub Actions.
+El flujo `.github/workflows/compilar-windows.yml` genera el instalador en GitHub Actions y publica la versión
+(`latest.yml` + `.blockmap`), de donde la app instalada descarga sus actualizaciones.
+
+### Firma digital (opcional)
+
+Sin firma, Windows SmartScreen muestra *"Windows protegió su PC"*. Para quitarlo se necesita un certificado de firma de código
+(OV o EV de una entidad como Sectigo, DigiCert o SSL.com, o el servicio Azure Trusted Signing). Con el certificado `.pfx`:
+
+1. Conviértelo a base64 (`certutil -encode cert.pfx cert.txt` y quita las líneas BEGIN/END).
+2. En GitHub → *Settings → Secrets and variables → Actions* crea los secretos `CSC_LINK` (el texto base64) y `CSC_KEY_PASSWORD`.
+3. Vuelve a ejecutar el flujo: electron-builder firmará el instalador y la portable automáticamente.

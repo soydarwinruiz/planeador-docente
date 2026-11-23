@@ -9,14 +9,18 @@
 <body>
   <aside id="menu">
     <div class="marca">
-      <div class="logo">📘</div>
+      <img class="logo" src="icono.svg" alt="" style="width:36px;height:36px">
       <div>
         <div class="marca-titulo">Planeador Docente</div>
         <div class="marca-sub" id="marca-sub">Educación básica y media</div>
       </div>
     </div>
+    <div class="buscador"><input placeholder="🔎 Buscar…  (Ctrl+K)" onfocus="this.blur();abrirBuscador()" readonly></div>
     <nav id="nav"></nav>
-    <div class="menu-pie" id="estado-guardado">Datos guardados en este equipo</div>
+    <div class="menu-pie"><div class="fila" style="justify-content:space-between;margin-bottom:6px">
+      <span><button title="Tema claro / oscuro" onclick="cambiarTema(document.body.classList.contains('oscuro') ? 'claro' : 'oscuro')">🌓</button> <button title="Personalizar el menú (ocultar y ordenar módulos)" onclick="ir('configuracion');setTimeout(()=>document.getElementById('tarjeta-menu')?.scrollIntoView({behavior:'smooth'}),80)">☰</button></span>
+      <span><button title="Letra más pequeña" onclick="cambiarZoom(-1)">A−</button> <button title="Letra más grande" onclick="cambiarZoom(1)">A+</button></span></div>
+      <div id="estado-guardado">Datos guardados en este equipo</div></div>
   </aside>
   <main id="contenido"></main>
   <div id="modal-fondo" class="oculto"><div id="modal"></div></div>
@@ -33,8 +37,14 @@
   <script src="banco-pedagogico.js"></script>
   <script src="evaluacion.js"></script>
   <script src="programacion.js"></script>
+  <script src="apoyo.js"></script>
+  <script src="piar.js"></script>
+  <script src="perfil.js"></script>
   <script src="calendario.js"></script>
+  <script src="horario.js"></script>
   <script src="seguimiento.js"></script>
+  <script src="buscador.js"></script>
+  <script src="compartir.js"></script>
   <script src="configuracion.js"></script>
   <script>iniciar();</script>
 </body>

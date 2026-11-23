@@ -120,6 +120,7 @@ RENDERS.alumnos = ({ grupoId }) => {
   <div class="cabecera"><div><h1>Estudiantes de ${esc(nombreGrupo(g))}</h1><p class="sub">${lista.length} estudiante(s) activos. Los cambios se guardan automáticamente.</p></div>
   <div class="acciones">
     <button class="btn" onclick="ir('grupos')">← Volver</button>
+    <button class="btn" onclick="ir('perfil',{grupoId:'${grupoId}'})">🧠 Perfil de aprendizaje</button>
     <button class="btn" onclick="pegarLista('${grupoId}')">📋 Pegar lista desde Excel</button>
     <button class="btn" onclick="exportarAlumnos('${grupoId}')">⬇️ Exportar a Excel</button>
     <button class="btn primario" onclick="agregarAlumno('${grupoId}')">＋ Estudiante</button>
@@ -130,9 +131,9 @@ RENDERS.alumnos = ({ grupoId }) => {
     <td><input value="${esc(a.apellidos)}" onchange="cambiarAlumno('${a.id}','apellidos',this.value)"></td>
     <td><input value="${esc(a.nombres)}" onchange="cambiarAlumno('${a.id}','nombres',this.value)"></td>
     <td><input value="${esc(a.documento || '')}" onchange="cambiarAlumno('${a.id}','documento',this.value)" style="width:130px"></td>
-    <td class="num"><input type="checkbox" ${a.piar ? 'checked' : ''} onchange="cambiarAlumno('${a.id}','piar',this.checked)" title="Estudiante con PIAR"></td>
+    <td class="num"><input type="checkbox" ${a.piar ? 'checked' : ''} onchange="cambiarAlumno('${a.id}','piar',this.checked);render()" title="Estudiante con PIAR"></td>
     <td><input value="${esc(a.observaciones || '')}" onchange="cambiarAlumno('${a.id}','observaciones',this.value)" placeholder="Ej.: diagnóstico, apoyos, acudiente…"></td>
-    <td style="white-space:nowrap"><button class="icono" title="Mover a otro grupo" onclick="moverAlumno('${a.id}')">↔️</button><button class="icono" title="Retirar" onclick="retirarAlumno('${a.id}')">🚪</button></td>
+    <td style="white-space:nowrap">${a.piar && vistaVisible('piar') ? `<button class="btn pequeno" onclick="ir('piarEditor',{alumnoId:'${a.id}'})">📝 PIAR</button>` : ''}<button class="icono" title="Mover a otro grupo" onclick="moverAlumno('${a.id}')">↔️</button><button class="icono" title="Retirar" onclick="retirarAlumno('${a.id}')">🚪</button></td>
   </tr>`).join('')}</tbody></table></div>` : `<div class="tarjeta vacio"><div class="grande">🧑‍🎓</div>Agrega estudiantes uno a uno o pega la lista copiada desde Excel o el SIMAT.</div>`}
   ${retirados.length ? `<h2>Retirados (${retirados.length})</h2><ul class="lista-simple tarjeta">${retirados.map((a) => `<li>${esc(nombreAlumno(a))}<div><button class="btn pequeno" onclick="cambiarAlumno('${a.id}','activo',true);render()">Reintegrar</button> <button class="btn pequeno peligro" onclick="eliminarAlumno('${a.id}')">Eliminar definitivamente</button></div></li>`).join('')}</ul>` : ''}`;
 };
@@ -210,7 +211,7 @@ function procesarLista(grupoId) {
 function exportarAlumnos(grupoId) {
   const filas = [['#', 'Apellidos', 'Nombres', 'Documento', 'PIAR', 'Observaciones']];
   alumnosDe(grupoId).forEach((a, i) => filas.push([i + 1, a.apellidos, a.nombres, a.documento, a.piar ? 'Sí' : '', a.observaciones]));
-  api.guardarCSV(`Lista ${nombreGrupoId(grupoId)}`, aCSV(filas));
+  exportarExcel(`Lista ${nombreGrupoId(grupoId)}`, filas);
 }
 
 // ---------- Plantilla del grupo ----------

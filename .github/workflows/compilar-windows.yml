@@ -15,6 +15,10 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run dist:win
+        env:
+          # Firma de código: se usa solo si se configuran estos secretos en GitHub
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
       - uses: actions/upload-artifact@v4
         with:
           name: planeador-docente-windows
@@ -29,10 +33,13 @@ jobs:
           tag_name: v${{ steps.version.outputs.v }}
           target_commitish: ${{ github.sha }}
           name: Planeador Docente ${{ steps.version.outputs.v }}
-          files: dist/*.exe
+          files: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
           body: |
             **Cómo instalar**
-            - `Planeador Docente Setup ...exe`: instalador (crea acceso directo en el escritorio).
+            - `PlaneadorDocente-Setup-...exe`: instalador (crea acceso directo y se actualiza solo).
             - `PlaneadorDocente-portable-...exe`: versión portable, se abre con doble clic sin instalar.
 
             Si Windows muestra "Windows protegió su PC", haz clic en **Más información → Ejecutar de todas formas**.

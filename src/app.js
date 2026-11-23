@@ -52,6 +52,8 @@ function estadoInicial() {
     bancoSemilla: 0,
     bancoEliminados: [],
     plantillas: [],
+    planesApoyo: [],
+    piar: [],
     instrumentosSemilla: 0,
     instrumentosEliminados: [],
   };
@@ -82,6 +84,11 @@ function fechaLarga(iso) {
 function porId(lista, id) { return lista.find((x) => x.id === id); }
 function normalizar(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function csvCelda(v) { const s = String(v ?? ''); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
+// Exporta una tabla a Excel (.xlsx) con el membrete básico de la institución
+async function exportarExcel(nombre, filas) {
+  const r = await api.guardarExcel({ nombre, filas, institucion: S.config.institucion || '', docente: S.config.docente || '', color: (S.config.membrete || {}).color || '#1f4e79' });
+  if (r?.ok) aviso('Archivo de Excel creado', 'ok'); else if (r?.error) aviso('No se pudo exportar: ' + r.error, 'error');
+}
 function aCSV(filas) { return filas.map((f) => f.map(csvCelda).join(';')).join('\r\n'); }
 
 // ---------- Grados ----------
@@ -121,10 +128,15 @@ function chipDesempeno(n) { const d = desempeno(n); return d ? `<span class="chi
 
 // ---------- Guardado ----------
 let temporizadorGuardado = null;
+// Si quedan cambios pendientes al cerrar la ventana, se guardan de inmediato
+window.addEventListener('beforeunload', () => {
+  if (temporizadorGuardado && typeof S !== 'undefined' && S) { clearTimeout(temporizadorGuardado); temporizadorGuardado = null; api.guardarAlCerrar(S); }
+});
 function guardar() {
   clearTimeout(temporizadorGuardado);
   document.getElementById('estado-guardado').textContent = 'Guardando…';
   temporizadorGuardado = setTimeout(async () => {
+    temporizadorGuardado = null;
     try {
       await api.guardar(S);
       document.getElementById('estado-guardado').textContent = 'Guardado ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
@@ -223,8 +235,10 @@ const VISTAS = [
   { id: 'banco', ico: '🗂️', nombre: 'Banco de planeaciones' },
   { id: 'bancoPedagogico', ico: '📚', nombre: 'Banco pedagógico' },
   { id: 'calendario', ico: '📅', nombre: 'Calendario' },
+  { id: 'horario', ico: '🕒', nombre: 'Mi horario' },
   { id: 'cronograma', ico: '🧭', nombre: 'Cronograma' },
   { id: 'grupos', ico: '👥', nombre: 'Grupos y alumnos' },
+  { id: 'piar', ico: '🤝', nombre: 'Inclusión (PIAR)' },
   { id: 'asistencia', ico: '✅', nombre: 'Asistencia' },
   { id: 'calificaciones', ico: '📊', nombre: 'Evaluación y notas' },
   { id: 'seguimiento', ico: '📈', nombre: 'Seguimiento del estudiante' },
@@ -238,9 +252,19 @@ function ir(vista, params = {}) {
   document.getElementById('contenido').scrollTop = 0;
 }
 
+// Menú lateral personalizable: orden y módulos ocultos
+const VISTAS_FIJAS = ['inicio', 'configuracion'];
+function vistasMenu(incluirOcultas = false) {
+  const m = S.config.menu || {};
+  const orden = (m.orden || []).filter((id) => VISTAS.some((v) => v.id === id));
+  const lista = [...orden.map((id) => VISTAS.find((v) => v.id === id)), ...VISTAS.filter((v) => !orden.includes(v.id))];
+  const ocultos = new Set(m.ocultos || []);
+  return incluirOcultas ? lista : lista.filter((v) => VISTAS_FIJAS.includes(v.id) || !ocultos.has(v.id));
+}
+function vistaVisible(id) { return !(S.config.menu?.ocultos || []).includes(id); }
 function renderNav() {
-  document.getElementById('nav').innerHTML = VISTAS.map((v) =>
-    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || (ui.vista === 'alumnos' && v.id === 'grupos') ? 'activo' : ''}" onclick="ir('${v.id}')"><span class="ico">${v.ico}</span>${v.nombre}</button>`
+  document.getElementById('nav').innerHTML = vistasMenu().map((v) =>
+    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') ? 'activo' : ''}" onclick="ir('${v.id}')"><span class="ico">${v.ico}</span>${v.nombre}</button>`
   ).join('');
   document.getElementById('marca-sub').textContent = S.config.institucion || 'Educación básica y media';
 }
@@ -290,6 +314,8 @@ RENDERS.inicio = () => {
     <div class="estadistica"><div class="num">${S.planeaciones.filter((p) => p.enBanco).length}</div><div class="eti">En el banco</div></div>
   </div>
 
+  ${tarjetaClasesHoy()}
+
   <div class="rejilla r2">
     <div class="tarjeta"><h2>Clases de los próximos 7 días</h2>
       ${proximas.length ? `<ul class="lista-simple">${proximas.slice(0, 12).map(({ p, s }) => `
@@ -319,6 +345,9 @@ async function iniciar() {
   sembrarBanco();
   sembrarInstrumentos();
   migrarPlantillas();
+  aplicarApariencia();
+  if (S.config.nube?.carpeta) api.configurarNube(S.config.nube.carpeta);
+  if (S.config.actualizaciones?.auto !== false) setTimeout(() => buscarActualizaciones(true), 6000);
   guardar();
   if (!datos || (!S.config.configurado && !S.config.institucion)) setTimeout(abrirAsistente, 300);
   render();

@@ -2,8 +2,9 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion } = require('./exportar-word');
+const { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion, generarDocxApoyo, generarDocxPiar } = require('./exportar-word');
 const { sugerirConIA } = require('./ia');
+const { iniciarActualizaciones } = require('./actualizaciones');
 
 const DATA_DIR = () => app.getPath('userData');
 const DATA_FILE = () => path.join(DATA_DIR(), 'datos.json');
@@ -46,6 +47,7 @@ function crearVentana() {
     minWidth: 1024,
     minHeight: 640,
     title: 'Planeador Docente',
+    icon: path.join(__dirname, 'build', 'icon.png'),
     backgroundColor: '#f4f6fb',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -79,6 +81,7 @@ Menu.setApplicationMenu(
 app.whenReady().then(() => {
   respaldoAutomatico();
   crearVentana();
+  iniciarActualizaciones(ventana);
 });
 
 app.on('before-quit', () => {
@@ -97,6 +100,15 @@ ipcMain.handle('datos:cargar', () => {
   } catch (e) {
     return { __error: 'No se pudo leer el archivo de datos: ' + e.message };
   }
+});
+
+ipcMain.on('datos:guardarSync', (e, estado) => {
+  try {
+    ultimoEstado = JSON.stringify(estado);
+    fs.mkdirSync(DATA_DIR(), { recursive: true });
+    escribirSeguro(DATA_FILE(), ultimoEstado);
+    e.returnValue = true;
+  } catch (err) { e.returnValue = false; }
 });
 
 ipcMain.handle('datos:guardar', (_e, estado) => {
@@ -168,7 +180,7 @@ ipcMain.handle('word:planeacion', async (_e, payload) => {
   }
 });
 
-const GENERADORES = { malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula, programacion: generarDocxProgramacion };
+const GENERADORES = { malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula, programacion: generarDocxProgramacion, apoyo: generarDocxApoyo, piar: generarDocxPiar };
 ipcMain.handle('word:curricular', async (_e, { tipo, nombreArchivo, payload }) => {
   const nombre = (nombreArchivo || tipo).replace(/[\\/:*?"<>|]+/g, '-');
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
@@ -187,6 +199,45 @@ ipcMain.handle('word:curricular', async (_e, { tipo, nombreArchivo, payload }) =
   }
 });
 
+ipcMain.handle('excel:guardar', async (_e, { nombre, filas, institucion, docente, color }) => {
+  const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
+    title: 'Exportar a Excel',
+    defaultPath: `${nombre.replace(/[\\/:*?"<>|]+/g, '-').trim()}.xlsx`,
+    filters: [{ name: 'Libro de Excel', extensions: ['xlsx'] }],
+  });
+  if (canceled || !filePath) return { ok: false };
+  try {
+    const ExcelJS = require('exceljs');
+    const libro = new ExcelJS.Workbook();
+    libro.creator = docente || 'Planeador Docente';
+    const hoja = libro.addWorksheet(nombre.slice(0, 31).replace(/[\\/?*[\]:]/g, '-'), { views: [{ state: 'frozen', ySplit: 4 }] });
+    const nCol = Math.max(1, ...filas.map((f) => f.length));
+    const hex = 'FF' + String(color || '#1f4e79').replace('#', '').toUpperCase();
+    hoja.addRow([institucion || 'Planeador Docente']).font = { bold: true, size: 13, color: { argb: hex } };
+    hoja.addRow([nombre]).font = { bold: true, size: 11 };
+    hoja.addRow([`${docente ? 'Docente: ' + docente + ' · ' : ''}Generado el ${new Date().toLocaleDateString('es-CO')}`]).font = { italic: true, size: 9, color: { argb: 'FF666666' } };
+    [1, 2, 3].forEach((r) => hoja.mergeCells(r, 1, r, nCol));
+    filas.forEach((f, i) => {
+      const fila = hoja.addRow(f.map((v) => (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v.trim()) && v.trim().length < 12 ? Number(v) : v)));
+      fila.eachCell({ includeEmpty: true }, (celda) => {
+        celda.border = { top: { style: 'thin', color: { argb: 'FFBFCBDC' } }, bottom: { style: 'thin', color: { argb: 'FFBFCBDC' } }, left: { style: 'thin', color: { argb: 'FFBFCBDC' } }, right: { style: 'thin', color: { argb: 'FFBFCBDC' } } };
+        celda.alignment = { vertical: 'top', wrapText: true };
+      });
+      if (i === 0) fila.eachCell({ includeEmpty: true }, (celda) => { celda.font = { bold: true, color: { argb: 'FFFFFFFF' } }; celda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: hex } }; });
+    });
+    for (let c = 1; c <= nCol; c++) {
+      const largo = Math.max(...filas.map((f) => String(f[c - 1] ?? '').split('\n')[0].length), 4);
+      hoja.getColumn(c).width = Math.min(60, Math.max(6, largo + 2));
+    }
+    hoja.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: nCol } };
+    await libro.xlsx.writeFile(filePath);
+    shell.openPath(filePath);
+    return { ok: true, ruta: filePath };
+  } catch (e) {
+    return { ok: false, error: e.message.includes('EBUSY') ? 'El archivo está abierto en Excel. Ciérralo e inténtalo de nuevo.' : e.message };
+  }
+});
+
 ipcMain.handle('csv:guardar', async (_e, { nombre, contenido }) => {
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
     title: 'Exportar a Excel (CSV)',
@@ -197,6 +248,52 @@ ipcMain.handle('csv:guardar', async (_e, { nombre, contenido }) => {
   fs.writeFileSync(filePath, '﻿' + contenido, 'utf8'); // BOM para que Excel lea tildes
   shell.openPath(filePath);
   return { ok: true, ruta: filePath };
+});
+
+// ---------- Respaldo en carpeta sincronizada (OneDrive, Google Drive, USB…) ----------
+let carpetaNube = '';
+function respaldarEnCarpeta(contenido) {
+  if (!carpetaNube || !contenido) return { ok: false };
+  try {
+    if (!fs.existsSync(carpetaNube)) return { ok: false, error: 'La carpeta no existe o no está disponible.' };
+    const dir = path.join(carpetaNube, 'Respaldos Planeador Docente');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'planeador-ultimo.json'), contenido, 'utf8');
+    const dia = new Date().toISOString().slice(0, 10);
+    fs.writeFileSync(path.join(dir, `planeador-${dia}.json`), contenido, 'utf8');
+    const viejos = fs.readdirSync(dir).filter((f) => /^planeador-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
+    while (viejos.length > 14) fs.unlinkSync(path.join(dir, viejos.shift()));
+    return { ok: true, ruta: dir };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+ipcMain.handle('nube:elegir', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(ventana, { title: 'Carpeta para respaldos (OneDrive, Google Drive, USB…)', properties: ['openDirectory', 'createDirectory'] });
+  return canceled ? null : filePaths[0];
+});
+ipcMain.handle('nube:configurar', (_e, carpeta) => { carpetaNube = carpeta || ''; return true; });
+ipcMain.handle('nube:respaldar', () => respaldarEnCarpeta(ultimoEstado));
+setInterval(() => respaldarEnCarpeta(ultimoEstado), 20 * 60 * 1000);
+app.on('before-quit', () => respaldarEnCarpeta(ultimoEstado));
+
+// ---------- Paquetes para compartir con otros docentes ----------
+ipcMain.handle('paquete:exportar', async (_e, { nombre, contenido }) => {
+  const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
+    title: 'Guardar paquete para compartir', defaultPath: `${nombre.replace(/[\\/:*?"<>|]+/g, '-')}.planeador`,
+    filters: [{ name: 'Paquete del Planeador Docente', extensions: ['planeador'] }],
+  });
+  if (canceled || !filePath) return { ok: false };
+  fs.writeFileSync(filePath, JSON.stringify(contenido), 'utf8');
+  shell.showItemInFolder(filePath);
+  return { ok: true, ruta: filePath };
+});
+ipcMain.handle('paquete:abrir', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(ventana, { title: 'Abrir paquete compartido', properties: ['openFile'], filters: [{ name: 'Paquete del Planeador Docente', extensions: ['planeador', 'json'] }] });
+  if (canceled || !filePaths.length) return { ok: false };
+  try {
+    const d = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'));
+    if (d?.formato !== 'paquete-planeador') throw new Error('El archivo no es un paquete del Planeador Docente.');
+    return { ok: true, datos: d };
+  } catch (e) { return { ok: false, error: e.message }; }
 });
 
 // ---------- IA ----------

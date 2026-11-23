@@ -173,6 +173,7 @@ async function sugerirConIA({ ia, contexto, campos = [], numSesiones = 0, tarea 
   if (!ia) return { ok: false, error: 'Configura la inteligencia artificial en Configuración.' };
   const prompt = tarea === 'malla' ? promptMalla(contexto, numItems)
     : tarea === 'planArea' ? promptPlanArea(contexto, campos)
+    : tarea === 'apoyo' ? `Datos del plan de apoyo (Decreto 1290) para un estudiante con desempeño bajo:\n${contexto}\n\nPropón un plan de apoyo realizable en casa y en clase en 2 a 3 semanas. Devuelve un JSON con:\n- "actividades": 3 a 5 actividades numeradas, concretas y graduales (de repaso a aplicación), con lo que debe entregar en cada una y una sustentación final.\n- "recursos": materiales y recursos accesibles.\n- "criterios": criterios de evaluación observables del plan.`
     : tarea === 'prueba' ? 'Responde exactamente con este JSON: {"ok": true}'
     : promptClase(contexto, campos, numSesiones);
   try {

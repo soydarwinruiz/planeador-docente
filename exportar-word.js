@@ -1,7 +1,7 @@
 // Genera la planeación en formato Word (.docx)
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType,
-  AlignmentType, ShadingType, BorderStyle, Header, Footer, PageNumber, PageOrientation,
+  AlignmentType, ShadingType, BorderStyle, Header, Footer, PageNumber, PageOrientation, ImageRun, VerticalAlign,
 } = require('docx');
 
 const AZUL = '1F4E79';
@@ -10,6 +10,41 @@ const FUENTE = 'Arial';
 
 const borde = { style: BorderStyle.SINGLE, size: 4, color: '8EA9DB' };
 const bordes = { top: borde, bottom: borde, left: borde, right: borde };
+
+// ---------- Membrete institucional ----------
+const SIN_BORDE = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+const SIN_BORDES = { top: SIN_BORDE, bottom: SIN_BORDE, left: SIN_BORDE, right: SIN_BORDE };
+function imagenMembrete(img, altoMax = 62) {
+  if (!img || !img.data) return null;
+  const m = /^data:image\/(png|jpe?g|gif|bmp);base64,(.+)$/.exec(img.data);
+  if (!m) return null;
+  const tipo = m[1].startsWith('jp') ? 'jpg' : m[1];
+  const alto = altoMax, ancho = Math.round(altoMax * ((img.ancho || 1) / (img.alto || 1)));
+  return new ImageRun({ type: tipo, data: Buffer.from(m[2], 'base64'), transformation: { width: Math.min(ancho, 160), height: alto } });
+}
+function colorMembrete(c) { return ((c.membrete || {}).color || AZUL).replace('#', ''); }
+function membreteHeader(c, extra) {
+  const mb = c.membrete || {};
+  const col = colorMembrete(c);
+  const lineas = [
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (c.institucion || 'INSTITUCIÓN EDUCATIVA').toUpperCase(), bold: true, font: FUENTE, size: 24, color: col })] }),
+    ...String(mb.lineas || '').split(/\r?\n/).filter((l) => l.trim()).map((l) => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: l.trim(), font: FUENTE, size: 15 })] })),
+  ];
+  const sedeMun = [c.sede, c.municipio].filter(Boolean).join(' – ');
+  if (sedeMun) lineas.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: sedeMun, font: FUENTE, size: 15 })] }));
+  if (mb.lema) lineas.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: mb.lema, italics: true, font: FUENTE, size: 15, color: col })] }));
+  const logo = imagenMembrete(mb.logo), logo2 = imagenMembrete(mb.logo2);
+  const celdaImg = (im) => new TableCell({ borders: SIN_BORDES, width: { size: 15, type: WidthType.PERCENTAGE }, verticalAlign: VerticalAlign.CENTER,
+    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: im ? [im] : [] })] });
+  const hijos = [new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: { ...SIN_BORDES, insideHorizontal: SIN_BORDE, insideVertical: SIN_BORDE },
+    rows: [new TableRow({ children: [celdaImg(logo), new TableCell({ borders: SIN_BORDES, width: { size: 70, type: WidthType.PERCENTAGE }, verticalAlign: VerticalAlign.CENTER, children: lineas }), celdaImg(logo2)] })],
+  })];
+  hijos.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: col, space: 1 } }, spacing: { after: 60 },
+    alignment: AlignmentType.RIGHT, children: extra ? [new TextRun({ text: extra, font: FUENTE, size: 14, color: '808080' })] : [] }));
+  return { default: new Header({ children: hijos }) };
+}
 
 function parrafos(texto, opciones = {}) {
   const lineas = String(texto || '').split(/\r?\n/);
@@ -71,10 +106,7 @@ async function generarDocxPlaneacion({ config, plan, grupoNombre, areaNombre, pe
     ...parrafos(texto || ''),
   ])] });
 
-  // Encabezado institucional
-  contenido.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (c.institucion || 'INSTITUCIÓN EDUCATIVA').toUpperCase(), bold: true, font: FUENTE, size: 28, color: AZUL })] }));
-  if (c.sede || c.municipio) contenido.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: [c.sede, c.municipio].filter(Boolean).join(' – '), font: FUENTE, size: 20 })] }));
-  contenido.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 40 }, children: [new TextRun({ text: 'ORIENTACIONES DIDÁCTICAS', bold: true, font: FUENTE, size: 24 })] }));
+  contenido.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 60, after: 40 }, children: [new TextRun({ text: 'ORIENTACIONES DIDÁCTICAS', bold: true, font: FUENTE, size: 24 })] }));
   contenido.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 160 }, children: [new TextRun({ text: `Planeación ${tipoLabel.toLowerCase()}${plan.titulo ? ' – ' + plan.titulo : ''}`, font: FUENTE, size: 20 })] }));
 
   // 1. Identificación
@@ -169,13 +201,8 @@ async function generarDocxPlaneacion({ config, plan, grupoNombre, areaNombre, pe
     styles: { default: { document: { run: { font: FUENTE, size: 20 } } } },
     sections: [{
       properties: { page: { margin: { top: 900, bottom: 900, left: 900, right: 900 }, size: { orientation: PageOrientation.PORTRAIT } } },
-      headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${areaNombre || ''} · ${grupoNombre || ''}`, font: FUENTE, size: 16, color: '808080' })] })] }) },
-      footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [
-        new TextRun({ text: 'Página ', font: FUENTE, size: 16, color: '808080' }),
-        new TextRun({ children: [PageNumber.CURRENT], font: FUENTE, size: 16, color: '808080' }),
-        new TextRun({ text: ' de ', font: FUENTE, size: 16, color: '808080' }),
-        new TextRun({ children: [PageNumber.TOTAL_PAGES], font: FUENTE, size: 16, color: '808080' }),
-      ] })] }) },
+      headers: membreteHeader(c, `${areaNombre || ''} · ${grupoNombre || ''}`),
+      footers: piePagina(c),
       children: contenido,
     }],
   });
@@ -183,12 +210,10 @@ async function generarDocxPlaneacion({ config, plan, grupoNombre, areaNombre, pe
 }
 
 // ================= Documentos curriculares =================
+// El nombre de la institución y el logo van en el membrete (encabezado de página)
 function encabezado(c, tituloDoc, subtitulo) {
-  const r = [
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: (c.institucion || 'INSTITUCIÓN EDUCATIVA').toUpperCase(), bold: true, font: FUENTE, size: 28, color: AZUL })] }),
-  ];
-  if (c.sede || c.municipio) r.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: [c.sede, c.municipio].filter(Boolean).join(' – '), font: FUENTE, size: 20 })] }));
-  r.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: subtitulo ? 40 : 200 }, children: [new TextRun({ text: tituloDoc.toUpperCase(), bold: true, font: FUENTE, size: 24 })] }));
+  const r = [];
+  r.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 60, after: subtitulo ? 40 : 200 }, children: [new TextRun({ text: tituloDoc.toUpperCase(), bold: true, font: FUENTE, size: 24 })] }));
   if (subtitulo) r.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: subtitulo, font: FUENTE, size: 20 })] }));
   return r;
 }
@@ -210,8 +235,12 @@ function tablaDatos(columnas, filas) {
   return new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [cab, ...filas] });
 }
 
-function piePagina() {
-  return { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [
+function piePagina(c = {}) {
+  const pie = String((c.membrete || {}).pie || '').split(/\r?\n/).filter((l) => l.trim());
+  return { default: new Footer({ children: [
+    ...pie.map((l, i) => new Paragraph({ alignment: AlignmentType.CENTER, border: i === 0 ? { top: { style: BorderStyle.SINGLE, size: 6, color: colorMembrete(c), space: 1 } } : undefined,
+      children: [new TextRun({ text: l.trim(), font: FUENTE, size: 14, color: '606060' })] })),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [
     new TextRun({ text: 'Página ', font: FUENTE, size: 16, color: '808080' }),
     new TextRun({ children: [PageNumber.CURRENT], font: FUENTE, size: 16, color: '808080' }),
     new TextRun({ text: ' de ', font: FUENTE, size: 16, color: '808080' }),
@@ -226,7 +255,7 @@ function documento(c, titulo, secciones) {
   return Packer.toBuffer(new Document({
     creator: c.docente || 'Planeador Docente', title: titulo,
     styles: { default: { document: { run: { font: FUENTE, size: 20 } } } },
-    sections: secciones.map((s) => ({ ...s, footers: piePagina() })),
+    sections: secciones.map((s) => ({ ...s, headers: membreteHeader(c), footers: piePagina(c) })),
   }));
 }
 
@@ -389,4 +418,73 @@ async function generarDocxProgramacion({ config, datos }) {
   return documento(c, 'Programación evaluativa', [{ properties: VERTICAL, children: hijos }]);
 }
 
-module.exports = { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion };
+async function generarDocxApoyo({ config, planes }) {
+  const c = config;
+  const hijos = [];
+  planes.forEach((p, i) => {
+    hijos.push(...encabezado(c, 'Plan de apoyo / mejoramiento', `${p.areaNombre} · ${p.periodoNombre}`));
+    hijos.push(datosIdent([
+      ['Estudiante', p.estudiante], ['Grado / grupo', p.grupoNombre],
+      ['Documento', p.documento], ['Docente', c.docente],
+      ['Nota del periodo', p.notaTexto], ['Estado', p.estadoTexto],
+      ['Fecha de entrega', p.entregaTexto], ['Fecha de sustentación', p.sustTexto],
+    ]));
+    hijos.push(new Paragraph({ spacing: { after: 80 }, children: [] }));
+    hijos.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
+      ['Dificultades evidenciadas', p.dificultades], ['Desempeños por alcanzar', p.desempenos], ['Actividades de apoyo', p.actividades],
+      ['Recursos y materiales', p.recursos], ['Criterios de evaluación', p.criterios], ['Compromiso del estudiante', p.compromisoEstudiante],
+      ['Compromiso del padre de familia o acudiente', p.compromisoAcudiente],
+      ...(p.notaFinal || p.observaciones ? [['Resultado', [p.notaFinal ? 'Nota del plan: ' + p.notaFinal : '', p.observaciones].filter(Boolean).join('\n')]] : []),
+    ].map(([e, v]) => new TableRow({ children: [celdaPeq(e, { fondo: GRIS, negrita: true, ancho: 26 }), celdaPeq(v || '', { ancho: 74 })] })) }));
+    hijos.push(new Paragraph({ spacing: { before: 600 }, children: [] }));
+    hijos.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: { ...SIN_BORDES, insideHorizontal: SIN_BORDE, insideVertical: SIN_BORDE },
+      rows: [new TableRow({ children: [[c.docente || '', 'Docente'], [p.estudiante, 'Estudiante'], ['', 'Padre de familia o acudiente']].map(([n, rol]) => new TableCell({
+        borders: SIN_BORDES, width: { size: 33, type: WidthType.PERCENTAGE }, children: [
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '________________________', font: FUENTE })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: n || ' ', font: FUENTE, size: 18, bold: true })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: rol, font: FUENTE, size: 16 })] }),
+        ] })) })] }));
+    if (i < planes.length - 1) hijos.push(new Paragraph({ pageBreakBefore: true, children: [] }));
+  });
+  return documento(c, 'Planes de apoyo', [{ properties: VERTICAL, children: hijos }]);
+}
+
+async function generarDocxPiar({ config, datos: d }) {
+  const c = config;
+  const hijos = [...encabezado(c, 'Plan Individual de Ajustes Razonables – PIAR', 'Decreto 1421 de 2017')];
+  hijos.push(datosIdent([
+    ['Estudiante', d.estudiante], ['Documento', d.documento], ['Grado / grupo', d.grupoNombre], ['Año lectivo', String(d.anio || c.anio || '')],
+    ['Fecha de nacimiento', d.nacimientoTexto], ['Edad', d.edad ? d.edad + ' años' : ''], ['Fecha de elaboración', d.fechaTexto], ['Responsables', d.responsables || c.docente],
+  ]));
+  for (const s of d.secciones) {
+    const filas = s.campos.filter(([, v]) => v);
+    if (!filas.length) continue;
+    hijos.push(titulo(s.t));
+    hijos.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: filas.map(([e, v]) => new TableRow({ children: [celdaPeq(e, { fondo: GRIS, negrita: true, ancho: 32 }), celdaPeq(v, { ancho: 68 })] })) }));
+  }
+  hijos.push(titulo('6. Ajustes razonables por área'));
+  hijos.push(tablaDatos([{ t: 'Área', ancho: 13 }, { t: 'Objetivos / propósitos', ancho: 22 }, { t: 'Barreras evidenciadas', ancho: 20 }, { t: 'Ajustes razonables', ancho: 25 }, { t: 'Evaluación de los ajustes', ancho: 20 }],
+    d.ajustesTexto.length ? d.ajustesTexto.map((a) => new TableRow({ children: [celdaPeq(a.area, { negrita: true }), celdaPeq(a.objetivos), celdaPeq(a.barreras), celdaPeq(a.ajustes), celdaPeq(a.evaluacion)] }))
+      : [new TableRow({ children: [celdaPeq('(sin áreas registradas)', { columnas: 5 })] })]));
+  const recs = [['Recomendaciones', d.recomendaciones], ['Compromisos de la familia', d.compromisosFamilia], ['Compromisos de la institución', d.compromisosInstitucion]].filter(([, v]) => v);
+  if (recs.length) {
+    hijos.push(titulo('7. Recomendaciones y acta de acuerdo'));
+    hijos.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: recs.map(([e, v]) => new TableRow({ children: [celdaPeq(e, { fondo: GRIS, negrita: true, ancho: 28 }), celdaPeq(v, { ancho: 72 })] })) }));
+  }
+  if (d.seguimientoTexto.length) {
+    hijos.push(titulo('8. Seguimiento'));
+    hijos.push(tablaDatos([{ t: 'Fecha', ancho: 15 }, { t: 'Avances, dificultades y acciones', ancho: 60 }, { t: 'Responsable', ancho: 25 }],
+      d.seguimientoTexto.map(([f, t, r]) => new TableRow({ children: [celdaPeq(f), celdaPeq(t), celdaPeq(r)] }))));
+  }
+  hijos.push(new Paragraph({ spacing: { before: 700 }, children: [] }));
+  hijos.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: { ...SIN_BORDES, insideHorizontal: SIN_BORDE, insideVertical: SIN_BORDE },
+    rows: [new TableRow({ children: [[c.docente || '', 'Docente'], [c.coordinador || '', 'Coordinación / docente de apoyo'], ['', 'Padre de familia o acudiente']].map(([n, rol]) => new TableCell({
+      borders: SIN_BORDES, width: { size: 33, type: WidthType.PERCENTAGE }, children: [
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '________________________', font: FUENTE })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: n || ' ', font: FUENTE, size: 18, bold: true })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: rol, font: FUENTE, size: 16 })] }),
+      ] })) })] }));
+  return documento(c, 'PIAR', [{ properties: VERTICAL, children: hijos }]);
+}
+
+module.exports = { generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion, generarDocxApoyo, generarDocxPiar };

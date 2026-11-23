@@ -1,7 +1,7 @@
 {
   "name": "planeador-docente",
   "productName": "Planeador Docente",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Sistema de planeación docente para educación básica y media (Colombia, grados 1.° a 11.°)",
   "main": "main.js",
   "author": "Planeador Docente",
@@ -20,27 +20,41 @@
       "exportar-word.js",
       "ia.js",
       "src/**/*",
-      "package.json"
+      "package.json",
+      "build/icon.png",
+      "actualizaciones.js"
     ],
     "win": {
-      "signAndEditExecutable": false
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Planeador Docente"
+      "shortcutName": "Planeador Docente",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "PlaneadorDocente-Setup-${version}.${ext}"
     },
     "portable": {
       "artifactName": "PlaneadorDocente-portable-${version}.exe"
     },
     "directories": {
       "output": "dist"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "soydarwinruiz",
+        "repo": "planeador-docente"
+      }
+    ]
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.12.0",
-    "docx": "^9.16.0"
+    "docx": "^9.16.0",
+    "electron-updater": "^6.8.11",
+    "exceljs": "^4.4.0"
   },
   "devDependencies": {
     "electron": "^45.4.1",

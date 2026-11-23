@@ -21,7 +21,14 @@ function contextoPorDefecto(obj) {
 
 // ---------- Asistencia ----------
 RENDERS.asistencia = () => {
-  const c = ui.asis || (ui.asis = { grupoId: '', areaId: '', fecha: hoyISO(), periodoId: '' });
+  if (!ui.asis) {
+    // Por defecto, la clase que está en curso (o la próxima de hoy) según el horario
+    const ahora = new Date().toTimeString().slice(0, 5);
+    const hoy = clasesDelDia(hoyISO());
+    const cl = hoy.find(({ b }) => ahora >= b.inicio && ahora < b.fin) || hoy.find(({ b }) => b.inicio > ahora) || hoy[0];
+    ui.asis = { grupoId: cl?.c.grupoId || '', areaId: cl?.c.areaId || '', fecha: hoyISO(), periodoId: '' };
+  }
+  const c = ui.asis;
   contextoPorDefecto(c);
   if (!S.grupos.length) return `<h1>Asistencia</h1><div class="tarjeta vacio"><div class="grande">✅</div>Primero crea tus grupos y alumnos.</div>`;
   const clave = `${c.grupoId}|${c.areaId}`;
@@ -93,7 +100,7 @@ function exportarAsistencia() {
     const est = fechas.map((f) => registro[f][a.id] || '');
     filas.push([nombreAlumno(a), ...est, ...['P', 'A', 'T', 'E'].map((e) => est.filter((x) => x === e).length)]);
   }
-  api.guardarCSV(`Asistencia ${nombreGrupoId(c.grupoId)} ${nombreArea(c.areaId)} ${per ? per.nombre : ''}`, aCSV(filas));
+  exportarExcel(`Asistencia ${nombreGrupoId(c.grupoId)} ${nombreArea(c.areaId)} ${per ? per.nombre : ''}`, filas);
 }
 
 // ---------- Cálculos de notas ----------
@@ -147,12 +154,13 @@ function claseNota(n) { return n != null && redondear(n) < +S.config.notaAprobac
 RENDERS.calificaciones = () => {
   const c = ui.cal || (ui.cal = { grupoId: '', areaId: '', periodoId: '', pestana: 'programacion' });
   contextoPorDefecto(c);
-  const pestanas = `<div class="pestanas">${[['programacion', '📅 Programación evaluativa'], ['planilla', '📊 Planilla de notas'], ['anual', '📈 Consolidado anual'], ['rubricas', '📋 Instrumentos de evaluación']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
+  const pestanas = `<div class="pestanas">${[['programacion', '📅 Programación evaluativa'], ['planilla', '📊 Planilla de notas'], ['anual', '📈 Consolidado anual'], ['apoyo', '🆘 Planes de apoyo'], ['rubricas', '📋 Instrumentos de evaluación']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
   const cab = `<div class="cabecera"><div><h1>Evaluación y notas</h1><p class="sub">Escala ${S.config.escalaMin} a ${S.config.escalaMax} · Aprobación desde ${S.config.notaAprobacion} · Decreto 1290 de 2009</p></div>
     ${c.pestana === 'planilla' || c.pestana === 'anual' ? `<div class="acciones"><button class="btn" onclick="exportarCalificaciones()">⬇️ Exportar a Excel</button></div>` : ''}</div>`;
   if (c.pestana === 'rubricas') return cab + pestanas + vistaRubricas();
   if (!S.grupos.length || !S.config.periodos.length) return cab + pestanas + '<div class="tarjeta vacio">Configura primero tus grupos y los periodos académicos.</div>';
   if (c.pestana === 'anual') return cab + pestanas + selectorGrupoArea(c, 'ui.cal') + vistaAnual(c);
+  if (c.pestana === 'apoyo') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaApoyo(c);
   if (c.pestana === 'programacion') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaProgramacion(c);
   return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaPlanilla(c);
 };
@@ -330,6 +338,6 @@ function exportarCalificaciones() {
     }
     nombre = `Planilla ${nombreGrupoId(c.grupoId)} ${nombreArea(c.areaId)} ${nombrePeriodo(c.periodoId)}`;
   }
-  api.guardarCSV(nombre, aCSV(filas));
+  exportarExcel(nombre, filas);
 }
 

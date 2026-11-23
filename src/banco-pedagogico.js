@@ -5,6 +5,7 @@ const TIPOS_BANCO = {
   estrategia: { uno: 'Estrategia', varios: 'Estrategias', ico: '🎯' },
   metodologia: { uno: 'Metodología', varios: 'Metodologías (métodos)', ico: '🧭' },
   tecnica: { uno: 'Técnica', varios: 'Técnicas', ico: '🛠️' },
+  dua: { uno: 'Pauta DUA / ajuste', varios: 'DUA y flexibilización', ico: '♿' },
 };
 const MOMENTOS_BANCO = [
   ['exploracion', 'Exploración'], ['estructuracion', 'Estructuración'], ['practica', 'Práctica'], ['transferencia', 'Transferencia'], ['valoracion', 'Valoración / cierre'],
@@ -137,6 +138,7 @@ function tipoDesdeTexto(t, porDefecto) {
   if (n.startsWith('metod')) return 'metodologia';
   if (n.startsWith('tecn')) return 'tecnica';
   if (n.startsWith('estrat')) return 'estrategia';
+  if (n.includes('dua') || n.startsWith('ajuste') || n.startsWith('flexib')) return 'dua';
   return porDefecto;
 }
 function momentosDesdeTexto(t) {
@@ -199,7 +201,7 @@ function exportarBanco() {
     filas.push([TIPOS_BANCO[x.tipo].uno, x.codigo || '', x.nombre, x.clasificacion, (x.momentos || []).map((m) => (MOMENTOS_BANCO.find((z) => z[0] === m) || [m, m])[1]).join(', '),
       x.descripcion, x.pasos, x.recursos, x.areas, x.fuente]);
   }
-  api.guardarCSV('Banco pedagógico', aCSV(filas));
+  exportarExcel('Banco pedagógico', filas);
 }
 
 // ---------- Insertar en las planeaciones ----------
@@ -208,7 +210,9 @@ function botonBanco(textareaId, momento = '') {
 }
 let selectorBanco = {};
 function abrirSelectorBanco(textareaId, momento) {
-  selectorBanco = { textareaId, tipo: '', texto: '', momento: momento || '', conPasos: false };
+  // Los campos de ajustes, apoyos e inclusión abren directamente las pautas DUA
+  const esAjuste = /ajuste|apoyo|inclusion|barrera/i.test(textareaId);
+  selectorBanco = { textareaId, tipo: esAjuste ? 'dua' : '', texto: '', momento: esAjuste ? '' : (momento || ''), conPasos: false };
   dibujarSelectorBanco();
 }
 function dibujarSelectorBanco() {
