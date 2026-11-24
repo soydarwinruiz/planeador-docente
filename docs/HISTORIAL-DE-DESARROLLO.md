@@ -167,6 +167,7 @@ Pedido del docente: *"una herramienta tipo tablero Miro con muchas opciones, que
 - **Imágenes:** insertar, arrastrar o pegar; recorte no destructivo con proporciones y forma circular o redondeada; ajustes de color, voltear, borde y sombra. Las fotos grandes se reducen para no inflar el archivo de datos.
 - **Integración con el aula:** estudiantes del grupo como notas, momentos de la sesión, objetivo y pregunta problematizadora, estudiante al azar durante la presentación y acceso a las herramientas de aula.
 - **Presentación** por marcos en pantalla completa con lápiz para escribir encima, y **exportación** a PNG y PDF.
+- **Integración de Pizarra Local:** a pedido del docente (*"no se ajusta bien… si pudieras integrar este"*, con una captura de una nota donde una palabra larga quedaba diminuta) el editor pasó a ser [Pizarra Local](https://github.com/soydarwinruiz/pizarra-local), que dibuja en canvas y parte las palabras largas en vez de achicarlas. Se integró dentro del planeador (los tableros se guardan en los datos del planeador con su sesión y sus grupos) y se le agregó **fuente, tamaño y resaltado por letra**. Los tableros hechos antes se convierten solos.
 
 ---
 
