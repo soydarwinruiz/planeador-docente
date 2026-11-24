@@ -2,8 +2,13 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   cargar: () => ipcRenderer.invoke('datos:cargar'),
-  guardar: (estado) => ipcRenderer.invoke('datos:guardar', estado),
-  guardarAlCerrar: (estado) => ipcRenderer.sendSync('datos:guardarSync', estado),
+  guardar: (texto) => ipcRenderer.invoke('datos:guardar', texto),
+  guardarAlCerrar: (texto) => ipcRenderer.sendSync('datos:guardarSync', texto),
+  guardarClaves: (claves) => ipcRenderer.invoke('claves:guardar', claves),
+  infoClaves: () => ipcRenderer.invoke('claves:info'),
+  leerRecursosTablero: (id) => ipcRenderer.invoke('tablero:leerRecursos', id),
+  guardarRecursosTablero: (id, assets) => ipcRenderer.invoke('tablero:guardarRecursos', { id, assets }),
+  limpiarRecursosTableros: (ids) => ipcRenderer.invoke('tablero:limpiar', ids),
   ubicacionDatos: () => ipcRenderer.invoke('datos:ubicacion'),
   abrirCarpetaDatos: () => ipcRenderer.invoke('datos:abrirCarpeta'),
   exportarRespaldo: (estado) => ipcRenderer.invoke('respaldo:exportar', estado),

@@ -1,4 +1,4 @@
-# Documentación técnica – Planeador Docente 1.13.0
+# Documentación técnica – Planeador Docente 1.14.0
 
 Para quien quiera mantener, modificar o compilar la aplicación.
 
@@ -34,7 +34,7 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 ```
 
 - **Seguridad:** `contextIsolation: true`, `nodeIntegration: false`; la interfaz solo accede a lo que expone `preload.js`. Los enlaces externos solo se abren si son `http(s)`, `mailto` o `whatsapp`. La página tiene una política de contenido que bloquea imágenes `blob:` (por eso las fotos se leen como `data:`).
-- **Estado:** todo el estado vive en el objeto `S` del renderer y se guarda como JSON con `guardar()` (espera 400 ms y escribe de forma segura). Al cerrar la ventana se guarda de forma síncrona lo pendiente (`datos:guardarSync`).
+- **Estado:** todo el estado vive en el objeto `S` del renderer y se guarda como JSON con `guardar()` (espera 400 ms; los guardados van en cola y nunca se cruzan). Se envía como texto (`textoEstado()`), sin `config.ia.claves` (van a `claves:guardar`) y sin las imágenes de los tableros (`externalizarRecursos()` las pasa a `tablero:guardarRecursos`). Al cerrar la ventana se guarda de forma síncrona lo pendiente (`datos:guardarSync`).
 - **Vistas:** cada módulo registra `RENDERS.nombre = () => html`. `ir(vista, params)` cambia de vista y `render()` repinta. `RENDERS.nombre_despues` corre tras pintar.
 - **Migración:** `migrar()` completa con valores por defecto las claves que falten, para que los datos de versiones anteriores sigan funcionando.
 
@@ -43,7 +43,8 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 ### Proceso principal
 | Archivo | Contenido |
 |---|---|
-| `main.js` | Ventana y menú; `PLANEADOR_DATA_DIR` permite otra carpeta de datos (pruebas); datos y respaldos automáticos (15); Word (`word:planeacion`, `word:curricular` con generadores `informe, tabla, comunicados, prueba, malla, planArea, planPeriodo, planAula, programacion, apoyo, piar`); Excel y CSV; respaldo en carpeta de nube (cada 20 min y al cerrar, 14 días); paquetes `.planeador`; PDF desde HTML (`pdf:html`, ventana oculta + `printToPDF`, tamaño carta); exportaciones de los tableros con diálogo de guardar (`will-download`); lectura de tablas (`tabla:abrir`: .xlsx con exceljs, CSV con detección de separador y codificación); IA (`ia:sugerir`, `ia:transcribir`) |
+| `main.js` | Ventana y menú (una sola instancia, `sandbox`, sin navegación externa); `PLANEADOR_DATA_DIR` permite otra carpeta de datos (pruebas); datos (recibe el estado como texto JSON y no reescribe si no cambió); Word (`word:planeacion`, `word:curricular` con generadores `informe, tabla, comunicados, prueba, malla, planArea, planPeriodo, planAula, programacion, apoyo, piar`); Excel y CSV; respaldo en carpeta de nube (cada 20 min y al cerrar, 14 días); paquetes `.planeador`; PDF desde HTML (`pdf:html`, ventana oculta + `printToPDF`, tamaño carta); exportaciones de los tableros con diálogo de guardar (`will-download`); lectura de tablas (`tabla:abrir`: .xlsx con exceljs, CSV con detección de separador y codificación); IA (`ia:sugerir`, `ia:transcribir`) |
+| `almacen.js` | Escritura atómica con `fsync` y reintentos (bloqueos de antivirus/OneDrive en Windows); carga con recuperación automática desde el último respaldo válido si `datos.json` está dañado (guarda `datos-danado_*.json`); respaldos automáticos al abrir y cada hora si hubo cambios (`respaldo_*` 15 recientes, `diario_*` 30 días); claves de IA cifradas con `safeStorage` en `claves.dat`; imágenes de los tableros en `tableros/<id>.json`; respaldo completo (con imágenes, sin claves) para la nube y el respaldo manual |
 | `preload.js` | Puente `window.api` |
 | `exportar-word.js` | Membrete (logos, color, líneas, lema, pie), páginas horizontales y verticales, todos los documentos |
 | `ia.js` | Prompt de sistema (contexto colombiano, JSON estricto), tareas: `clase, malla, planArea, apoyo, boletin, retro, ficha, saber, prueba`; imágenes para Claude, OpenAI/compatibles y Gemini; transcripción de audio WAV (OpenAI `audio/transcriptions`, Gemini con audio en línea, o compatible como Groq) |
@@ -111,7 +112,7 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `diario`, `pendientes`, `alertasOcultas` | Diario de campo, tareas del docente, alertas ocultas |
 | `comunicadosEnviados` | Historial de comunicados |
 | `pruebas` | Preguntas, respuestas por estudiante (letras), puntos de abiertas, textos escritos en el celular |
-| `pizarras` | Tableros: `titulo`, `planeacionId`, `sesionId`, `grupoIds`, `areaId`, `fecha`, `formato: 'pizarra-local'`, `items` (elementos de Pizarra Local: sticky, shape, text, connector, pen, image, frame, emoji, comment; el texto con formato va en `rich`, con fuente, tamaño y resaltado por fragmento), `assets` (imágenes en `data:`), `view` y `miniatura` (JPEG pequeño para la lista) |
+| `pizarras` | Tableros (las imágenes van en `tableros/<id>.json`, no en `datos.json`): `titulo`, `planeacionId`, `sesionId`, `grupoIds`, `areaId`, `fecha`, `formato: 'pizarra-local'`, `items` (elementos de Pizarra Local: sticky, shape, text, connector, pen, image, frame, emoji, comment; el texto con formato va en `rich`, con fuente, tamaño y resaltado por fragmento), `assets` (imágenes en `data:`; solo mientras están por escribir en su archivo), `view` y `miniatura` (JPEG pequeño para la lista) |
 | `papelera` | Elementos eliminados (30 días, máximo 200): `{ id, fecha, etiqueta, ops: [{ op: 'agregar', ruta, id/clave, indice, valor } \| { op: 'valor', ruta, antes, despues }] }`; `ruta` usa `{ id }` para entrar en listas con identificador |
 | `fichas`, `gamificacion`, `retro`, `informes` | Fichas guardadas; puntos, equipos e insignias por grupo; retroalimentaciones; textos del informe de cierre |
 
@@ -132,4 +133,6 @@ npm start
 - **Firma digital (opcional):** con un certificado de firma de código (OV/EV o Azure Trusted Signing), crear los secretos `CSC_LINK` (pfx en base64) y `CSC_KEY_PASSWORD` en GitHub.
 
 ## 7. Pruebas
+`npm test` ejecuta `tests/estatico.js` (sintaxis y nombres globales repetidos entre los scripts de `src/`, que comparten ámbito, y funciones inexistentes en `onclick`) y `tests/e2e.js` (vistas, plantillas, claves cifradas, migración de datos anteriores, imágenes de tableros, respaldo en nube, recuperación de un `datos.json` dañado, papelera y rendimiento del guardado). En Linux: `xvfb-run -a npm test`. El flujo `.github/workflows/pruebas.yml` las corre en cada cambio y la compilación de Windows corre la revisión estática antes de compilar.
+
 Las pruebas de punta a punta usan Playwright con Electron (`_electron.launch`) y una carpeta de datos aparte (`PLANEADOR_DATA_DIR`); en Linux se ejecutan con `xvfb-run`. Simulan diálogos de guardar/abrir, proveedores de IA (reemplazando el manejador IPC), celulares (Chromium con perfil de teléfono contra el servidor local), micrófono (`--use-fake-device-for-media-stream`) y fotos de hojas de respuestas (generadas, rellenadas y deformadas con Python/PIL).

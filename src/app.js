@@ -138,25 +138,66 @@ function desempeno(n) {
 function chipDesempeno(n) { const d = desempeno(n); return d ? `<span class="chip ${esc(d)}">${esc(d)}</span>` : ''; }
 
 // ---------- Guardado ----------
+// El estado se envía al proceso principal como texto JSON. Las claves de IA van aparte (cifradas) y las imágenes
+// de los tableros se guardan en un archivo por tablero, así guardar sigue siendo rápido aunque haya muchos tableros.
 let temporizadorGuardado = null;
+let cadenaGuardado = Promise.resolve();
+let ultimoTextoGuardado = null;
+let ultimasClaves = null;
+function textoEstado() {
+  const ia = S.config?.ia;
+  return JSON.stringify(S, function (k, v) { return k === 'claves' && this === ia ? undefined : v; });
+}
+// Pasa a su propio archivo las imágenes de los tableros que aún estén dentro del estado
+async function externalizarRecursos() {
+  for (const t of S.pizarras || []) {
+    if (!t || t.assets === undefined) continue;
+    const a = t.assets;
+    await api.guardarRecursosTablero(t.id, a || {});
+    if (t.assets === a) delete t.assets; // si cambió mientras se escribía, se guarda en la próxima
+  }
+}
+function marcarGuardado(texto) { const el = document.getElementById('estado-guardado'); if (el) el.textContent = texto; }
+async function pasoGuardado() {
+  try {
+    await externalizarRecursos();
+    const texto = textoEstado();
+    if (texto !== ultimoTextoGuardado) { await api.guardar(texto); ultimoTextoGuardado = texto; }
+    const claves = JSON.stringify(S.config.ia?.claves || {});
+    if (claves !== ultimasClaves) { await api.guardarClaves(S.config.ia?.claves || {}); ultimasClaves = claves; }
+    marcarGuardado('Guardado ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }));
+  } catch (e) {
+    marcarGuardado('⚠️ Error al guardar');
+    aviso('No se pudo guardar: ' + (e.message || e) + '. Revisa el espacio en disco y haz un respaldo.', 'error');
+  }
+}
 // Si quedan cambios pendientes al cerrar la ventana, se guardan de inmediato
 window.addEventListener('beforeunload', () => {
-  if (temporizadorGuardado && typeof S !== 'undefined' && S) { clearTimeout(temporizadorGuardado); temporizadorGuardado = null; api.guardarAlCerrar(S); }
+  if (typeof S === 'undefined' || !S) return;
+  clearTimeout(temporizadorGuardado); temporizadorGuardado = null;
+  if (typeof cerrarPapelera === 'function') cerrarPapelera();
+  const texto = textoEstado();
+  if (texto !== ultimoTextoGuardado) { api.guardarAlCerrar(texto); ultimoTextoGuardado = texto; }
 });
 function guardar() {
   if (typeof cerrarPapelera === 'function') cerrarPapelera();
   clearTimeout(temporizadorGuardado);
-  document.getElementById('estado-guardado').textContent = 'Guardando…';
-  temporizadorGuardado = setTimeout(async () => {
+  marcarGuardado('Guardando…');
+  temporizadorGuardado = setTimeout(() => {
     temporizadorGuardado = null;
-    try {
-      await api.guardar(S);
-      document.getElementById('estado-guardado').textContent = 'Guardado ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      document.getElementById('estado-guardado').textContent = 'Error al guardar';
-      aviso('No se pudo guardar: ' + e.message, 'error');
-    }
+    cadenaGuardado = cadenaGuardado.then(pasoGuardado); // los guardados nunca se cruzan
   }, 400);
+}
+// Reemplaza todos los datos por los de un respaldo (conserva las claves de IA de este equipo si el respaldo no trae)
+function aplicarRespaldo(datos) {
+  const claves = S?.config?.ia?.claves || {};
+  S = migrar(datos);
+  if (!Object.values(S.config.ia.claves || {}).some(Boolean)) S.config.ia.claves = { ...claves };
+  aplicarApariencia();
+  sembrarBanco();
+  migrarPlantillas();
+  sembrarInstrumentos();
+  guardar(); ir('inicio');
 }
 
 function migrar(d) {
@@ -165,6 +206,8 @@ function migrar(d) {
   for (const k of Object.keys(base)) if (r[k] == null) r[k] = base[k];
   if (!d.config?.ia) r.config.ia = { proveedor: 'anthropic', claves: { anthropic: d.config?.apiKey || '' }, modelos: {}, url: '' };
   delete r.config.apiKey;
+  delete r.__recuperado; delete r.__error;
+  if (!r.config.ia.claves || typeof r.config.ia.claves !== 'object') r.config.ia.claves = {};
   if (!r.config.componentesPorDefecto) r.config.componentesPorDefecto = structuredClone(COMPONENTES_POR_DEFECTO);
   r.version = VERSION_DATOS;
   return r;
@@ -416,7 +459,9 @@ async function iniciar() {
     ir('configuracion');
     return;
   }
+  const recuperado = datos?.__recuperado;
   S = migrar(datos || estadoInicial());
+  ultimasClaves = JSON.stringify(S.config.ia.claves || {});
   sembrarBanco();
   sembrarInstrumentos();
   migrarPlantillas();
@@ -427,4 +472,17 @@ async function iniciar() {
   guardar();
   if (!datos || (!S.config.configurado && !S.config.institucion)) setTimeout(abrirAsistente, 300);
   render();
+  if (recuperado) {
+    abrirModal(`<h2>🛟 Datos recuperados</h2>
+      <p>El archivo de datos estaba dañado (posiblemente por un apagón o un cierre inesperado). Se cargó automáticamente el respaldo
+      <b>${esc(recuperado.desde)}</b>. Revisa que tus últimos cambios estén; si falta algo, en <b>Configuración → Respaldos automáticos</b> hay otros puntos de restauración.</p>
+      <p class="ayuda">Se guardó una copia del archivo dañado como ${esc(recuperado.danado)} en la carpeta de datos.</p>
+      <div class="botones"><button class="btn primario" onclick="cerrarModal()">Entendido</button></div>`);
+  }
+  // Limpieza en segundo plano de imágenes de tableros que ya no existen
+  setTimeout(() => {
+    const ids = (S.pizarras || []).map((t) => t.id);
+    for (const e of S.papelera || []) for (const o of e.ops) if (o.ruta?.[0] === 'pizarras' && o.id) ids.push(o.id);
+    api.limpiarRecursosTableros(ids).catch(() => {});
+  }, 15000);
 }

@@ -162,13 +162,13 @@ Tipos: bajo desempeño, inasistencias, actividades pendientes, plan de apoyo, ci
 
 ## 6. Respaldos y cambio de computador
 - **🗑️ Papelera:** lo que eliminas con los botones de borrar (planeaciones, grupos, estudiantes, notas, actividades, tableros, eventos, pendientes…) se guarda 30 días. Justo después de borrar aparece un aviso con **Deshacer**; más tarde, abre **Papelera** en el menú lateral y pulsa **↩️ Recuperar**. Vuelve a su lugar (un grupo, por ejemplo, con sus estudiantes, asistencia y notas) sin cambiar lo que hiciste después. No guarda lo que cambias escribiendo encima de un dato, como una nota que reemplazas por otra: para eso están los respaldos.
-- **Automático:** una copia cada vez que abres la app (se conservan 15).
+- **Automático:** una copia al abrir la app y cada hora si hubo cambios (se conservan las 15 más recientes) y una por día durante 30 días. Si el archivo de datos se daña (por ejemplo, por un apagón), la app se recupera sola con el respaldo más reciente y te avisa.
 - **En la nube:** Configuración → *Respaldo en la nube* → elige la carpeta de OneDrive o de Google Drive para escritorio. Copia cada 20 minutos y al cerrar (14 días).
-- **Manual:** *Crear respaldo…* en una USB.
+- **Manual:** *Crear respaldo…* en una USB. El respaldo manual y el de la nube incluyen las imágenes de los tableros y **no** incluyen tus claves de IA.
 - **Cambio de computador:** instala la app y usa *Restaurar desde archivo…* con `planeador-ultimo.json`.
 
 ## 7. Inteligencia artificial y privacidad
-- Es **opcional**. En Configuración → *Inteligencia artificial* eliges el proveedor (Claude, ChatGPT, Gemini u otro compatible como DeepSeek, Groq, OpenRouter, Ollama o LM Studio) y pegas tu clave. Las claves se guardan solo en tu computador y se guardan por separado para cada proveedor.
+- Es **opcional**. En Configuración → *Inteligencia artificial* eliges el proveedor (Claude, ChatGPT, Gemini u otro compatible como DeepSeek, Groq, OpenRouter, Ollama o LM Studio) y pegas tu clave. Las claves se guardan **cifradas** solo en tu computador, por separado para cada proveedor, y no se copian en los respaldos (si cambias de computador, vuelve a pegarlas).
 - Se usa en: planeación de clase, malla, plan de área, planes de apoyo, observaciones del boletín, preguntas de pruebas, fichas y retroalimentación de trabajos.
 - **No se envían nombres de estudiantes.** En la retroalimentación de trabajos, si el nombre está escrito en el trabajo, la IA lo verá.
 - **Revisa siempre** lo que propone la IA antes de usarlo.

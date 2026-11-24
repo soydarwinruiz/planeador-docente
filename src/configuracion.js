@@ -108,41 +108,41 @@ async function eliminarPeriodo(i) {
 }
 
 async function crearRespaldo() {
-  const r = await api.exportarRespaldo(S);
-  if (r.ok) aviso('Respaldo guardado en ' + r.ruta, 'ok');
+  const r = await api.exportarRespaldo(textoEstado());
+  if (r.ok) aviso('Respaldo guardado en ' + r.ruta, 'ok'); else if (r.error) aviso('No se pudo guardar el respaldo: ' + r.error, 'error');
 }
 async function restaurarRespaldo() {
   const r = await api.importarRespaldo();
   if (!r.ok) { if (r.error) aviso(r.error, 'error'); return; }
   if (!(await confirmar('Se reemplazarán TODOS los datos actuales por los del respaldo. (Los datos actuales quedan en los respaldos automáticos.) ¿Continuar?', { boton: 'Restaurar' }))) return;
-  S = migrar(r.datos);
-  aplicarApariencia();
-  sembrarBanco();
-  migrarPlantillas();
-  sembrarInstrumentos();
-  guardar(); ir('inicio');
+  aplicarRespaldo(r.datos);
   aviso('Respaldo restaurado', 'ok');
+}
+function nombreRespaldoAuto(n) {
+  const m = n.match(/^(respaldo|diario)_(\d{4})-(\d{2})-(\d{2})(?:_(\d{2})(\d{2}))?/);
+  if (!m) return n;
+  const f = fechaCorta(`${m[2]}-${m[3]}-${m[4]}`);
+  return m[1] === 'diario' ? `${f} · último del día` : `${f} a las ${m[5]}:${m[6]}`;
 }
 async function verRespaldosAuto() {
   const lista = await api.listarRespaldosAuto();
   abrirModal(`<h2>Respaldos automáticos</h2>
-    ${lista.length ? `<ul class="lista-simple">${lista.map((n) => `<li>${esc(n.replace('respaldo_', '').replace('.json', '').replace('_', ' a las ').replace(/(\d{2})(\d{2})$/, '$1:$2'))}<button class="btn pequeno" onclick="restaurarAuto('${esc(n)}')">Restaurar</button></li>`).join('')}</ul>` : '<p class="ayuda">Aún no hay respaldos automáticos.</p>'}
+    <p class="ayuda">Se crea uno al abrir el programa y cada hora si hubo cambios (se guardan los 15 más recientes), y uno por día durante 30 días.</p>
+    ${lista.length ? `<ul class="lista-simple">${lista.map((n) => `<li>${esc(nombreRespaldoAuto(n))}<button class="btn pequeno" onclick="restaurarAuto('${esc(n)}')">Restaurar</button></li>`).join('')}</ul>` : '<p class="ayuda">Aún no hay respaldos automáticos.</p>'}
     <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button></div>`);
 }
 async function restaurarAuto(nombre) {
   cerrarModal();
   if (!(await confirmar('Se reemplazarán los datos actuales por este respaldo. ¿Continuar?', { boton: 'Restaurar' }))) return;
-  S = migrar(await api.restaurarRespaldoAuto(nombre));
-  aplicarApariencia();
-  sembrarBanco();
-  migrarPlantillas();
-  sembrarInstrumentos();
-  guardar(); ir('inicio');
+  const r = await api.restaurarRespaldoAuto(nombre);
+  if (!r?.ok) { aviso(r?.error || 'No se pudo restaurar el respaldo.', 'error'); return; }
+  aplicarRespaldo(r.datos);
   aviso('Respaldo restaurado', 'ok');
 }
 async function nuevoAnio() {
   if (!(await confirmar('Se eliminarán grupos, estudiantes, asistencia, notas, observaciones, diario, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario. Las planeaciones, pruebas, áreas, rúbricas, planes de área, mallas y planes de periodo se conservan. ¿Continuar?', { boton: 'Iniciar nuevo año', papelera: false }))) return;
-  await api.exportarRespaldo(S);
+  const resp = await api.exportarRespaldo(textoEstado());
+  if (!resp?.ok && !(await confirmar('No se guardó el respaldo. ¿Iniciar el nuevo año de todas formas? (Los datos actuales quedan en los respaldos automáticos.)', { boton: 'Continuar sin respaldo', papelera: false }))) return;
   const anio = (+S.config.anio || new Date().getFullYear()) + 1;
   S.planeaciones.forEach((p) => { const g = porId(S.grupos, p.grupoId); if (g) p.gradoOrigen = g.grado; });
   Object.assign(S, { grupos: [], alumnos: [], asistencia: {}, planillas: [], notas: {}, notasRubrica: {}, eventos: [], cronograma: {}, planesAula: [],
@@ -166,7 +166,7 @@ function tarjetaIA() {
   const p = ia.proveedor || 'anthropic';
   const info = PROVEEDORES_IA[p];
   return `<div class="tarjeta"><h2>✨ Inteligencia artificial (opcional)</h2>
-    <p class="ayuda">Puedes usar el proveedor que prefieras. Las claves se guardan solo en este equipo. Para generar sugerencias se envían el tema, el área, el grado
+    <p class="ayuda">Puedes usar el proveedor que prefieras. Las claves se guardan cifradas y solo en este equipo (no se copian en los respaldos ni en los paquetes). Para generar sugerencias se envían el tema, el área, el grado
     y lo escrito en la planeación; <b>no se envían nombres de estudiantes</b>. El costo depende del proveedor y del modelo.</p>
     <div class="rejilla r4" style="align-items:end">
       <div class="campo"><label>Proveedor</label><select onchange="S.config.ia.proveedor=this.value;guardar();render()">
