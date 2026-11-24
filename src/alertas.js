@@ -104,7 +104,7 @@ function agregarPendiente() {
   setTimeout(() => document.getElementById('pend-texto')?.focus(), 30);
 }
 function marcarPendiente(id, v) { const p = porId(S.pendientes, id); p.hecho = v; p.hechoEl = v ? hoyISO() : ''; guardar(); render(); }
-function borrarPendiente(id) { S.pendientes = S.pendientes.filter((p) => p.id !== id); guardar(); render(); }
+function borrarPendiente(id) { iniciarPapelera('Pendiente: ' + (porId(S.pendientes, id)?.texto || '')); S.pendientes = S.pendientes.filter((p) => p.id !== id); guardar(); render(); }
 
 function tarjetaAlertas() {
   const alertas = calcularAlertas();

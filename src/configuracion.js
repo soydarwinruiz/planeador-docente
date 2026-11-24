@@ -141,7 +141,7 @@ async function restaurarAuto(nombre) {
   aviso('Respaldo restaurado', 'ok');
 }
 async function nuevoAnio() {
-  if (!(await confirmar('Se eliminarán grupos, estudiantes, asistencia, notas, observaciones, diario, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario. Las planeaciones, pruebas, áreas, rúbricas, planes de área, mallas y planes de periodo se conservan. ¿Continuar?', { boton: 'Iniciar nuevo año' }))) return;
+  if (!(await confirmar('Se eliminarán grupos, estudiantes, asistencia, notas, observaciones, diario, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario. Las planeaciones, pruebas, áreas, rúbricas, planes de área, mallas y planes de periodo se conservan. ¿Continuar?', { boton: 'Iniciar nuevo año', papelera: false }))) return;
   await api.exportarRespaldo(S);
   const anio = (+S.config.anio || new Date().getFullYear()) + 1;
   S.planeaciones.forEach((p) => { const g = porId(S.grupos, p.grupoId); if (g) p.gradoOrigen = g.grado; });

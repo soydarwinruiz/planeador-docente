@@ -1,4 +1,4 @@
-# Manual de usuario – Planeador Docente 1.12.1
+# Manual de usuario – Planeador Docente 1.13.0
 
 Aplicación de escritorio para Windows para planear, evaluar y hacer seguimiento en **educación básica y media en Colombia (1.° a 11.°)**. Funciona **sin internet**; los datos quedan en tu computador.
 
@@ -20,8 +20,8 @@ Descarga desde https://github.com/soydarwinruiz/planeador-docente/releases (últ
 
 | Archivo | Para qué |
 |---|---|
-| `PlaneadorDocente-Setup-1.12.1.exe` | **Instalador (recomendado).** Crea acceso directo y **se actualiza solo**. |
-| `PlaneadorDocente-portable-1.12.1.exe` | Se abre con doble clic, sin instalar (sirve en una USB). Avisa de nuevas versiones, pero se descarga a mano. |
+| `PlaneadorDocente-Setup-1.13.0.exe` | **Instalador (recomendado).** Crea acceso directo y **se actualiza solo**. |
+| `PlaneadorDocente-portable-1.13.0.exe` | Se abre con doble clic, sin instalar (sirve en una USB). Avisa de nuevas versiones, pero se descarga a mano. |
 
 - Si Windows muestra *"Windows protegió su PC"*: **Más información → Ejecutar de todas formas** (el programa no tiene firma comercial).
 - **Actualizaciones:** Configuración → *Actualizaciones*. La app revisa sola al abrir; pulsa *Descargar e instalar* y luego *Reiniciar e instalar*. Tus datos no se tocan.
@@ -161,6 +161,7 @@ Tipos: bajo desempeño, inasistencias, actividades pendientes, plan de apoyo, ci
 - Respaldos y **Nuevo año lectivo** (conserva lo curricular, planeaciones y pruebas; borra grupos, estudiantes, notas, asistencia y demás datos del año; antes crea un respaldo).
 
 ## 6. Respaldos y cambio de computador
+- **🗑️ Papelera:** lo que eliminas con los botones de borrar (planeaciones, grupos, estudiantes, notas, actividades, tableros, eventos, pendientes…) se guarda 30 días. Justo después de borrar aparece un aviso con **Deshacer**; más tarde, abre **Papelera** en el menú lateral y pulsa **↩️ Recuperar**. Vuelve a su lugar (un grupo, por ejemplo, con sus estudiantes, asistencia y notas) sin cambiar lo que hiciste después. No guarda lo que cambias escribiendo encima de un dato, como una nota que reemplazas por otra: para eso están los respaldos.
 - **Automático:** una copia cada vez que abres la app (se conservan 15).
 - **En la nube:** Configuración → *Respaldo en la nube* → elige la carpeta de OneDrive o de Google Drive para escritorio. Copia cada 20 minutos y al cerrar (14 días).
 - **Manual:** *Crear respaldo…* en una USB.

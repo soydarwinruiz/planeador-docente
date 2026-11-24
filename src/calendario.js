@@ -89,6 +89,7 @@ function guardarEvento(iso) {
   guardar(); cerrarModal(); render();
 }
 function eliminarEvento(id, iso) {
+  iniciarPapelera('Evento: ' + (porId(S.eventos, id)?.titulo || ''));
   S.eventos = S.eventos.filter((e) => e.id !== id);
   guardar(); render(); dialogoDia(iso);
 }

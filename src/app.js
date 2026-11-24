@@ -66,6 +66,7 @@ function estadoInicial() {
     fichas: [],
     retro: {},
     pizarras: [],
+    papelera: [],
   };
 }
 
@@ -143,6 +144,7 @@ window.addEventListener('beforeunload', () => {
   if (temporizadorGuardado && typeof S !== 'undefined' && S) { clearTimeout(temporizadorGuardado); temporizadorGuardado = null; api.guardarAlCerrar(S); }
 });
 function guardar() {
+  if (typeof cerrarPapelera === 'function') cerrarPapelera();
   clearTimeout(temporizadorGuardado);
   document.getElementById('estado-guardado').textContent = 'Guardando…';
   temporizadorGuardado = setTimeout(async () => {
@@ -189,9 +191,14 @@ function cerrarModal() { document.getElementById('modal-fondo').classList.add('o
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModal(); });
 
 let resolverConfirmacion = null;
-function confirmar(texto, { boton = 'Eliminar', peligro = true } = {}) {
+// Si se confirma un borrado, lo eliminado va a la papelera (ver papelera.js). Se puede forzar con { papelera: true/false }.
+function confirmar(texto, { boton = 'Eliminar', peligro = true, papelera } = {}) {
+  const aPapelera = papelera ?? (peligro && /eliminar|vaciar|reiniciar|retirar|borrar|quitar/i.test(boton));
   return new Promise((res) => {
-    resolverConfirmacion = res;
+    resolverConfirmacion = (v) => {
+      if (v && aPapelera && typeof iniciarPapelera === 'function') iniciarPapelera(String(texto).replace(/^¿/, '').split('?')[0].trim());
+      res(v);
+    };
     abrirModal(`<h2>Confirmar</h2><p>${esc(texto)}</p>
       <div class="botones"><button class="btn" onclick="responderConfirmacion(false)">Cancelar</button>
       <button class="btn ${peligro ? 'peligro' : 'primario'}" onclick="responderConfirmacion(true)">${esc(boton)}</button></div>`);
@@ -259,6 +266,7 @@ const VISTAS = [
   { id: 'calificaciones', ico: '📊', nombre: 'Evaluación y notas' },
   { id: 'seguimiento', ico: '📈', nombre: 'Seguimiento del estudiante' },
   { id: 'comunicados', ico: '✉️', nombre: 'Comunicados a padres' },
+  { id: 'papelera', ico: '🗑️', nombre: 'Papelera' },
   { id: 'configuracion', ico: '⚙️', nombre: 'Configuración' },
 ];
 
@@ -413,6 +421,7 @@ async function iniciar() {
   sembrarInstrumentos();
   migrarPlantillas();
   aplicarApariencia();
+  purgarPapelera();
   if (S.config.nube?.carpeta) api.configurarNube(S.config.nube.carpeta);
   if (S.config.actualizaciones?.auto !== false) setTimeout(() => buscarActualizaciones(true), 6000);
   guardar();
