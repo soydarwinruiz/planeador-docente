@@ -1,4 +1,4 @@
-# Documentación técnica – Planeador Docente 1.12.1
+# Documentación técnica – Planeador Docente 1.13.0
 
 Para quien quiera mantener, modificar o compilar la aplicación.
 
@@ -88,6 +88,7 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `compartir.js` | Actualizaciones, respaldo en nube, paquetes para compartir |
 | `voz.js` | Dictado por voz |
 | `configuracion.js` | Configuración, asistente inicial, nuevo año lectivo |
+| `papelera.js` | Papelera: al confirmar un borrado (`confirmar()` o `iniciarPapelera()`) toma una foto de `S`; en el siguiente `guardar()` guarda solo las diferencias (`ops`: elementos que desaparecieron por `id` o clave, y valores cambiados) y las puede volver a aplicar sobre el estado actual |
 
 ## 4. Modelo de datos (`datos.json`)
 
@@ -111,6 +112,7 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `comunicadosEnviados` | Historial de comunicados |
 | `pruebas` | Preguntas, respuestas por estudiante (letras), puntos de abiertas, textos escritos en el celular |
 | `pizarras` | Tableros: `titulo`, `planeacionId`, `sesionId`, `grupoIds`, `areaId`, `fecha`, `formato: 'pizarra-local'`, `items` (elementos de Pizarra Local: sticky, shape, text, connector, pen, image, frame, emoji, comment; el texto con formato va en `rich`, con fuente, tamaño y resaltado por fragmento), `assets` (imágenes en `data:`), `view` y `miniatura` (JPEG pequeño para la lista) |
+| `papelera` | Elementos eliminados (30 días, máximo 200): `{ id, fecha, etiqueta, ops: [{ op: 'agregar', ruta, id/clave, indice, valor } \| { op: 'valor', ruta, antes, despues }] }`; `ruta` usa `{ id }` para entrar en listas con identificador |
 | `fichas`, `gamificacion`, `retro`, `informes` | Fichas guardadas; puntos, equipos e insignias por grupo; retroalimentaciones; textos del informe de cierre |
 
 ## 5. Algoritmos destacados

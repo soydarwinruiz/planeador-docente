@@ -224,6 +224,8 @@ input.bajo { border-color: var(--rojo); }
 .aviso { background: #263238; color: #fff; padding: 10px 16px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.2); max-width: 380px; animation: entra .2s; }
 .aviso.error { background: var(--rojo); }
 .aviso.ok { background: var(--verde); }
+.aviso-accion { background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 5px; padding: 2px 8px; margin-left: 6px; cursor: pointer; font: inherit; font-size: 12px; }
+.aviso-accion:hover { background: rgba(255,255,255,.28); }
 @keyframes entra { from { transform: translateY(10px); opacity: 0; } }
 .cargando { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: gira .8s linear infinite; }
 @keyframes gira { to { transform: rotate(360deg); } }

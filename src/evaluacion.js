@@ -269,7 +269,7 @@ function avisoNoEliminar(titulo, filas) {
 async function vaciarNotasActividad(plId, crId, actId) {
   const a = porId(porId(porId(S.planillas, plId).criterios, crId).actividades, actId);
   const n = calificacionesDe(actId);
-  if (!(await confirmar(`Se borrarán las ${n} calificación(es) de "${a.nombre}" (las notas no se pueden recuperar, salvo desde un respaldo). ¿Vaciar las notas?`, { boton: 'Vaciar notas' }))) return;
+  if (!(await confirmar(`Se borrarán las ${n} calificación(es) de "${a.nombre}" (quedan en la papelera 30 días por si necesitas recuperarlas). ¿Vaciar las notas?`, { boton: 'Vaciar notas' }))) return;
   delete S.notas[actId]; delete S.notasRubrica[actId]; if (S.retro) delete S.retro[actId];
   guardar(); render(); aviso('Notas vaciadas. Ahora puedes eliminar la actividad si lo necesitas.');
 }

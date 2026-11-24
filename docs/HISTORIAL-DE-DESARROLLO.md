@@ -4,7 +4,7 @@ Este documento cuenta cómo se construyó la aplicación, paso a paso: qué se p
 
 - **Repositorio:** https://github.com/soydarwinruiz/planeador-docente
 - **Descargas de cada versión:** https://github.com/soydarwinruiz/planeador-docente/releases
-- **Periodo de desarrollo:** 22 a 24 de noviembre de 2026 (versiones 1.0.0 a 1.12.1)
+- **Periodo de desarrollo:** 22 a 24 de noviembre de 2026 (versiones 1.0.0 a 1.13.0)
 
 ---
 
@@ -184,6 +184,13 @@ A partir de una captura del docente en la que la línea gruesa atravesaba la pun
 - La punta crece con el grosor de la línea y se orienta según el final de la curva.
 - Las líneas punteadas siempre empiezan y terminan con un trazo, para que la punta no quede suelta.
 - Lo mismo se aplica al exportar el tablero como SVG.
+
+### Versión 1.13.0 — Papelera (24 de noviembre)
+A la pregunta del docente (*"si por error borro alguna calificación o algo del programa, ¿existe una manera de recuperarlo?"*): hasta ahora solo se podía restaurar un respaldo completo, que reemplaza todos los datos.
+- **Papelera** en el menú lateral: lo eliminado se guarda 30 días y se recupera con un clic, sin tocar lo que se hizo después.
+- Funciona en todos los módulos a la vez: al confirmar un borrado se toma una foto de los datos y, al guardar, se registra solo lo que desapareció, incluidos los borrados en cascada (un grupo con sus estudiantes, asistencia y notas).
+- Aviso con **Deshacer** justo después de cada borrado.
+- No se guardan en la papelera la restauración de respaldos ni el inicio de un nuevo año lectivo (este ya crea un respaldo).
 
 ---
 
