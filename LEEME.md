@@ -3,6 +3,12 @@
 Aplicación de escritorio para Windows para planear clases de **educación básica y media en Colombia (grados 1.° a 11.°)**.
 Funciona **sin internet**: todos los datos quedan guardados en tu computador.
 
+## Documentación
+
+- [Manual de usuario](docs/MANUAL-DE-USUARIO.md): cómo usar cada módulo.
+- [Historial de desarrollo](docs/HISTORIAL-DE-DESARROLLO.md): cómo se construyó y qué trae cada versión.
+- [Documentación técnica](docs/DOCUMENTACION-TECNICA.md): arquitectura, archivos, datos, compilación y pruebas.
+
 ## Cómo abrirla
 
 - **Instalador** (`PlaneadorDocente-Setup-1.9.1.exe`, recomendado): instala la app con acceso directo en el escritorio
