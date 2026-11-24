@@ -21,6 +21,8 @@ function fuentesBusqueda() {
   for (const p of S.pruebas || []) r.push({ tipo: p.tipo === 'taller' ? '📄 Taller' : '🧪 Prueba', titulo: p.titulo || 'Sin título', detalle: `${nombreArea(p.areaId)} · ${p.preguntas.length} preguntas`,
     texto: [p.titulo, p.tema, ...p.preguntas.flatMap((q) => [q.enunciado, q.contexto])].join(' '), ir: () => { ui.pruebaPest = 'preguntas'; ir('pruebaEditor', { id: p.id }); } });
   for (const f of S.fichas || []) r.push({ tipo: '🧩 Ficha', titulo: f.titulo || TIPOS_FICHA[f.tipo].t, detalle: TIPOS_FICHA[f.tipo].t, texto: [f.titulo, f.palabras, f.pistas, f.pares, f.texto, ...Object.values(f.guia || {})].join(' '), ir: () => { ui.ficha = structuredClone(f); ir('fichas'); } });
+  for (const t of S.pizarras || []) r.push({ tipo: '🖍️ Tablero', titulo: t.titulo || 'Tablero sin título', detalle: [t.grupoIds.map(nombreGrupoId).join(', '), t.areaId ? nombreArea(t.areaId) : '', fechaCorta(t.fecha)].filter(Boolean).join(' · '),
+    texto: [t.titulo, ...t.elementos.map((e) => (e.html ? pzTextoPlano(e.html) : '') + ' ' + (e.titulo || '') + ' ' + (e.texto || ''))].join(' '), ir: () => pzAbrir(t.id) });
   for (const v of vistasMenu()) r.push({ tipo: '➡️ Ir a', titulo: v.nombre, detalle: '', texto: v.nombre, ir: () => ir(v.id) });
   return r;
 }

@@ -127,6 +127,7 @@ function tarjetaClasesHoy() {
         <div class="fila" style="flex-wrap:nowrap">${plan ? `<button class="btn pequeno" onclick="editarPlaneacion('${plan.id}')">Abrir</button>` : `<button class="btn pequeno" onclick="planearClaseDe('${c.grupoId}','${c.areaId}','${hoy}')">＋ Planear</button>`}
           <button class="btn pequeno" onclick="asistenciaDe('${c.grupoId}','${c.areaId}','${hoy}')">✅ Asistencia</button>
           <button class="btn pequeno ${dc ? 'primario' : ''}" title="${dc ? 'Ya registraste esta clase' : 'Registrar cómo fue la clase'}" onclick="abrirDiario('${c.grupoId}','${c.areaId}','${hoy}')">📓 Diario${dc ? ' ✓' : ''}</button>
+          ${plan ? pzBotonSesion(plan.id, (plan.sesiones.find((s) => s.fecha === hoy) || {}).id || '').replace('🖍️ Tablero', '🖍️') : ''}
           <button class="btn pequeno" title="Estudiante al azar, grupos, temporizador, proyector" onclick="abrirAula('${c.grupoId}','${c.areaId}')">🎲</button></div></li>`;
     }).join('')}</ul>` : '<p class="ayuda">No tienes clases hoy según tu horario.</p>'}
   </div>`;
