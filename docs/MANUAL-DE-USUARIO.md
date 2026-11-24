@@ -1,4 +1,4 @@
-# Manual de usuario – Planeador Docente 1.9.1
+# Manual de usuario – Planeador Docente 1.10.0
 
 Aplicación de escritorio para Windows para planear, evaluar y hacer seguimiento en **educación básica y media en Colombia (1.° a 11.°)**. Funciona **sin internet**; los datos quedan en tu computador.
 
@@ -20,8 +20,8 @@ Descarga desde https://github.com/soydarwinruiz/planeador-docente/releases (últ
 
 | Archivo | Para qué |
 |---|---|
-| `PlaneadorDocente-Setup-1.9.1.exe` | **Instalador (recomendado).** Crea acceso directo y **se actualiza solo**. |
-| `PlaneadorDocente-portable-1.9.1.exe` | Se abre con doble clic, sin instalar (sirve en una USB). Avisa de nuevas versiones, pero se descarga a mano. |
+| `PlaneadorDocente-Setup-1.10.0.exe` | **Instalador (recomendado).** Crea acceso directo y **se actualiza solo**. |
+| `PlaneadorDocente-portable-1.10.0.exe` | Se abre con doble clic, sin instalar (sirve en una USB). Avisa de nuevas versiones, pero se descarga a mano. |
 
 - Si Windows muestra *"Windows protegió su PC"*: **Más información → Ejecutar de todas formas** (el programa no tiene firma comercial).
 - **Actualizaciones:** Configuración → *Actualizaciones*. La app revisa sola al abrir; pulsa *Descargar e instalar* y luego *Reiniciar e instalar*. Tus datos no se tocan.
@@ -98,6 +98,20 @@ Pantalla completa para el video beam (⛶):
 - **Temporizador:** grande, amarillo en el último minuto, rojo al final, con alarma.
 - **Proyector:** momentos de la clase o preguntas de una prueba (← → para avanzar, *Mostrar respuesta*).
 - **Tablero** de gamificación.
+
+### Tableros (🖍️)
+Pizarra infinita para la clase, al estilo de Miro, que queda **asignada a una sesión de una planeación, a uno o varios grupos y a un área**.
+- **Crear:** desde una sesión de la planeación (botón *🖍️ Tablero* junto a cada sesión), desde *Mis clases de hoy* en Inicio o en el módulo *Tableros* (*＋ Nuevo tablero*). El tablero de una sesión se abre con el mismo botón (✓). Con *🔗 Asignar* (o tocando las etiquetas de la barra superior) se cambia la planeación, la sesión, los grupos, el área y la fecha.
+- **Herramientas** (barra izquierda): seleccionar (V), mover el lienzo (H o barra espaciadora), nota adhesiva (N), texto (T), 20 formas (S), conector o flecha (L), lápiz (P), resaltador (M), borrador de trazos (E), imagen (I), marco (F), tabla y sellos. *Ctrl + rueda* o pellizco hace zoom; el minimapa (🗺️) muestra dónde estás.
+- **Texto con formato por letra:** doble clic (o Enter) para escribir; selecciona solo algunas letras y cámbiales la **fuente** (todas las fuentes instaladas en el computador, con buscador y recientes), el **tamaño**, el **color**, el **resaltado**, negrita, cursiva, subrayado, tachado, superíndice o subíndice, mayúsculas, sombra, contorno y espaciado. Sin escribir, los cambios se aplican a todo el texto del elemento.
+- **Ajuste del texto:** *Reducir si no cabe* (la letra se achica para que el texto quepa en la nota o forma), *Llenar la caja*, *La caja crece con el texto* o *Tamaño fijo*.
+- **Imágenes:** botón 🖼️, arrastrar el archivo o pegar con Ctrl+V. *Recortar* (doble clic) con proporciones libres, 1:1, 4:3, 16:9… y forma rectangular, redondeada o circular; ajustes de brillo, contraste, saturación, blanco y negro, sepia, tono y desenfoque; voltear, borde, sombra y transparencia. El recorte no destruye la foto: se puede deshacer o cambiar después.
+- **Conectores:** al seleccionar una nota o forma aparecen cuatro puntos; arrástralos hasta otro elemento para unirlos, o haz clic en uno para crear otra igual ya conectada (mapas mentales rápidos). Rectos, curvos o en ángulo, con distintas puntas y etiqueta.
+- **Organizar:** guías de alineación al mover, alinear y distribuir, agrupar (Ctrl+G), bloquear, traer al frente o enviar al fondo, duplicar (Ctrl+D o Alt + arrastrar), copiar y pegar entre tableros, deshacer y rehacer, menú con clic derecho.
+- **Insertar desde el planeador:** los *estudiantes del grupo* como notas, los *momentos de la sesión* (con lo que escribiste en la planeación) y el *objetivo y la pregunta problematizadora*.
+- **Plantillas:** lluvia de ideas, mapa mental, cuadro S-Q-A, diagrama de Venn, línea de tiempo, tablero de tareas, retroalimentación, causa y efecto, matriz 2 × 2 y momentos de la clase.
+- **Presentar (▶):** pantalla completa que recorre los marcos como diapositivas (← →), con lápiz y resaltador para escribir encima y 🎲 *estudiante al azar* de los grupos del tablero. El fondo puede ser oscuro, como un tablero verde o negro.
+- **Exportar:** imagen PNG (todo o la selección) o PDF (todo en una página o un marco por página).
 
 ### Gamificación
 Por grupo: puntos a uno o varios estudiantes (motivos configurables, también negativos), **niveles** (Explorador, Aprendiz, Experto, Maestro, Leyenda), **12 insignias**, **equipos** con sus puntos, **tablero** proyectable, historial con deshacer y *Nueva temporada* para reiniciar puntos.

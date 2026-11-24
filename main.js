@@ -322,6 +322,27 @@ ipcMain.handle('pdf:html', async (_e, { nombre, html, horizontal, ruta }) => {
   } catch (e) { return { ok: false, error: e.message }; }
 });
 
+// ---------- Imagen PNG desde HTML (tableros) ----------
+ipcMain.handle('png:html', async (_e, { nombre, html, ancho, alto, ruta }) => {
+  let filePath = ruta;
+  if (!filePath) {
+    const r = await dialog.showSaveDialog(ventana, { title: 'Guardar imagen', defaultPath: `${String(nombre || 'tablero').replace(/[\\/:*?"<>|]+/g, '-')}.png`, filters: [{ name: 'Imagen PNG', extensions: ['png'] }] });
+    if (r.canceled || !r.filePath) return { ok: false };
+    filePath = r.filePath;
+  }
+  const tmp = path.join(app.getPath('temp'), `planeador-${Date.now()}.html`);
+  fs.writeFileSync(tmp, html, 'utf8');
+  const w = new BrowserWindow({ show: false, width: Math.max(50, Math.round(ancho)), height: Math.max(50, Math.round(alto)), useContentSize: true, enableLargerThanScreen: true, frame: false, webPreferences: { javascript: false } });
+  try {
+    await w.loadFile(tmp);
+    await new Promise((res) => setTimeout(res, 350));
+    const img = await w.webContents.capturePage({ x: 0, y: 0, width: Math.round(ancho), height: Math.round(alto) });
+    fs.writeFileSync(filePath, img.toPNG());
+    if (!ruta) shell.openPath(filePath);
+    return { ok: true, ruta: filePath };
+  } catch (e) { return { ok: false, error: e.message }; } finally { w.destroy(); fs.rmSync(tmp, { force: true }); }
+});
+
 // ---------- Leer tablas (Excel o CSV) para importar notas ----------
 function valorCelda(v) {
   if (v == null) return '';

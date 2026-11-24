@@ -4,7 +4,7 @@ Este documento cuenta cómo se construyó la aplicación, paso a paso: qué se p
 
 - **Repositorio:** https://github.com/soydarwinruiz/planeador-docente
 - **Descargas de cada versión:** https://github.com/soydarwinruiz/planeador-docente/releases
-- **Periodo de desarrollo:** 22 y 23 de noviembre de 2026 (versiones 1.0.0 a 1.9.1)
+- **Periodo de desarrollo:** 22 a 24 de noviembre de 2026 (versiones 1.0.0 a 1.10.0)
 
 ---
 
@@ -157,6 +157,16 @@ Observaciones del docente:
 
 - *"Que no se borre una actividad si ya tiene calificaciones"*: ya no se pueden eliminar actividades ni componentes con notas, ni reemplazar la estructura de una planilla calificada. Para borrar una actividad creada por error primero hay que vaciar sus notas de forma explícita (🧹).
 - *"Si los ocultos desaparecen por completo… lo ideal es volver a mostrarla pulsando en el check"*: los módulos ocultos siguen en la lista de Configuración, atenuados, y se vuelven a mostrar marcando el check. (La causa era un nombre de estilo que la app ya usaba para "no mostrar nada".)
+
+### Versión 1.10.0 — Tableros tipo Miro (24 de noviembre)
+Pedido del docente: *"una herramienta tipo tablero Miro con muchas opciones, que lo que se haga se asigne a una sesión con los grupos; que las etiquetas de texto se ajusten, que el texto se pueda personalizar con fuentes del sistema y por letras, no solo de forma global; poder insertar imágenes y recortarlas, todo integrado"*.
+
+- **Módulo Tableros** con lienzo infinito: notas, textos, 20 formas, conectores, lápiz, resaltador, borrador, imágenes, marcos, tablas y sellos; zoom, minimapa, guías de alineación, agrupar, bloquear, capas, deshacer y rehacer, copiar y pegar (también imágenes del portapapeles) y menú contextual.
+- **Asignación a la sesión y a los grupos:** cada tablero guarda planeación, sesión, grupos, área y fecha. Se crea o se abre desde cada sesión de la planeación y desde *Mis clases de hoy*; aparece en el buscador.
+- **Texto:** formato por letra (fuente del sistema, tamaño, color, resaltado, negrita, cursiva, subrayado, tachado, superíndice, subíndice, mayúsculas, sombra, contorno, espaciado), listas, alineación, interlineado y ajuste automático del tamaño a la caja.
+- **Imágenes:** insertar, arrastrar o pegar; recorte no destructivo con proporciones y forma circular o redondeada; ajustes de color, voltear, borde y sombra. Las fotos grandes se reducen para no inflar el archivo de datos.
+- **Integración con el aula:** estudiantes del grupo como notas, momentos de la sesión, objetivo y pregunta problematizadora, estudiante al azar durante la presentación y acceso a las herramientas de aula.
+- **Presentación** por marcos en pantalla completa con lápiz para escribir encima, y **exportación** a PNG y PDF.
 
 ---
 
