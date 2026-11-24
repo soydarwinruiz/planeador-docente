@@ -4,7 +4,7 @@ Este documento cuenta cómo se construyó la aplicación, paso a paso: qué se p
 
 - **Repositorio:** https://github.com/soydarwinruiz/planeador-docente
 - **Descargas de cada versión:** https://github.com/soydarwinruiz/planeador-docente/releases
-- **Periodo de desarrollo:** 22 a 24 de noviembre de 2026 (versiones 1.0.0 a 1.12.0)
+- **Periodo de desarrollo:** 22 a 24 de noviembre de 2026 (versiones 1.0.0 a 1.12.1)
 
 ---
 
@@ -177,6 +177,13 @@ A pedido del docente (*"me gustaría que la barra lateral pudiera ocultarse temp
 - **Modo enfoque en los tableros** (⤢ Enfoque o Ctrl + Shift + B): oculta el menú y la barra superior del tablero. Los atajos funcionan también desde dentro de la pizarra.
 - **Menú compacto** (solo íconos, botón ⇤ / ⇥), que se activa solo en ventanas de menos de 1000 px.
 - El botón para personalizar el menú pasó de ☰ a 🧭 para no confundirse con el de mostrar el menú.
+
+### Versión 1.12.1 — Puntas de flecha de los conectores (24 de noviembre)
+A partir de una captura del docente en la que la línea gruesa atravesaba la punta de la flecha:
+- La línea ahora termina dentro de la punta, sin asomar por delante.
+- La punta crece con el grosor de la línea y se orienta según el final de la curva.
+- Las líneas punteadas siempre empiezan y terminan con un trazo, para que la punta no quede suelta.
+- Lo mismo se aplica al exportar el tablero como SVG.
 
 ---
 
