@@ -4,7 +4,7 @@ Este documento cuenta cómo se construyó la aplicación, paso a paso: qué se p
 
 - **Repositorio:** https://github.com/soydarwinruiz/planeador-docente
 - **Descargas de cada versión:** https://github.com/soydarwinruiz/planeador-docente/releases
-- **Periodo de desarrollo:** 22 a 24 de noviembre de 2026 (versiones 1.0.0 a 1.11.0)
+- **Periodo de desarrollo:** 22 a 24 de noviembre de 2026 (versiones 1.0.0 a 1.12.0)
 
 ---
 
@@ -171,6 +171,13 @@ Pedido del docente: *"una herramienta tipo tablero Miro con muchas opciones, que
 ### Versión 1.11.0 — Pizarra Local integrada (24 de noviembre)
 A pedido del docente (*"no se ajusta bien… si pudieras integrar este"*, con una captura de una nota donde una palabra larga quedaba diminuta) el editor pasó a ser [Pizarra Local](https://github.com/soydarwinruiz/pizarra-local), que dibuja en canvas y parte las palabras largas en vez de achicarlas. Se integró dentro del planeador (los tableros se guardan en los datos del planeador con su sesión y sus grupos) y se le agregó **fuente, tamaño y resaltado por letra**. Los tableros hechos antes se convierten solos.
 
+### Versión 1.12.0 — Menú lateral plegable y modo enfoque (24 de noviembre)
+A pedido del docente (*"me gustaría que la barra lateral pudiera ocultarse temporalmente… y si estoy en el tablero que también se pueda ocultar"*):
+- **Menú lateral plegable** con el botón « o Ctrl + B; un botón ☰ flotante lo vuelve a mostrar. Se recuerda por separado en los tableros y en el resto de la app.
+- **Modo enfoque en los tableros** (⤢ Enfoque o Ctrl + Shift + B): oculta el menú y la barra superior del tablero. Los atajos funcionan también desde dentro de la pizarra.
+- **Menú compacto** (solo íconos, botón ⇤ / ⇥), que se activa solo en ventanas de menos de 1000 px.
+- El botón para personalizar el menú pasó de ☰ a 🧭 para no confundirse con el de mostrar el menú.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo
@@ -191,6 +198,7 @@ A pedido del docente (*"no se ajusta bien… si pudieras integrar este"*, con un
 | Lector óptico que fallaba con la hoja inclinada | Detección de las marcas de esquina independiente del giro; funciona hasta 20° |
 | Las fotos no se podían abrir por la política de seguridad de la app | Lectura de la imagen como datos |
 | Módulos ocultos que desaparecían de la lista | Cambio del nombre del estilo |
+| El nuevo botón de ocultar el menú no respondía: ya existía otra función con el mismo nombre (la de personalizar el menú) | Nombre propio para la nueva función (`alternarBarraLateral`) |
 
 ---
 
