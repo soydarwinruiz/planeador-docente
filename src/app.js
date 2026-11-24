@@ -485,6 +485,7 @@ async function iniciar() {
   sembrarInstrumentos();
   migrarPlantillas();
   aplicarApariencia();
+  if (S.config.apariencia?.ortografia === false) api.ortografia(false);
   purgarPapelera();
   if (S.config.nube?.carpeta) api.configurarNube(S.config.nube.carpeta);
   if (S.config.actualizaciones?.auto !== false) setTimeout(() => buscarActualizaciones(true), 6000);

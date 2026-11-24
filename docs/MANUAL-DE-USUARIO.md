@@ -168,7 +168,7 @@ Tipos: bajo desempeño, inasistencias, actividades pendientes, plan de apoyo, ci
 ## 5. Configuración
 - Datos institucionales, docente, coordinador, año lectivo.
 - **Hoja membrete:** logos, color, líneas (NIT, DANE…), lema y pie de página.
-- **Apariencia:** tema claro, oscuro o como el sistema; tamaño de letra.
+- **Apariencia:** tema claro, oscuro o como el sistema; tamaño de letra; **corrector de ortografía** (subraya en rojo; clic derecho sobre la palabra para ver sugerencias o agregarla al diccionario).
 - **🧭 Menú lateral:** desmarca para ocultar un módulo (queda atenuado en la lista y lo vuelves a mostrar marcándolo); ordena arrastrando o con ▲▼. Ocultar no borra datos.
 - **🔄 Actualizaciones**, **☁️ Respaldo en la nube**, **🤝 Compartir con otros docentes**.
 - SIEE: escala, desempeños, periodos y porcentajes, componentes de evaluación por defecto.
