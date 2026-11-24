@@ -856,12 +856,46 @@ function shapePath(c, s, x, y, w, h) {
     default: c.rect(x, y, w, h);
   }
 }
-function arrowHead(c, from, to, size) {
+/* [Planeador Docente] Puntas de flecha: la línea termina dentro de la punta (antes la atravesaba y su extremo
+   redondeado sobresalía), la punta crece con el grosor y se orienta según el último tramo visible de la curva. */
+const ARROW_ANG = 0.5;
+const arrowSize = w => 10 + w * 2.6;
+function polyLen(P) { let L = 0; for (let i = 1; i < P.length; i++) L += Math.hypot(P[i].x - P[i - 1].x, P[i].y - P[i - 1].y); return L; }
+function trimEnd(P, len) { // quita `len` unidades del final de la polilínea
+  const Q = P.slice(); let rest = len;
+  while (Q.length > 1) {
+    const a = Q[Q.length - 2], b = Q[Q.length - 1], d = Math.hypot(b.x - a.x, b.y - a.y);
+    if (d > rest) { const t = (d - rest) / d; Q[Q.length - 1] = {x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t}; return Q; }
+    rest -= d; Q.pop();
+  }
+  return Q;
+}
+// Devuelve la línea recortada y las puntas a dibujar ([desde, hasta] de cada una)
+function connArrows(it, P) {
+  const hs = arrowSize(it.strokeWidth), heads = [];
+  let line = P;
+  const total = polyLen(P), n = (it.endArrow ? 1 : 0) + (it.startArrow ? 1 : 0);
+  if (P.length < 2 || !n) return {line, heads, hs};
+  const k = Math.min(1, total / (n * hs * 1.2)), cut = hs * Math.cos(ARROW_ANG) * 0.8 * k, back = hs * k;
+  if (it.endArrow) { heads.push([trimEnd(P, back).at(-1), P.at(-1)]); line = trimEnd(line, cut); }
+  if (it.startArrow) { const R = P.slice().reverse(); heads.push([trimEnd(R, back).at(-1), P[0]]); line = trimEnd(line.slice().reverse(), cut).reverse(); }
+  return {line: line.length > 1 ? line : P, heads, hs: hs * Math.max(k, 0.5)};
+}
+// Guiones repartidos para que la línea empiece y termine con trazo (así la punta nunca queda suelta)
+function dashFor(it, line) {
+  if (!it.dash) return [];
+  const L = polyLen(line), base = it.strokeWidth * 3, n = Math.max(1, Math.round((L / base + 1) / 2));
+  if (n < 2) return [];
+  const d = L / (2 * n - 1); return [d, d];
+}
+function arrowPts(from, to, size) {
   const a = Math.atan2(to.y - from.y, to.x - from.x);
-  c.beginPath(); c.moveTo(to.x, to.y);
-  c.lineTo(to.x - size * Math.cos(a - 0.45), to.y - size * Math.sin(a - 0.45));
-  c.lineTo(to.x - size * Math.cos(a + 0.45), to.y - size * Math.sin(a + 0.45));
-  c.closePath(); c.fill();
+  return [to, {x: to.x - size * Math.cos(a - ARROW_ANG), y: to.y - size * Math.sin(a - ARROW_ANG)}, {x: to.x - size * Math.cos(a + ARROW_ANG), y: to.y - size * Math.sin(a + ARROW_ANG)}];
+}
+function arrowHead(c, from, to, size) {
+  const [p, q, r] = arrowPts(from, to, size);
+  c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(q.x, q.y); c.lineTo(r.x, r.y); c.closePath();
+  c.save(); c.lineJoin = 'round'; c.lineWidth = Math.max(1, size * 0.08); c.setLineDash([]); c.fill(); c.stroke(); c.restore();
 }
 const bgColor = () => S.dark ? '#1b1b1f' : '#f2f2f2';
 
@@ -934,12 +968,11 @@ function drawItem(c, it) {
     case 'connector': {
       const g = connGeom(it), P = g.pts;
       c.strokeStyle = it.stroke; c.fillStyle = it.stroke; c.lineWidth = it.strokeWidth; c.lineJoin = 'round'; c.lineCap = 'round';
-      c.setLineDash(it.dash ? [it.strokeWidth * 3, it.strokeWidth * 3] : []);
-      c.beginPath(); c.moveTo(P[0].x, P[0].y); for (let i = 1; i < P.length; i++) c.lineTo(P[i].x, P[i].y); c.stroke();
+      const A = connArrows(it, P), L = A.line;
+      c.setLineDash(dashFor(it, L));
+      c.beginPath(); c.moveTo(L[0].x, L[0].y); for (let i = 1; i < L.length; i++) c.lineTo(L[i].x, L[i].y); c.stroke();
       c.setLineDash([]);
-      const hs = 8 + it.strokeWidth * 2.2;
-      if (it.endArrow && P.length > 1) arrowHead(c, P[P.length - 2], P[P.length - 1], hs);
-      if (it.startArrow && P.length > 1) arrowHead(c, P[1], P[0], hs);
+      for (const [f, t] of A.heads) arrowHead(c, f, t, A.hs);
       if (!skipText && it.text) {
         const tb = textBox(it), size = it.fontSize || 14, lines = wrap(it.text, size, tb.w, it.bold, it.italic, it.font);
         mctx.font = fontStr(size, it.bold, it.italic, it.font); const lw = Math.max(...lines.map(l => mctx.measureText(l).width)) + 10;
@@ -2451,10 +2484,9 @@ function exportSVG() {
       case 'emoji': out.push(`<text x="${X(it.x + it.w / 2)}" y="${X(it.y + it.h / 2)}" font-size="${X(it.h * 0.82)}" text-anchor="middle" dominant-baseline="central">${it.char}</text>`); break;
       case 'pen': { const P = penPoints(it); out.push(`<polyline points="${P.map(p => X(p.x) + ',' + X(p.y)).join(' ')}" fill="none" stroke="${it.stroke}" stroke-width="${it.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"${it.hl ? ' stroke-opacity=".45"' : ''}/>`); break; }
       case 'connector': {
-        const g = connGeom(it), P = g.pts, hs = 8 + it.strokeWidth * 2.2;
-        out.push(`<polyline points="${P.map(p => X(p.x) + ',' + X(p.y)).join(' ')}" fill="none" stroke="${it.stroke}" stroke-width="${it.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"${it.dash ? ` stroke-dasharray="${it.strokeWidth * 3} ${it.strokeWidth * 3}"` : ''}/>`);
-        const head = (f, t) => { const a = Math.atan2(t.y - f.y, t.x - f.x); return `<path d="M${X(t.x)} ${X(t.y)}L${X(t.x - hs * Math.cos(a - .45))} ${X(t.y - hs * Math.sin(a - .45))}L${X(t.x - hs * Math.cos(a + .45))} ${X(t.y - hs * Math.sin(a + .45))}Z" fill="${it.stroke}"/>`; };
-        if (it.endArrow) out.push(head(P[P.length - 2], P[P.length - 1])); if (it.startArrow) out.push(head(P[1], P[0]));
+        const g = connGeom(it), A = connArrows(it, g.pts);
+        out.push(`<polyline points="${A.line.map(p => X(p.x) + ',' + X(p.y)).join(' ')}" fill="none" stroke="${it.stroke}" stroke-width="${it.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"${dashFor(it, A.line).length ? ` stroke-dasharray="${dashFor(it, A.line).map(X).join(' ')}"` : ''}/>`);
+        for (const [f, t] of A.heads) { const [p, q, r] = arrowPts(f, t, A.hs); out.push(`<path d="M${X(p.x)} ${X(p.y)}L${X(q.x)} ${X(q.y)}L${X(r.x)} ${X(r.y)}Z" fill="${it.stroke}" stroke="${it.stroke}" stroke-width="${X(Math.max(1, A.hs * 0.08))}" stroke-linejoin="round"/>`); }
         if (it.text) { const tb = textBox(it); out.push(`<rect x="${X(tb.x)}" y="${X(tb.y)}" width="${X(tb.w)}" height="${X(tb.h)}" fill="#fff" opacity=".85"/>` + txt(it, tb, it.fontSize || 14, {...it, color: it.color || it.stroke, align: 'center', valign: 'middle'})); }
         break;
       }
