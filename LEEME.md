@@ -11,9 +11,9 @@ Funciona **sin internet**: todos los datos quedan guardados en tu computador.
 
 ## Cómo abrirla
 
-- **Instalador** (`PlaneadorDocente-Setup-1.10.0.exe`, recomendado): instala la app con acceso directo en el escritorio
+- **Instalador** (`PlaneadorDocente-Setup-1.11.0.exe`, recomendado): instala la app con acceso directo en el escritorio
   y **se actualiza sola** (Configuración → *Actualizaciones*).
-- **Versión portable** (`PlaneadorDocente-portable-1.10.0.exe`): haz doble clic y listo. No necesita instalación.
+- **Versión portable** (`PlaneadorDocente-portable-1.11.0.exe`): haz doble clic y listo. No necesita instalación.
   Puedes llevarla en una memoria USB. Avisa cuando hay versión nueva, pero se descarga a mano.
 - La primera vez, Windows puede mostrar *"Windows protegió su PC"* (el programa no tiene firma digital comercial).
   Haz clic en **Más información → Ejecutar de todas formas**.

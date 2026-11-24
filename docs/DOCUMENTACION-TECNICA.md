@@ -1,4 +1,4 @@
-# Documentación técnica – Planeador Docente 1.10.0
+# Documentación técnica – Planeador Docente 1.11.0
 
 Para quien quiera mantener, modificar o compilar la aplicación.
 
