@@ -82,7 +82,8 @@ Las listas, la asistencia, las planillas, la programación evaluativa y el crono
 
 ## Respaldos
 
-- **Automático**: cada vez que abres la aplicación se guarda una copia (se conservan las últimas 15).
+- **Automático**: al abrir la aplicación y cada hora si hubo cambios (se conservan las 15 más recientes), más una copia por día durante 30 días.
+  Si el archivo de datos se daña (apagón, cierre inesperado), la app se recupera sola con el respaldo válido más reciente.
 - **En la nube**: Configuración → *Respaldo en la nube* → elige la carpeta de **OneDrive** o de **Google Drive para escritorio**.
   La app copia tus datos allí cada 20 minutos y al cerrar (conserva 14 días). Si se daña o se pierde el computador,
   instala la app en otro y usa *Restaurar desde archivo…* con `planeador-ultimo.json`.

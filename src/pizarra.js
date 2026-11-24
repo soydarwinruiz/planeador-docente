@@ -3,14 +3,18 @@
 // El planeador guarda cada tablero en S.pizarras con su vínculo a la planeación, la sesión, los grupos y el área,
 // y le envía elementos (estudiantes, momentos de la sesión…) por mensajes (postMessage).
 
-const PZ = { id: null, listo: false, cerrando: null, temporizadorCierre: null };
+const PZ = { id: null, listo: false, cerrando: null, temporizadorCierre: null, firmaRecursos: '' };
+// Las imágenes de cada tablero (assets) se guardan en un archivo aparte (ver almacen.js) y no dentro de S:
+// así guardar el resto de los datos sigue siendo rápido. t.assets solo existe mientras hay imágenes por escribir.
+function pzFirmaRecursos(a) { return Object.entries(a || {}).map(([k, v]) => k + ':' + String(v).length).sort().join('|'); }
+async function pzRecursos(t) { return t.assets !== undefined ? t.assets || {} : await api.leerRecursosTablero(t.id); }
 
 // ---------- Datos ----------
 function pzT(id = PZ.id) { return (S.pizarras || []).find((t) => t.id === id); }
 function pzNuevoTablero(datos = {}) {
   const ahora = new Date().toISOString();
   const t = { id: uid(), titulo: '', grupoIds: [], areaId: '', planeacionId: '', sesionId: '', fecha: hoyISO(), creada: ahora, modificada: ahora,
-    formato: 'pizarra-local', items: [], assets: {}, view: null, miniatura: '', ...datos };
+    formato: 'pizarra-local', items: [], view: null, miniatura: '', ...datos };
   S.pizarras.push(t);
   return t;
 }
@@ -97,11 +101,18 @@ window.addEventListener('message', (ev) => {
   const t = pzT();
   if (!t) return;
   if (m.tipo === 'listo') {
-    PZ.listo = true;
-    pzEnviar({ tipo: 'abrir', tablero: { id: t.id, name: t.titulo || 'Tablero sin título', items: t.items || [], assets: t.assets || {}, view: t.view || null, created: Date.parse(t.creada) || Date.now(), updated: Date.parse(t.modificada) || Date.now() } });
+    pzRecursos(t).then((assets) => {
+      if (pzT() !== t) return;
+      PZ.firmaRecursos = pzFirmaRecursos(assets);
+      PZ.listo = true;
+      pzEnviar({ tipo: 'abrir', tablero: { id: t.id, name: t.titulo || 'Tablero sin título', items: t.items || [], assets, view: t.view || null, created: Date.parse(t.creada) || Date.now(), updated: Date.parse(t.modificada) || Date.now() } });
+    }).catch((e) => aviso('No se pudieron cargar las imágenes del tablero: ' + e.message, 'error'));
   } else if (m.tipo === 'guardar' && m.id === t.id) {
     t.items = m.items || [];
-    if (m.assets) t.assets = m.assets;
+    if (m.assets) {
+      const firma = pzFirmaRecursos(m.assets);
+      if (firma !== PZ.firmaRecursos) { t.assets = m.assets; PZ.firmaRecursos = firma; } // solo se reescriben si cambiaron
+    }
     t.view = m.view || null;
     if (m.nombre != null && m.nombre !== 'Tablero sin título') t.titulo = m.nombre;
     t.modificada = new Date().toISOString();
@@ -336,9 +347,10 @@ function pzCrearDesdeDialogo() {
   pzAbrir(t.id);
   setTimeout(() => pzDialogoVinculo(t.id), 300);
 }
-function pzDuplicarTablero(id) {
+async function pzDuplicarTablero(id) {
   const o = pzT(id);
   const c = structuredClone(o);
+  c.assets = structuredClone(await pzRecursos(o));
   c.id = uid(); c.titulo = (o.titulo || 'Tablero') + ' (copia)'; c.creada = c.modificada = new Date().toISOString();
   S.pizarras.push(c);
   guardar();

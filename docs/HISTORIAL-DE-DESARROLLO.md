@@ -192,6 +192,18 @@ A la pregunta del docente (*"si por error borro alguna calificación o algo del 
 - Aviso con **Deshacer** justo después de cada borrado.
 - No se guardan en la papelera la restauración de respaldos ni el inicio de un nuevo año lectivo (este ya crea un respaldo).
 
+### Versión 1.14.0 — Consolidación: datos más seguros y guardado más rápido (24 de noviembre)
+A pedido del docente (*"analízalo todo, quiero que se consolide y quede bien robusto, sólido, rápido, ágil"*) se revisó todo el código y se corrigió lo encontrado:
+- **Corrección importante:** las observaciones del boletín y los comunicados a padres fallaban desde la 1.13.0, porque la papelera declaró una función con el mismo nombre (`rellenar`) que usan sus plantillas.
+- **Recuperación automática:** si el archivo de datos se daña (apagón, cierre inesperado) la app carga sola el respaldo válido más reciente, conserva una copia del archivo dañado y avisa.
+- **Escritura más segura:** se fuerza a disco antes de reemplazar el archivo y se reintenta cuando Windows, el antivirus u OneDrive lo bloquean un instante.
+- **Más respaldos automáticos:** al abrir y cada hora si hubo cambios (15 recientes) y uno por día durante 30 días.
+- **Una sola ventana del programa:** abrirlo dos veces ya no puede pisar los datos.
+- **Guardado mucho más rápido:** las imágenes de los tableros se guardan en un archivo por tablero; con 15 tableros con fotos el archivo de datos pasa de ~9 MB a ~0,4 MB y cada guardado de ~340 ms a menos de 10 ms. Si nada cambió, no se reescribe.
+- **Claves de IA cifradas** con el sistema operativo y fuera de los respaldos y de la carpeta de la nube.
+- Respaldo manual y de la nube completos (con las imágenes de los tableros) y escritos de forma segura.
+- **Pruebas automáticas en el repositorio** (`npm test`) y en GitHub en cada cambio, incluida una revisión que detecta nombres repetidos entre módulos (el origen del error del boletín).
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo
@@ -213,6 +225,7 @@ A la pregunta del docente (*"si por error borro alguna calificación o algo del 
 | Las fotos no se podían abrir por la política de seguridad de la app | Lectura de la imagen como datos |
 | Módulos ocultos que desaparecían de la lista | Cambio del nombre del estilo |
 | El nuevo botón de ocultar el menú no respondía: ya existía otra función con el mismo nombre (la de personalizar el menú) | Nombre propio para la nueva función (`alternarBarraLateral`) |
+| Observaciones del boletín y comunicados fallaban: la papelera declaró otra función `rellenar` | Nombre propio (`rellenarFaltantes`) y revisión automática de nombres repetidos (`tests/estatico.js`) |
 
 ---
 

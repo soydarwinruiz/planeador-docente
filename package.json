@@ -1,13 +1,15 @@
 {
   "name": "planeador-docente",
   "productName": "Planeador Docente",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Sistema de planeación docente para educación básica y media (Colombia, grados 1.° a 11.°)",
   "main": "main.js",
   "author": "Planeador Docente",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
+    "test": "node tests/estatico.js && node tests/e2e.js",
+    "test:estatico": "node tests/estatico.js",
     "dist:win": "electron-builder --win nsis portable --x64 --publish never",
     "dist:portable": "electron-builder --win portable --x64 --publish never"
   },
@@ -17,6 +19,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "almacen.js",
       "exportar-word.js",
       "ia.js",
       "src/**/*",
@@ -61,6 +64,7 @@
   },
   "devDependencies": {
     "electron": "^45.4.1",
-    "electron-builder": "^26.18.0"
+    "electron-builder": "^26.18.0",
+    "playwright-core": "^1.65.1"
   }
 }

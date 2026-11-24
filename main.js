@@ -7,38 +7,25 @@ const { sugerirConIA, transcribirAudio } = require('./ia');
 const { iniciarActualizaciones } = require('./actualizaciones');
 const { iniciarAplicacionMovil, detenerAplicacionMovil } = require('./servidor-aula');
 
-const DATA_DIR = () => app.getPath('userData');
-const DATA_FILE = () => path.join(DATA_DIR(), 'datos.json');
-const BACKUP_DIR = () => path.join(DATA_DIR(), 'respaldos-automaticos');
-const MAX_RESPALDOS_AUTO = 15;
-
 if (process.env.PLANEADOR_DATA_DIR) app.setPath('userData', process.env.PLANEADOR_DATA_DIR);
+const almacen = require('./almacen');
+const { DIR: DATA_DIR, DATOS: DATA_FILE, RESPALDOS: BACKUP_DIR, fechaArchivo, escribirSeguro, respaldoAutomatico } = almacen;
 
 let ventana;
-let ultimoEstado = null; // último estado recibido, para respaldo al cerrar
+let ultimoEstado = null; // último estado recibido (texto JSON), para guardar al cerrar
+let ultimoEscrito = null; // último texto escrito en disco (evita escrituras repetidas)
 
-function escribirSeguro(archivo, contenido) {
-  const tmp = archivo + '.tmp';
-  fs.writeFileSync(tmp, contenido, 'utf8');
-  fs.renameSync(tmp, archivo);
+function nombreSeguro(n, defecto) { return String(n || defecto).replace(/[\\/:*?"<>|]+/g, '-').trim().slice(0, 150) || defecto; }
+function errorArchivo(e, programa) {
+  return /EBUSY|EPERM|EACCES/.test(e.code || e.message) ? `El archivo está abierto en ${programa} o no se tiene permiso. Ciérralo e inténtalo de nuevo.` : e.message;
 }
-
-function fechaArchivo() {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
-}
-
-function respaldoAutomatico() {
-  try {
-    if (!fs.existsSync(DATA_FILE())) return;
-    fs.mkdirSync(BACKUP_DIR(), { recursive: true });
-    fs.copyFileSync(DATA_FILE(), path.join(BACKUP_DIR(), `respaldo_${fechaArchivo()}.json`));
-    const archivos = fs.readdirSync(BACKUP_DIR()).filter((f) => f.endsWith('.json')).sort();
-    while (archivos.length > MAX_RESPALDOS_AUTO) fs.unlinkSync(path.join(BACKUP_DIR(), archivos.shift()));
-  } catch (e) {
-    console.error('Error en respaldo automático', e);
-  }
+// El renderer envía el estado ya convertido a texto (más rápido que clonar el objeto entre procesos)
+function escribirEstado(texto) {
+  if (typeof texto !== 'string' || texto[0] !== '{') throw new Error('Estado no válido');
+  ultimoEstado = texto;
+  if (texto === ultimoEscrito) return;
+  escribirSeguro(DATA_FILE(), texto);
+  ultimoEscrito = texto;
 }
 
 function crearVentana() {
@@ -54,6 +41,7 @@ function crearVentana() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
       spellcheck: true,
     },
   });
@@ -63,6 +51,10 @@ function crearVentana() {
   ventana.webContents.session.on('will-download', (_e, item) => {
     const ruta = dialog.showSaveDialogSync(ventana, { defaultPath: item.getFilename() });
     if (ruta) item.setSavePath(ruta); else item.cancel();
+  });
+  // La ventana nunca navega fuera de la aplicación (un enlace o archivo arrastrado no la reemplaza)
+  ventana.webContents.on('will-navigate', (e, url) => {
+    if (!url.startsWith('file://')) { e.preventDefault(); if (/^(https?:|mailto:|whatsapp:)/i.test(url)) shell.openExternal(url); }
   });
   ventana.webContents.setWindowOpenHandler(({ url }) => {
     if (/^(https?:|mailto:|whatsapp:)/i.test(url)) shell.openExternal(url);
@@ -84,8 +76,13 @@ Menu.setApplicationMenu(
   ])
 );
 
+// Una sola ventana del programa: dos copias abiertas a la vez se pisarían los datos
+if (!app.requestSingleInstanceLock()) app.quit();
+else app.on('second-instance', () => { if (ventana) { if (ventana.isMinimized()) ventana.restore(); ventana.focus(); } });
+
 app.whenReady().then(() => {
   respaldoAutomatico();
+  setInterval(() => respaldoAutomatico(), 60 * 60 * 1000); // cada hora, solo si hubo cambios
   crearVentana();
   iniciarActualizaciones(ventana);
   iniciarAplicacionMovil(ventana);
@@ -93,54 +90,61 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   if (ultimoEstado) {
-    try { escribirSeguro(DATA_FILE(), ultimoEstado); } catch (e) { console.error(e); }
+    try { escribirEstado(ultimoEstado); } catch (e) { console.error(e); }
   }
+  respaldarEnCarpeta();
 });
 
 app.on('window-all-closed', () => { detenerAplicacionMovil(); app.quit(); });
 
 // ---------- Datos ----------
 ipcMain.handle('datos:cargar', () => {
-  try {
-    if (!fs.existsSync(DATA_FILE())) return null;
-    return JSON.parse(fs.readFileSync(DATA_FILE(), 'utf8'));
-  } catch (e) {
-    return { __error: 'No se pudo leer el archivo de datos: ' + e.message };
+  const d = almacen.cargarDatos();
+  if (d && !d.__error) {
+    // Claves de IA: se guardan cifradas aparte. Las que vengan de versiones anteriores dentro de datos.json se pasan al archivo cifrado.
+    const ia = (d.config ||= {}).ia ||= {};
+    const previas = ia.claves && typeof ia.claves === 'object' ? ia.claves : {};
+    const cifradas = almacen.leerClaves();
+    ia.claves = { ...previas, ...cifradas };
+    if (Object.keys(previas).some((k) => previas[k] && !cifradas[k])) { try { almacen.guardarClaves(ia.claves); } catch (e) { console.error(e); } }
   }
+  return d;
 });
 
-ipcMain.on('datos:guardarSync', (e, estado) => {
-  try {
-    ultimoEstado = JSON.stringify(estado);
-    fs.mkdirSync(DATA_DIR(), { recursive: true });
-    escribirSeguro(DATA_FILE(), ultimoEstado);
-    e.returnValue = true;
-  } catch (err) { e.returnValue = false; }
+ipcMain.on('datos:guardarSync', (e, texto) => {
+  try { escribirEstado(texto); e.returnValue = true; } catch (err) { console.error(err); e.returnValue = false; }
 });
 
-ipcMain.handle('datos:guardar', (_e, estado) => {
-  const texto = JSON.stringify(estado);
-  ultimoEstado = texto;
-  fs.mkdirSync(DATA_DIR(), { recursive: true });
-  escribirSeguro(DATA_FILE(), texto);
-  return true;
-});
+ipcMain.handle('datos:guardar', (_e, texto) => { escribirEstado(texto); return true; });
+ipcMain.handle('claves:guardar', (_e, claves) => almacen.guardarClaves(claves));
+ipcMain.handle('claves:info', () => ({ cifradas: almacen.cifradoDisponible() }));
+ipcMain.handle('tablero:leerRecursos', (_e, id) => almacen.leerRecursosTablero(id));
+ipcMain.handle('tablero:guardarRecursos', (_e, { id, assets }) => almacen.guardarRecursosTablero(id, assets));
+ipcMain.handle('tablero:limpiar', (_e, ids) => almacen.limpiarRecursosTableros(ids));
 
 ipcMain.handle('datos:ubicacion', () => DATA_DIR());
 ipcMain.handle('datos:abrirCarpeta', () => shell.openPath(DATA_DIR()));
 
 // ---------- Respaldos ----------
-ipcMain.handle('respaldo:exportar', async (_e, estado) => {
+// El respaldo manual es completo (incluye las imágenes de los tableros) y no lleva las claves de IA
+ipcMain.handle('respaldo:exportar', async (_e, texto) => {
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
     title: 'Guardar respaldo',
     defaultPath: `respaldo-planeador-${fechaArchivo()}.json`,
     filters: [{ name: 'Respaldo del Planeador', extensions: ['json'] }],
   });
   if (canceled || !filePath) return { ok: false };
-  fs.writeFileSync(filePath, JSON.stringify(estado, null, 1), 'utf8');
-  return { ok: true, ruta: filePath };
+  try {
+    escribirSeguro(filePath, almacen.textoRespaldoCompleto(typeof texto === 'string' ? texto : JSON.stringify(texto), 1));
+    return { ok: true, ruta: filePath };
+  } catch (e) { return { ok: false, error: errorArchivo(e, 'otro programa') }; }
 });
 
+function validarRespaldo(datos) {
+  if (!datos || typeof datos !== 'object' || !datos.config || !Array.isArray(datos.grupos || [])) throw new Error('El archivo no es un respaldo válido del Planeador.');
+  delete datos.__recuperado;
+  return datos;
+}
 ipcMain.handle('respaldo:importar', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(ventana, {
     title: 'Restaurar respaldo',
@@ -149,28 +153,27 @@ ipcMain.handle('respaldo:importar', async () => {
   });
   if (canceled || !filePaths.length) return { ok: false };
   try {
-    const datos = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'));
-    if (!datos || typeof datos !== 'object' || !datos.config) throw new Error('El archivo no es un respaldo válido del Planeador.');
-    respaldoAutomatico(); // guarda lo actual antes de reemplazar
+    const datos = validarRespaldo(almacen.leerJSON(filePaths[0]));
+    respaldoAutomatico({ forzar: true }); // guarda lo actual antes de reemplazar
     return { ok: true, datos };
   } catch (e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: e instanceof SyntaxError ? 'El archivo está dañado o no es un respaldo del Planeador.' : e.message };
   }
 });
 
-ipcMain.handle('respaldo:listarAuto', () => {
-  if (!fs.existsSync(BACKUP_DIR())) return [];
-  return fs.readdirSync(BACKUP_DIR()).filter((f) => f.endsWith('.json')).sort().reverse();
-});
+ipcMain.handle('respaldo:listarAuto', () => almacen.listarRespaldos());
 
 ipcMain.handle('respaldo:restaurarAuto', (_e, nombre) => {
-  const ruta = path.join(BACKUP_DIR(), path.basename(nombre));
-  return JSON.parse(fs.readFileSync(ruta, 'utf8'));
+  try {
+    const datos = validarRespaldo(almacen.leerJSON(path.join(BACKUP_DIR(), path.basename(String(nombre)))));
+    respaldoAutomatico({ forzar: true });
+    return { ok: true, datos };
+  } catch (e) { return { ok: false, error: 'No se pudo leer ese respaldo: ' + e.message }; }
 });
 
 // ---------- Exportaciones ----------
 ipcMain.handle('word:planeacion', async (_e, payload) => {
-  const nombre = (payload.nombreArchivo || 'planeacion').replace(/[\\/:*?"<>|]+/g, '-');
+  const nombre = nombreSeguro(payload.nombreArchivo, 'planeacion');
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
     title: 'Exportar planeación a Word',
     defaultPath: `${nombre}.docx`,
@@ -183,13 +186,14 @@ ipcMain.handle('word:planeacion', async (_e, payload) => {
     shell.openPath(filePath);
     return { ok: true, ruta: filePath };
   } catch (e) {
-    return { ok: false, error: e.message.includes('EBUSY') ? 'El archivo está abierto en Word. Ciérralo e inténtalo de nuevo.' : e.message };
+    return { ok: false, error: errorArchivo(e, 'Word') };
   }
 });
 
 const GENERADORES = { informe: generarDocxInforme, tabla: generarDocxTabla, comunicados: generarDocxComunicados, prueba: generarDocxPrueba, malla: generarDocxMalla, planArea: generarDocxPlanArea, planPeriodo: generarDocxPlanPeriodo, planAula: generarDocxPlanAula, programacion: generarDocxProgramacion, apoyo: generarDocxApoyo, piar: generarDocxPiar };
 ipcMain.handle('word:curricular', async (_e, { tipo, nombreArchivo, payload }) => {
-  const nombre = (nombreArchivo || tipo).replace(/[\\/:*?"<>|]+/g, '-');
+  if (!Object.hasOwn(GENERADORES, tipo)) return { ok: false, error: `Tipo de documento desconocido: ${tipo}` };
+  const nombre = nombreSeguro(nombreArchivo, tipo);
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
     title: 'Exportar a Word',
     defaultPath: `${nombre}.docx`,
@@ -202,7 +206,7 @@ ipcMain.handle('word:curricular', async (_e, { tipo, nombreArchivo, payload }) =
     shell.openPath(filePath);
     return { ok: true, ruta: filePath };
   } catch (e) {
-    return { ok: false, error: e.message.includes('EBUSY') ? 'El archivo está abierto en Word. Ciérralo e inténtalo de nuevo.' : e.message };
+    return { ok: false, error: errorArchivo(e, 'Word') };
   }
 });
 
@@ -241,7 +245,7 @@ ipcMain.handle('excel:guardar', async (_e, { nombre, filas, institucion, docente
     shell.openPath(filePath);
     return { ok: true, ruta: filePath };
   } catch (e) {
-    return { ok: false, error: e.message.includes('EBUSY') ? 'El archivo está abierto en Excel. Ciérralo e inténtalo de nuevo.' : e.message };
+    return { ok: false, error: errorArchivo(e, 'Excel') };
   }
 });
 
@@ -252,24 +256,26 @@ ipcMain.handle('csv:guardar', async (_e, { nombre, contenido }) => {
     filters: [{ name: 'CSV (Excel)', extensions: ['csv'] }],
   });
   if (canceled || !filePath) return { ok: false };
-  fs.writeFileSync(filePath, '﻿' + contenido, 'utf8'); // BOM para que Excel lea tildes
+  try { fs.writeFileSync(filePath, '\uFEFF' + contenido, 'utf8'); } catch (e) { return { ok: false, error: errorArchivo(e, 'Excel') }; } // BOM para que Excel lea tildes
   shell.openPath(filePath);
   return { ok: true, ruta: filePath };
 });
 
 // ---------- Respaldo en carpeta sincronizada (OneDrive, Google Drive, USB…) ----------
 let carpetaNube = '';
-function respaldarEnCarpeta(contenido) {
-  if (!carpetaNube || !contenido) return { ok: false };
+let ultimoEnNube = null;
+function respaldarEnCarpeta({ forzar = false } = {}) {
+  if (!carpetaNube || !ultimoEstado) return { ok: false };
+  if (!forzar && ultimoEstado === ultimoEnNube) return { ok: true, sinCambios: true };
   try {
     if (!fs.existsSync(carpetaNube)) return { ok: false, error: 'La carpeta no existe o no está disponible.' };
     const dir = path.join(carpetaNube, 'Respaldos Planeador Docente');
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'planeador-ultimo.json'), contenido, 'utf8');
-    const dia = new Date().toISOString().slice(0, 10);
-    fs.writeFileSync(path.join(dir, `planeador-${dia}.json`), contenido, 'utf8');
+    const contenido = almacen.textoRespaldoCompleto(ultimoEstado);
+    escribirSeguro(path.join(dir, 'planeador-ultimo.json'), contenido);
+    escribirSeguro(path.join(dir, `planeador-${fechaArchivo().slice(0, 10)}.json`), contenido);
     const viejos = fs.readdirSync(dir).filter((f) => /^planeador-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
-    while (viejos.length > 14) fs.unlinkSync(path.join(dir, viejos.shift()));
+    while (viejos.length > 14) fs.rmSync(path.join(dir, viejos.shift()), { force: true });
+    ultimoEnNube = ultimoEstado;
     return { ok: true, ruta: dir };
   } catch (e) { return { ok: false, error: e.message }; }
 }
@@ -277,19 +283,18 @@ ipcMain.handle('nube:elegir', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(ventana, { title: 'Carpeta para respaldos (OneDrive, Google Drive, USB…)', properties: ['openDirectory', 'createDirectory'] });
   return canceled ? null : filePaths[0];
 });
-ipcMain.handle('nube:configurar', (_e, carpeta) => { carpetaNube = carpeta || ''; return true; });
-ipcMain.handle('nube:respaldar', () => respaldarEnCarpeta(ultimoEstado));
-setInterval(() => respaldarEnCarpeta(ultimoEstado), 20 * 60 * 1000);
-app.on('before-quit', () => respaldarEnCarpeta(ultimoEstado));
+ipcMain.handle('nube:configurar', (_e, carpeta) => { carpetaNube = carpeta || ''; ultimoEnNube = null; return true; });
+ipcMain.handle('nube:respaldar', () => respaldarEnCarpeta({ forzar: true }));
+setInterval(() => respaldarEnCarpeta(), 20 * 60 * 1000);
 
 // ---------- Paquetes para compartir con otros docentes ----------
 ipcMain.handle('paquete:exportar', async (_e, { nombre, contenido }) => {
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
-    title: 'Guardar paquete para compartir', defaultPath: `${nombre.replace(/[\\/:*?"<>|]+/g, '-')}.planeador`,
+    title: 'Guardar paquete para compartir', defaultPath: `${nombreSeguro(nombre, 'paquete')}.planeador`,
     filters: [{ name: 'Paquete del Planeador Docente', extensions: ['planeador'] }],
   });
   if (canceled || !filePath) return { ok: false };
-  fs.writeFileSync(filePath, JSON.stringify(contenido), 'utf8');
+  try { escribirSeguro(filePath, JSON.stringify(contenido)); } catch (e) { return { ok: false, error: errorArchivo(e, 'otro programa') }; }
   shell.showItemInFolder(filePath);
   return { ok: true, ruta: filePath };
 });

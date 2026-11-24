@@ -82,10 +82,10 @@ function buscarRuta(ruta) {
   return o;
 }
 // Completa "destino" con lo que le falte de "origen" (sin pisar lo que ya tiene)
-function rellenar(destino, origen) {
+function rellenarFaltantes(destino, origen) {
   for (const k of Object.keys(origen)) {
     if (!(k in destino)) destino[k] = structuredClone(origen[k]);
-    else if (esObjetoPlano(destino[k]) && esObjetoPlano(origen[k])) rellenar(destino[k], origen[k]);
+    else if (esObjetoPlano(destino[k]) && esObjetoPlano(origen[k])) rellenarFaltantes(destino[k], origen[k]);
   }
 }
 
@@ -102,7 +102,7 @@ function aplicarPapelera(e) {
       } else {
         if (!esObjetoPlano(cont)) { fallidas++; continue; }
         if (!(o.clave in cont)) cont[o.clave] = structuredClone(o.valor);
-        else if (esObjetoPlano(cont[o.clave]) && esObjetoPlano(o.valor)) rellenar(cont[o.clave], o.valor);
+        else if (esObjetoPlano(cont[o.clave]) && esObjetoPlano(o.valor)) rellenarFaltantes(cont[o.clave], o.valor);
       }
     } else {
       const ultima = o.ruta[o.ruta.length - 1], padre = buscarRuta(o.ruta.slice(0, -1));
