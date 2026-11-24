@@ -11,9 +11,9 @@ Funciona **sin internet**: todos los datos quedan guardados en tu computador.
 
 ## Cómo abrirla
 
-- **Instalador** (`PlaneadorDocente-Setup-1.10.0.exe`, recomendado): instala la app con acceso directo en el escritorio
+- **Instalador** (`PlaneadorDocente-Setup-1.11.0.exe`, recomendado): instala la app con acceso directo en el escritorio
   y **se actualiza sola** (Configuración → *Actualizaciones*).
-- **Versión portable** (`PlaneadorDocente-portable-1.10.0.exe`): haz doble clic y listo. No necesita instalación.
+- **Versión portable** (`PlaneadorDocente-portable-1.11.0.exe`): haz doble clic y listo. No necesita instalación.
   Puedes llevarla en una memoria USB. Avisa cuando hay versión nueva, pero se descarga a mano.
 - La primera vez, Windows puede mostrar *"Windows protegió su PC"* (el programa no tiene firma digital comercial).
   Haz clic en **Más información → Ejecutar de todas formas**.
@@ -57,7 +57,7 @@ Al abrir la app por primera vez aparece el **asistente de configuración** (inst
 | Fichas imprimibles | **Sopas de letras, crucigramas, emparejar, completar y guías de trabajo** en PDF con el membrete y solucionario. Se generan sin internet; la IA es opcional para sugerir palabras, pistas o el texto a partir del tema o de una planeación |
 | Gamificación | Puntos por estudiante y por equipo con motivos configurables, **niveles** (Explorador → Leyenda), **insignias** y un **tablero** para proyectar. Se integra con "Estudiante al azar" y "Grupos de trabajo" |
 | Herramientas de aula | En pantalla completa para el video beam: **estudiante al azar** (sin repetir y sin ausentes), **grupos de trabajo** aleatorios (equilibrados por desempeño y con roles), **temporizador** grande con alarma y **modo proyector** que muestra los momentos de la clase o las preguntas de una prueba |
-| Tableros (pizarra) | Pizarra infinita tipo Miro **asignada a una sesión de la planeación y a sus grupos**: notas adhesivas, textos con **formato por letra** (cualquier fuente instalada en el equipo, tamaño, color, negrita, resaltado, subíndice…), texto que **se ajusta solo a la caja**, formas, conectores, lápiz y resaltador, **imágenes con recorte** y ajustes de color, tablas, sellos, marcos para **presentar**, plantillas (lluvia de ideas, mapa mental, S-Q-A, Venn, línea de tiempo…), estudiantes del grupo como notas y exportación a PNG o PDF |
+| Tableros (pizarra) | Pizarra infinita tipo Miro (**Pizarra Local** integrada) **asignada a una sesión de la planeación y a sus grupos**: notas, textos con **formato por letra** (fuente del equipo, tamaño, color, resaltado, negrita…), texto que **se ajusta solo a la nota**, formas, conectores, lápiz, **imágenes con recorte**, PDF, marcos para **presentar**, comentarios, temporizador, plantillas, estudiantes del grupo como notas, momentos de la sesión y exportación a PNG, SVG o PDF |
 | Diario de campo | Al terminar la clase registras en segundos qué se alcanzó, qué quedó pendiente y las novedades. Lo pendiente aparece al planear la siguiente clase. Exportable a Word y Excel como evidencia para la evaluación de desempeño |
 | Comunicados a padres | Mensajes listos (bajo desempeño, inasistencias, actividades pendientes, plan de apoyo, citación, felicitación o los tuyos) con los datos de cada estudiante. Se envían por **WhatsApp** o **correo** con un clic, o se imprimen en Word con **desprendible** para firma del acudiente. Sugiere a quién enviar y guarda el historial |
 | Calendario | Vista mensual con clases planeadas, periodos, festivos y eventos |

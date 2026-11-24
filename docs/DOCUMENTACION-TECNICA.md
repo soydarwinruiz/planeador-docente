@@ -1,4 +1,4 @@
-# Documentación técnica – Planeador Docente 1.10.0
+# Documentación técnica – Planeador Docente 1.11.0
 
 Para quien quiera mantener, modificar o compilar la aplicación.
 
@@ -43,7 +43,7 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 ### Proceso principal
 | Archivo | Contenido |
 |---|---|
-| `main.js` | Ventana y menú; `PLANEADOR_DATA_DIR` permite otra carpeta de datos (pruebas); datos y respaldos automáticos (15); Word (`word:planeacion`, `word:curricular` con generadores `informe, tabla, comunicados, prueba, malla, planArea, planPeriodo, planAula, programacion, apoyo, piar`); Excel y CSV; respaldo en carpeta de nube (cada 20 min y al cerrar, 14 días); paquetes `.planeador`; PDF desde HTML (`pdf:html`, ventana oculta + `printToPDF`, tamaño carta); PNG desde HTML (`png:html`, ventana oculta + `capturePage`, para los tableros); lectura de tablas (`tabla:abrir`: .xlsx con exceljs, CSV con detección de separador y codificación); IA (`ia:sugerir`, `ia:transcribir`) |
+| `main.js` | Ventana y menú; `PLANEADOR_DATA_DIR` permite otra carpeta de datos (pruebas); datos y respaldos automáticos (15); Word (`word:planeacion`, `word:curricular` con generadores `informe, tabla, comunicados, prueba, malla, planArea, planPeriodo, planAula, programacion, apoyo, piar`); Excel y CSV; respaldo en carpeta de nube (cada 20 min y al cerrar, 14 días); paquetes `.planeador`; PDF desde HTML (`pdf:html`, ventana oculta + `printToPDF`, tamaño carta); exportaciones de los tableros con diálogo de guardar (`will-download`); lectura de tablas (`tabla:abrir`: .xlsx con exceljs, CSV con detección de separador y codificación); IA (`ia:sugerir`, `ia:transcribir`) |
 | `preload.js` | Puente `window.api` |
 | `exportar-word.js` | Membrete (logos, color, líneas, lema, pie), páginas horizontales y verticales, todos los documentos |
 | `ia.js` | Prompt de sistema (contexto colombiano, JSON estricto), tareas: `clase, malla, planArea, apoyo, boletin, retro, ficha, saber, prueba`; imágenes para Claude, OpenAI/compatibles y Gemini; transcripción de audio WAV (OpenAI `audio/transcriptions`, Gemini con audio en línea, o compatible como Groq) |
@@ -82,7 +82,7 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `omr.js` | Hojas para cámara y lectura óptica |
 | `fichas.js` | Fichas imprimibles |
 | `aula.js` | Herramientas de aula |
-| `pizarra.js` | Tableros: lienzo infinito (DOM con `transform`), elementos, selección y asas, formato por letra (`execCommand` con `styleWithCSS` y tamaños en `em` relativos al tamaño base), ajuste automático del texto (búsqueda binaria del tamaño), fuentes del sistema (`queryLocalFonts`, con detección por medición como respaldo), conectores anclados, trazos simplificados (Ramer–Douglas–Peucker), recorte no destructivo, historial, plantillas, presentación por marcos y exportación |
+| `pizarra.js` | Tableros: lista, asignación a planeación/sesión/grupos/área, botones en las sesiones y en las clases de hoy, inserción de estudiantes, momentos de la sesión y objetivo, estudiante al azar, conversión de los tableros de la versión anterior. El editor es **Pizarra Local** (`src/pizarra-local/index.html`) dentro de un iframe; se comunican por `postMessage` (ver `src/pizarra-local/ORIGEN.md`) |
 | `gamificacion.js` | Gamificación |
 | `buscador.js` | Buscador, apariencia y menú personalizable |
 | `compartir.js` | Actualizaciones, respaldo en nube, paquetes para compartir |
@@ -110,7 +110,7 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `diario`, `pendientes`, `alertasOcultas` | Diario de campo, tareas del docente, alertas ocultas |
 | `comunicadosEnviados` | Historial de comunicados |
 | `pruebas` | Preguntas, respuestas por estudiante (letras), puntos de abiertas, textos escritos en el celular |
-| `pizarras` | Tableros: `titulo`, `planeacionId`, `sesionId`, `grupoIds`, `areaId`, `fecha`, `fondo`, `vista` (x, y, zoom), `elementos` (nota, texto, forma, linea, trazo, imagen, marco, tabla, sello; el texto se guarda como HTML limpio) y `recursos` (imágenes en `data:`, reducidas a 2400 px, referenciadas por `rid`) |
+| `pizarras` | Tableros: `titulo`, `planeacionId`, `sesionId`, `grupoIds`, `areaId`, `fecha`, `formato: 'pizarra-local'`, `items` (elementos de Pizarra Local: sticky, shape, text, connector, pen, image, frame, emoji, comment; el texto con formato va en `rich`, con fuente, tamaño y resaltado por fragmento), `assets` (imágenes en `data:`), `view` y `miniatura` (JPEG pequeño para la lista) |
 | `fichas`, `gamificacion`, `retro`, `informes` | Fichas guardadas; puntos, equipos e insignias por grupo; retroalimentaciones; textos del informe de cierre |
 
 ## 5. Algoritmos destacados
