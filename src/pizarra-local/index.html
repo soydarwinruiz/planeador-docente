@@ -2278,6 +2278,7 @@ window.addEventListener('keydown', e => {
       case '-': zoomAt(innerWidth / 2, innerHeight / 2, 0.8); break;
       case 's': saveNow(); toast('Guardado'); break;
       case 'e': exportPNG(false); break;
+      case 'b': if (!EMBEBIDO) return; puenteEnviar({tipo: 'atajo', accion: e.shiftKey ? 'enfoque' : 'menu'}); break; // [Planeador Docente] menú lateral / modo enfoque
       case 'c': case 'x': case 'v': return; // eventos copy/cut/paste
       default: return;
     }

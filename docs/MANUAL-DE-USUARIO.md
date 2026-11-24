@@ -39,6 +39,7 @@ Descarga desde https://github.com/soydarwinruiz/planeador-docente/releases (últ
 ## 3. La pantalla principal
 
 - **Menú lateral:** todos los módulos. El botón **☰** (abajo) lleva a personalizarlo; **🌓** cambia claro/oscuro; **A− / A+** cambia el tamaño de letra.
+- **Ocultar el menú lateral (Ctrl + B):** el botón **«** junto al título lo esconde para ganar espacio; el botón **☰** de la esquina superior izquierda (o Ctrl + B otra vez) lo vuelve a mostrar. Se recuerda por separado para los tableros y para el resto de la app.
 - **Buscar (Ctrl + K):** encuentra planeaciones, estudiantes, estrategias, mallas, plantillas, pruebas, fichas, entradas del diario y más.
 - **Inicio:**
   - **🔔 Alertas** (el número rojo en *Inicio* indica cuántas): cierre de periodo, actividades sin calificar, asistencia sin registrar, estudiantes con muchas faltas o en riesgo alto, planes de apoyo vencidos, observaciones por redactar, clases sin planear, eventos de hoy y mañana. Cada alerta tiene un botón para resolverla y ✕ para ocultarla.
@@ -103,6 +104,7 @@ Pantalla completa para el video beam (⛶):
 Pizarra infinita para la clase (el editor **Pizarra Local**, integrado) que queda **asignada a una sesión de una planeación, a uno o varios grupos y a un área**.
 - **Crear:** desde una sesión de la planeación (botón *🖍️ Tablero* junto a cada sesión), desde *Mis clases de hoy* en Inicio o en el módulo *Tableros* (*＋ Nuevo tablero*). El tablero de una sesión se abre con el mismo botón (✓). Con *🔗 Asignar* (o tocando las etiquetas de la barra superior) se cambia la planeación, la sesión, los grupos, el área y la fecha.
 - **Barra del planeador** (arriba): *🧑‍🎓 Estudiantes* (una nota por estudiante del grupo), *📝 Momentos de la sesión* (lo que escribiste en la planeación), *🎯 Objetivo* (objetivo y pregunta problematizadora), *🎲 Al azar* (estudiante al azar de los grupos del tablero) y *👥 Aula*.
+- **Más espacio para la pizarra:** **☰** (barra superior del tablero) oculta o muestra el menú lateral (Ctrl + B). **⤢ Enfoque** (Ctrl + Shift + B) oculta además la barra superior del tablero; sal con el botón **Salir del modo enfoque** de arriba al centro.
 - **Herramientas** (barra izquierda): seleccionar (V), mano (H), nota (N), texto (T), formas (R), conector (L), lápiz (P), rotulador (M), borrador (E), marco (F), sellos, comentarios (C), imagen o PDF (I) y plantillas. Atajos completos con **?**.
 - **Texto con formato por letra:** doble clic para escribir; selecciona solo algunas letras y usa la barra que aparece encima: negrita, cursiva, subrayado, tachado, **fuente** (todas las del equipo, con buscador), **tamaño** (A−, A+ o la lista), **color**, **resaltado**, listas con viñetas, numeradas o de tareas. Sin seleccionar letras, la fuente y el tamaño del panel derecho cambian todo el texto.
 - **El texto se ajusta solo** a la nota o forma: en *Auto (llenar)* ocupa el espacio y crece al agrandar la nota; con tamaño fijo se reduce si no cabe. Las palabras muy largas se parten en varias líneas en lugar de volverse diminutas.

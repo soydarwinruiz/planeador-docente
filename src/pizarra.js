@@ -61,6 +61,7 @@ RENDERS.pizarra = ({ id }) => {
   PZ.id = id; PZ.listo = false;
   return `<div class="pz" id="pz">
     <div class="pz-barra-sup">
+      <button class="btn pequeno" id="pz-boton-menu" onclick="alternarBarraLateral()" title="Ocultar o mostrar el menú lateral (Ctrl + B)">☰</button>
       <button class="btn pequeno" onclick="pzSalir()" title="Volver a la lista de tableros">← Tableros</button>
       <div class="pz-vinculo" onclick="pzDialogoVinculo('${t.id}')" title="Asignar a una planeación, sesión, grupos y área">${pzChipsVinculo(t)}</div>
       <div class="pz-sup-der">
@@ -69,6 +70,7 @@ RENDERS.pizarra = ({ id }) => {
         <button class="btn pequeno" onclick="pzInsertarObjetivo()" title="Objetivo y pregunta problematizadora de la planeación">🎯 Objetivo</button>
         <button class="btn pequeno" onclick="pzAlumnoAzar()" title="Estudiante al azar de los grupos del tablero">🎲 Al azar</button>
         <button class="btn pequeno" onclick="pzAulaDesdeTablero()" title="Grupos de trabajo, temporizador y más">👥 Aula</button>
+        <button class="btn pequeno" onclick="alternarEnfoque()" title="Ocultar el menú y esta barra para usar toda la pantalla (Ctrl + Shift + B)">⤢ Enfoque</button>
       </div>
     </div>
     <div class="pz-area" id="pz-area"><iframe id="pz-marco" src="pizarra-local/index.html" allow="fullscreen; local-fonts; clipboard-read; clipboard-write" title="Pizarra"></iframe></div>
@@ -109,6 +111,7 @@ window.addEventListener('message', (ev) => {
     guardar();
     if (PZ.cerrando) { const fn = PZ.cerrando; PZ.cerrando = null; clearTimeout(PZ.temporizadorCierre); fn(); }
   } else if (m.tipo === 'pdf') pzGuardarPDF(m);
+  else if (m.tipo === 'atajo') { if (m.accion === 'enfoque') alternarEnfoque(); else if (m.accion === 'menu') alternarBarraLateral(); }
 });
 async function pzGuardarPDF({ nombre, imagen, ancho, alto }) {
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{margin:10mm}html,body{margin:0;height:100%}body{display:flex;align-items:center;justify-content:center}img{max-width:100%;max-height:100%;display:block}</style></head><body><img src="${imagen}"></body></html>`;

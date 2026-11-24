@@ -78,6 +78,7 @@ function aplicarApariencia() {
   const oscuro = ap.tema === 'oscuro' || (ap.tema === 'sistema' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.body.classList.toggle('oscuro', oscuro);
   document.body.style.zoom = ap.zoom || 1;
+  if (typeof aplicarMenu === 'function') aplicarMenu();
 }
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => aplicarApariencia());
 function cambiarTema(t) { (S.config.apariencia ||= {}).tema = t; guardar(); aplicarApariencia(); render(); }

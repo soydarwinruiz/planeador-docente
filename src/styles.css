@@ -50,7 +50,21 @@ body {
 }
 #menu {
   width: 230px; background: var(--azul); color: #fff; display: flex; flex-direction: column; flex-shrink: 0;
+  transition: margin-left .2s ease, visibility .2s;
 }
+/* Menú lateral plegable (Ctrl + B) y modo enfoque del tablero (Ctrl + Shift + B) */
+body.menu-oculto #menu { margin-left: -230px; visibility: hidden; }
+.plegar-menu { margin-left: auto; align-self: flex-start; background: none; border: 0; color: #fff; opacity: .7; font-size: 18px; line-height: 1; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.plegar-menu:hover { opacity: 1; background: rgba(255,255,255,.15); }
+#mostrar-menu { display: none; position: fixed; top: 12px; left: 10px; z-index: 40; width: 38px; height: 38px; border: 0; border-radius: 8px; background: var(--azul); color: #fff; font-size: 18px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+#mostrar-menu:hover { filter: brightness(1.15); }
+body.menu-oculto:not(.en-tablero) #mostrar-menu { display: block; }
+body.menu-oculto:not(.en-tablero) main { padding-left: 64px; }
+#salir-enfoque { display: none; position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 40; border: 0; border-radius: 999px; padding: 6px 14px; background: var(--azul); color: #fff; font-size: 13px; cursor: pointer; opacity: .45; box-shadow: 0 2px 8px rgba(0,0,0,.25); transition: opacity .15s; }
+#salir-enfoque:hover { opacity: 1; }
+body.enfoque #salir-enfoque { display: block; }
+body.enfoque .pz-barra-sup { display: none; }
+@media print { #mostrar-menu, #salir-enfoque { display: none !important; } }
 .marca { display: flex; gap: 10px; align-items: center; padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,.15); }
 .logo { font-size: 28px; }
 .marca-titulo { font-weight: 700; font-size: 16px; }
