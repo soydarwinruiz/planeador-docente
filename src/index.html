@@ -14,6 +14,7 @@
         <div class="marca-titulo">Planeador Docente</div>
         <div class="marca-sub" id="marca-sub">Educación básica y media</div>
       </div>
+      <button class="plegar-menu" title="Ocultar el menú (Ctrl + B)" aria-label="Ocultar el menú" onclick="alternarBarraLateral()">«</button>
     </div>
     <div class="buscador"><input placeholder="🔎 Buscar…  (Ctrl+K)" onfocus="this.blur();abrirBuscador()" readonly></div>
     <nav id="nav"></nav>
@@ -22,6 +23,8 @@
       <span><button title="Letra más pequeña" onclick="cambiarZoom(-1)">A−</button> <button title="Letra más grande" onclick="cambiarZoom(1)">A+</button></span></div>
       <div id="estado-guardado">Datos guardados en este equipo</div></div>
   </aside>
+  <button id="mostrar-menu" title="Mostrar el menú (Ctrl + B)" aria-label="Mostrar el menú" onclick="alternarBarraLateral()">☰</button>
+  <button id="salir-enfoque" title="Salir del modo enfoque (Ctrl + Shift + B)" onclick="alternarEnfoque()">⤡ Salir del modo enfoque</button>
   <main id="contenido"></main>
   <div id="modal-fondo" class="oculto"><div id="modal"></div></div>
   <div id="avisos"></div>

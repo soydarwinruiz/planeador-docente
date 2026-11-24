@@ -264,11 +264,41 @@ const VISTAS = [
 
 function ir(vista, params = {}) {
   if (vista === 'aula') { abrirAula(); return; } // se abre encima, en pantalla completa
+  if (vista !== 'pizarra') ui.enfoque = false;
   ui.vista = vista;
   ui.params = params;
   render();
   document.getElementById('contenido').scrollTop = 0;
 }
+
+// Menú lateral plegable. Se recuerda por separado si está oculto en los tableros (pizarra) y en el resto de la app.
+// En un tablero, el "modo enfoque" oculta además la barra superior del tablero para dejar toda la pantalla a la pizarra.
+function claveMenu() { return ui.vista === 'pizarra' ? 'menuOcultoTablero' : 'menuOculto'; }
+function aplicarMenu() {
+  const ap = S?.config?.apariencia || {};
+  const tablero = ui.vista === 'pizarra';
+  const enfoque = tablero && !!ui.enfoque;
+  document.body.classList.toggle('en-tablero', tablero);
+  document.body.classList.toggle('enfoque', enfoque);
+  document.body.classList.toggle('menu-oculto', enfoque || !!ap[claveMenu()]);
+  const b = document.getElementById('pz-boton-menu');
+  if (b) b.title = (document.body.classList.contains('menu-oculto') ? 'Mostrar' : 'Ocultar') + ' el menú lateral (Ctrl + B)';
+}
+function alternarBarraLateral() {
+  const ap = (S.config.apariencia ||= {}), k = claveMenu();
+  if (ui.enfoque) { ui.enfoque = false; ap[k] = false; } else ap[k] = !ap[k];
+  guardar(); aplicarMenu();
+}
+function alternarEnfoque() {
+  if (ui.vista !== 'pizarra') return;
+  ui.enfoque = !ui.enfoque; aplicarMenu();
+  if (ui.enfoque) aviso('Modo enfoque: usa el botón de arriba o Ctrl + Shift + B para salir.');
+}
+document.addEventListener('keydown', (e) => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== 'b' || !S) return;
+  e.preventDefault();
+  if (e.shiftKey) alternarEnfoque(); else alternarBarraLateral();
+});
 
 // Menú lateral personalizable: orden y módulos ocultos
 const VISTAS_FIJAS = ['inicio', 'configuracion'];
@@ -293,6 +323,7 @@ function render() {
   renderNav();
   const fn = RENDERS[ui.vista] || RENDERS.inicio;
   document.getElementById('contenido').innerHTML = fn(ui.params);
+  aplicarMenu();
   if (RENDERS[ui.vista + '_despues']) RENDERS[ui.vista + '_despues'](ui.params);
 }
 
