@@ -274,8 +274,21 @@ function ir(vista, params = {}) {
 // Menú lateral plegable. Se recuerda por separado si está oculto en los tableros (pizarra) y en el resto de la app.
 // En un tablero, el "modo enfoque" oculta además la barra superior del tablero para dejar toda la pantalla a la pizarra.
 function claveMenu() { return ui.vista === 'pizarra' ? 'menuOcultoTablero' : 'menuOculto'; }
+// Menú compacto (solo íconos): se activa solo en ventanas angostas, salvo que el docente elija otra cosa.
+const VENTANA_ANGOSTA = window.matchMedia('(max-width: 1000px)');
+VENTANA_ANGOSTA.addEventListener('change', () => aplicarMenu());
+function menuCompacto() { return S?.config?.apariencia?.menuCompacto ?? VENTANA_ANGOSTA.matches; }
+function alternarCompacto() {
+  const ap = (S.config.apariencia ||= {});
+  ap.menuCompacto = !menuCompacto();
+  guardar(); aplicarMenu();
+}
 function aplicarMenu() {
   const ap = S?.config?.apariencia || {};
+  const compacto = menuCompacto();
+  document.body.classList.toggle('menu-compacto', compacto);
+  const bc = document.getElementById('boton-compacto');
+  if (bc) { bc.textContent = compacto ? '⇥' : '⇤'; bc.title = compacto ? 'Menú completo (con nombres)' : 'Menú compacto (solo íconos)'; }
   const tablero = ui.vista === 'pizarra';
   const enfoque = tablero && !!ui.enfoque;
   document.body.classList.toggle('en-tablero', tablero);
@@ -313,7 +326,7 @@ function vistaVisible(id) { return !(S.config.menu?.ocultos || []).includes(id);
 function renderNav() {
   const insignia = typeof numeroAlertas === 'function' ? numeroAlertas() : 0;
   document.getElementById('nav').innerHTML = vistasMenu().map((v) =>
-    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') || (ui.vista === 'pruebaEditor' && v.id === 'pruebas') || (ui.vista === 'pizarra' && v.id === 'pizarras') ? 'activo' : ''}" onclick="ir('${v.id}')"><span class="ico">${v.ico}</span>${v.nombre}${v.id === 'inicio' && insignia ? `<span class="insignia" title="Alertas y pendientes">${insignia}</span>` : ''}</button>`
+    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') || (ui.vista === 'pruebaEditor' && v.id === 'pruebas') || (ui.vista === 'pizarra' && v.id === 'pizarras') ? 'activo' : ''}" onclick="ir('${v.id}')" title="${esc(v.nombre)}"><span class="ico">${v.ico}</span><span class="nom">${v.nombre}</span>${v.id === 'inicio' && insignia ? `<span class="insignia" title="Alertas y pendientes">${insignia}</span>` : ''}</button>`
   ).join('');
   document.getElementById('marca-sub').textContent = S.config.institucion || 'Educación básica y media';
 }

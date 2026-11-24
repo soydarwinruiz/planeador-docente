@@ -49,11 +49,25 @@ body {
   display: flex; overflow: hidden;
 }
 #menu {
-  width: 230px; background: var(--azul); color: #fff; display: flex; flex-direction: column; flex-shrink: 0;
+  --ancho-menu: 230px; width: var(--ancho-menu); background: var(--azul); color: #fff; display: flex; flex-direction: column; flex-shrink: 0;
   transition: margin-left .2s ease, visibility .2s;
 }
 /* Menú lateral plegable (Ctrl + B) y modo enfoque del tablero (Ctrl + Shift + B) */
-body.menu-oculto #menu { margin-left: -230px; visibility: hidden; }
+body.menu-oculto #menu { margin-left: calc(-1 * var(--ancho-menu)); visibility: hidden; }
+/* Menú compacto: solo íconos (automático en ventanas de menos de 1000 px) */
+.buscador-ico { display: none; }
+body.menu-compacto #menu { --ancho-menu: 64px; }
+body.menu-compacto .marca { flex-direction: column; gap: 6px; padding: 12px 0; }
+body.menu-compacto .marca > div, body.menu-compacto #nav .nom, body.menu-compacto #estado-guardado, body.menu-compacto .buscador input { display: none; }
+body.menu-compacto .plegar-menu { margin: 0; align-self: center; }
+body.menu-compacto .buscador { margin: 10px 8px 2px; }
+body.menu-compacto .buscador-ico { display: block; width: 100%; padding: 6px 0; border-radius: 6px; cursor: pointer; font-size: 15px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); }
+body.menu-compacto #nav { padding: 10px 6px; }
+body.menu-compacto #nav button { justify-content: center; padding: 10px 0; position: relative; }
+body.menu-compacto #nav .ico { width: auto; font-size: 18px; }
+body.menu-compacto #nav .insignia { position: absolute; top: 2px; right: 2px; min-width: 16px; padding: 0 4px; font-size: 10px; line-height: 14px; }
+body.menu-compacto .menu-pie { padding: 8px 6px; }
+body.menu-compacto .menu-pie .fila, body.menu-compacto .menu-pie .fila > span { flex-direction: column; display: flex; gap: 4px; align-items: center; margin: 0 !important; }
 .plegar-menu { margin-left: auto; align-self: flex-start; background: none; border: 0; color: #fff; opacity: .7; font-size: 18px; line-height: 1; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
 .plegar-menu:hover { opacity: 1; background: rgba(255,255,255,.15); }
 #mostrar-menu { display: none; position: fixed; top: 12px; left: 10px; z-index: 40; width: 38px; height: 38px; border: 0; border-radius: 8px; background: var(--azul); color: #fff; font-size: 18px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); }

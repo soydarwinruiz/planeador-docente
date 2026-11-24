@@ -38,7 +38,7 @@ Descarga desde https://github.com/soydarwinruiz/planeador-docente/releases (últ
 
 ## 3. La pantalla principal
 
-- **Menú lateral:** todos los módulos. El botón **☰** (abajo) lleva a personalizarlo; **🌓** cambia claro/oscuro; **A− / A+** cambia el tamaño de letra.
+- **Menú lateral:** todos los módulos. El botón **🧭** (abajo) lleva a personalizarlo; **⇤ / ⇥** alterna el menú compacto (solo íconos, se activa solo en ventanas angostas); **🌓** cambia claro/oscuro; **A− / A+** cambia el tamaño de letra.
 - **Ocultar el menú lateral (Ctrl + B):** el botón **«** junto al título lo esconde para ganar espacio; el botón **☰** de la esquina superior izquierda (o Ctrl + B otra vez) lo vuelve a mostrar. Se recuerda por separado para los tableros y para el resto de la app.
 - **Buscar (Ctrl + K):** encuentra planeaciones, estudiantes, estrategias, mallas, plantillas, pruebas, fichas, entradas del diario y más.
 - **Inicio:**
