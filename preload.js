@@ -41,4 +41,23 @@ contextBridge.exposeInMainWorld('api', {
   qrEstado: () => ipcRenderer.invoke('qr:estado'),
   qrAbrirEnEquipo: (url) => ipcRenderer.invoke('qr:abrirEnEquipo', url),
   alEventoQR: (fn) => ipcRenderer.on('qr:evento', (_e, d) => fn(d)),
+  // Celular del docente
+  celActivar: (activo) => ipcRenderer.invoke('cel:activar', activo),
+  alSolicitudCelular: (fn) => ipcRenderer.on('cel:solicitud', (_e, d) => fn(d)),
+  responderCelular: (id, codigo, datos) => ipcRenderer.send('cel:respuesta', { id, codigo, datos }),
+  // Clave de acceso
+  accesoEstado: () => ipcRenderer.invoke('acceso:estado'),
+  accesoDesbloquear: (clave) => ipcRenderer.invoke('acceso:desbloquear', clave),
+  accesoBloquear: () => ipcRenderer.invoke('acceso:bloquear'),
+  accesoActivar: (clave, minutos) => ipcRenderer.invoke('acceso:activar', { clave, minutos }),
+  accesoCambiar: (actual, nueva) => ipcRenderer.invoke('acceso:cambiar', { actual, nueva }),
+  accesoDesactivar: (actual) => ipcRenderer.invoke('acceso:desactivar', actual),
+  accesoRecuperar: (codigo, nueva) => ipcRenderer.invoke('acceso:recuperar', { codigo, nueva }),
+  accesoMinutos: (minutos) => ipcRenderer.invoke('acceso:minutos', minutos),
+  // Años anteriores
+  aniosListar: () => ipcRenderer.invoke('anios:listar'),
+  aniosLeer: (id) => ipcRenderer.invoke('anios:leer', id),
+  aniosArchivar: (texto) => ipcRenderer.invoke('anios:archivar', texto),
+  aniosEliminar: (id) => ipcRenderer.invoke('anios:eliminar', id),
+  aniosImportar: () => ipcRenderer.invoke('anios:importar'),
 });

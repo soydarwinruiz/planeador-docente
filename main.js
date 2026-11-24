@@ -10,6 +10,10 @@ const { iniciarAplicacionMovil, detenerAplicacionMovil } = require('./servidor-a
 if (process.env.PLANEADOR_DATA_DIR) app.setPath('userData', process.env.PLANEADOR_DATA_DIR);
 const almacen = require('./almacen');
 const { DIR: DATA_DIR, DATOS: DATA_FILE, RESPALDOS: BACKUP_DIR, fechaArchivo, escribirSeguro, respaldoAutomatico } = almacen;
+const { iniciarAcceso, estaBloqueado } = require('./acceso');
+iniciarAcceso();
+// Mientras el programa esté bloqueado con la clave, no se entregan datos a la interfaz
+function exigirDesbloqueo() { if (estaBloqueado()) throw new Error('El programa está bloqueado.'); }
 
 let ventana;
 let ultimoEstado = null; // último estado recibido (texto JSON), para guardar al cerrar
@@ -71,7 +75,8 @@ Menu.setApplicationMenu(
     ] },
     { label: 'Ver', submenu: [
       { role: 'zoomIn', label: 'Acercar' }, { role: 'zoomOut', label: 'Alejar' }, { role: 'resetZoom', label: 'Tamaño normal' },
-      { type: 'separator' }, { role: 'togglefullscreen', label: 'Pantalla completa' }, { role: 'toggleDevTools', label: 'Herramientas de desarrollo' },
+      { type: 'separator' }, { role: 'togglefullscreen', label: 'Pantalla completa' },
+      ...(app.isPackaged ? [] : [{ role: 'toggleDevTools', label: 'Herramientas de desarrollo' }]),
     ] },
   ])
 );
@@ -99,6 +104,7 @@ app.on('window-all-closed', () => { detenerAplicacionMovil(); app.quit(); });
 
 // ---------- Datos ----------
 ipcMain.handle('datos:cargar', () => {
+  if (estaBloqueado()) return { __bloqueado: true };
   const d = almacen.cargarDatos();
   if (d && !d.__error) {
     // Claves de IA: se guardan cifradas aparte. Las que vengan de versiones anteriores dentro de datos.json se pasan al archivo cifrado.
@@ -118,7 +124,24 @@ ipcMain.on('datos:guardarSync', (e, texto) => {
 ipcMain.handle('datos:guardar', (_e, texto) => { escribirEstado(texto); return true; });
 ipcMain.handle('claves:guardar', (_e, claves) => almacen.guardarClaves(claves));
 ipcMain.handle('claves:info', () => ({ cifradas: almacen.cifradoDisponible() }));
-ipcMain.handle('tablero:leerRecursos', (_e, id) => almacen.leerRecursosTablero(id));
+ipcMain.handle('tablero:leerRecursos', (_e, id) => { exigirDesbloqueo(); return almacen.leerRecursosTablero(id); });
+// Años anteriores
+ipcMain.handle('anios:listar', () => { exigirDesbloqueo(); return almacen.listarAnios(); });
+ipcMain.handle('anios:leer', (_e, id) => { exigirDesbloqueo(); return almacen.leerAnio(id); });
+ipcMain.handle('anios:archivar', (_e, texto) => {
+  try { exigirDesbloqueo(); respaldoAutomatico({ forzar: true }); return { ok: true, meta: almacen.guardarAnio(texto) }; } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('anios:eliminar', (_e, id) => { exigirDesbloqueo(); return almacen.eliminarAnio(id); });
+// Importar un año desde un respaldo (por ejemplo, el que se guardó al iniciar el año con una versión anterior)
+ipcMain.handle('anios:importar', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(ventana, { title: 'Elegir el respaldo del año que quieres archivar', properties: ['openFile'], filters: [{ name: 'Respaldo del Planeador', extensions: ['json'] }] });
+  if (canceled || !filePaths.length) return { ok: false };
+  try {
+    exigirDesbloqueo();
+    const datos = validarRespaldo(almacen.leerJSON(filePaths[0]));
+    return { ok: true, meta: almacen.guardarAnio(datos) };
+  } catch (e) { return { ok: false, error: e instanceof SyntaxError ? 'El archivo está dañado o no es un respaldo del Planeador.' : e.message }; }
+});
 ipcMain.handle('tablero:guardarRecursos', (_e, { id, assets }) => almacen.guardarRecursosTablero(id, assets));
 ipcMain.handle('tablero:limpiar', (_e, ids) => almacen.limpiarRecursosTableros(ids));
 
@@ -128,6 +151,7 @@ ipcMain.handle('datos:abrirCarpeta', () => shell.openPath(DATA_DIR()));
 // ---------- Respaldos ----------
 // El respaldo manual es completo (incluye las imágenes de los tableros) y no lleva las claves de IA
 ipcMain.handle('respaldo:exportar', async (_e, texto) => {
+  if (estaBloqueado()) return { ok: false, error: 'El programa está bloqueado.' };
   const { canceled, filePath } = await dialog.showSaveDialog(ventana, {
     title: 'Guardar respaldo',
     defaultPath: `respaldo-planeador-${fechaArchivo()}.json`,
@@ -143,6 +167,7 @@ ipcMain.handle('respaldo:exportar', async (_e, texto) => {
 function validarRespaldo(datos) {
   if (!datos || typeof datos !== 'object' || !datos.config || !Array.isArray(datos.grupos || [])) throw new Error('El archivo no es un respaldo válido del Planeador.');
   delete datos.__recuperado;
+  almacen.restaurarAniosDeRespaldo(datos);
   return datos;
 }
 ipcMain.handle('respaldo:importar', async () => {
@@ -165,6 +190,7 @@ ipcMain.handle('respaldo:listarAuto', () => almacen.listarRespaldos());
 
 ipcMain.handle('respaldo:restaurarAuto', (_e, nombre) => {
   try {
+    exigirDesbloqueo();
     const datos = validarRespaldo(almacen.leerJSON(path.join(BACKUP_DIR(), path.basename(String(nombre)))));
     respaldoAutomatico({ forzar: true });
     return { ok: true, datos };

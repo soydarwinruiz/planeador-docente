@@ -48,6 +48,7 @@ RENDERS.configuracion = () => {
       <td><input type="number" step="0.1" value="${d.desde}" onchange="S.config.desempenos[${i}].desde=+this.value;guardar()"></td>
       <td><input type="number" step="0.1" value="${d.hasta}" onchange="S.config.desempenos[${i}].hasta=+this.value;guardar()"></td></tr>`).join('')}
     </tbody></table>
+    ${tarjetaRecuperaciones()}
   </div>
 
   <div class="tarjeta"><div class="cabecera"><h2 style="margin:0">Periodos académicos</h2><button class="btn pequeno primario" onclick="agregarPeriodo()">＋ Periodo</button></div>
@@ -68,9 +69,13 @@ RENDERS.configuracion = () => {
 
   ${tarjetaVoz()}
 
+  ${tarjetaAcceso()}
+
+  ${tarjetaCelular()}
+
   <div class="tarjeta"><h2>💾 Respaldo de datos</h2>
     <p class="ayuda">Todos tus datos se guardan en este equipo. Haz respaldos frecuentes en una memoria USB o en una carpeta sincronizada (OneDrive, Google Drive).
-    Además, la aplicación crea un respaldo automático cada vez que se abre (se conservan los últimos 15).</p>
+    Además, la aplicación crea un respaldo automático al abrirse y cada hora si hubo cambios (15 recientes y uno por día durante 30 días).</p>
     <div class="fila">
       <button class="btn primario" onclick="crearRespaldo()">💾 Crear respaldo…</button>
       <button class="btn" onclick="restaurarRespaldo()">📂 Restaurar desde archivo…</button>
@@ -82,7 +87,7 @@ RENDERS.configuracion = () => {
 
   <div class="tarjeta"><h2>Nuevo año lectivo</h2>
     <p class="ayuda">Prepara la aplicación para un nuevo año: conserva áreas, rúbricas, configuración, planes de área, mallas, planes de periodo, todas las planeaciones (para reutilizarlas desde el banco) y las pruebas (sin resultados), y elimina grupos, estudiantes, asistencia, notas, observaciones, diario de campo, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario (se conservan las franjas).
-    <b>Antes se crea un respaldo automático.</b></p>
+    <b>Antes, el año que termina se archiva completo</b> y queda para consultar en <a href="#" onclick="ir('anios');return false">Años anteriores</a>.</p>
     <button class="btn peligro" onclick="nuevoAnio()">Iniciar nuevo año lectivo…</button>
   </div>`;
 };
@@ -140,12 +145,13 @@ async function restaurarAuto(nombre) {
   aviso('Respaldo restaurado', 'ok');
 }
 async function nuevoAnio() {
-  if (!(await confirmar('Se eliminarán grupos, estudiantes, asistencia, notas, observaciones, diario, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario. Las planeaciones, pruebas, áreas, rúbricas, planes de área, mallas y planes de periodo se conservan. ¿Continuar?', { boton: 'Iniciar nuevo año', papelera: false }))) return;
-  const resp = await api.exportarRespaldo(textoEstado());
-  if (!resp?.ok && !(await confirmar('No se guardó el respaldo. ¿Iniciar el nuevo año de todas formas? (Los datos actuales quedan en los respaldos automáticos.)', { boton: 'Continuar sin respaldo', papelera: false }))) return;
+  if (ui.archivo) return aviso('Primero vuelve al año en curso.', 'error');
+  if (!(await confirmar(`El año ${S.config.anio} se archivará completo y podrás consultarlo en "Años anteriores". Después se vaciarán grupos, estudiantes, asistencia, notas, recuperaciones, observaciones, diario, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario. Las planeaciones, pruebas, áreas, rúbricas, planes de área, mallas y planes de periodo se conservan. ¿Continuar?`, { boton: 'Archivar e iniciar nuevo año', papelera: false }))) return;
+  const arch = await api.aniosArchivar(textoEstado());
+  if (!arch?.ok) { aviso('No se pudo archivar el año: ' + (arch?.error || 'error desconocido') + '. No se borró nada.', 'error'); return; }
   const anio = (+S.config.anio || new Date().getFullYear()) + 1;
   S.planeaciones.forEach((p) => { const g = porId(S.grupos, p.grupoId); if (g) p.gradoOrigen = g.grado; });
-  Object.assign(S, { grupos: [], alumnos: [], asistencia: {}, planillas: [], notas: {}, notasRubrica: {}, eventos: [], cronograma: {}, planesAula: [],
+  Object.assign(S, { grupos: [], alumnos: [], asistencia: {}, planillas: [], notas: {}, notasRubrica: {}, recuperaciones: {}, anotaciones: [], eventos: [], cronograma: {}, planesAula: [],
     observaciones: {}, diario: [], comunicadosEnviados: [], alertasOcultas: [], planesApoyo: [], piar: [], gamificacion: {}, retro: {} });
   S.pendientes = (S.pendientes || []).filter((p) => !p.hecho);
   (S.pruebas || []).forEach((p) => { p.grupoId = ''; p.respuestas = {}; p.abiertas = {}; p.actividadId = ''; p.periodoId = ''; });
@@ -157,7 +163,7 @@ async function nuevoAnio() {
     if (p.fin) p.fin = p.fin.replace(/^\d{4}/, (y) => String(+y + 1));
   });
   guardar(); ir('inicio');
-  aviso(`Año lectivo ${anio} listo. Revisa las fechas de los periodos en Configuración.`, 'ok');
+  aviso(`Año lectivo ${anio} listo. El año anterior quedó en "Años anteriores". Revisa las fechas de los periodos en Configuración.`, 'ok');
 }
 
 // ---------- Configuración de IA ----------

@@ -129,13 +129,22 @@ PIAR según el Decreto 1421: información general, entorno de salud, hogar y esc
 Al terminar cada clase (botón 📓 en Inicio): cómo te fue, qué se alcanzó, qué quedó pendiente y novedades. Lo pendiente aparece al planear la siguiente clase. Filtros y exportación a Word y Excel como evidencia.
 
 ### Asistencia
-P (presente), A (ausente), T (tarde), E (excusa) por clase; *Todos presentes*; resumen con % de asistencia; Excel.
+P (presente), A (ausente), T (tarde), E (excusa) por clase; *Todos presentes*; resumen con % de asistencia; Excel. También se toma desde el celular (ver *Celular del docente*).
+
+### Celular del docente (📱)
+Tu celular funciona como una extensión del computador durante la clase, sin instalar nada y sin internet:
+1. En el computador: **Configuración → Celular del docente → ＋ Vincular un celular**. Elige cuánto tiempo queda autorizado (1 hora, solo hoy, 7 días, 30 días, hasta el fin del periodo o hasta que lo desautorices).
+2. Conecta el celular a la **misma red** que el computador, escanea el código QR y escribe el **PIN** de 6 dígitos (sirve una vez durante 10 minutos).
+3. En el celular aparecen **tus clases de hoy** (de *Mi horario*) y puedes abrir cualquier grupo, área y fecha. Pestañas: **✅ Asistencia** (todos empiezan sin marcar; *Marcar a los demás como presentes*), **📊 Notas** (por actividad de la programación evaluativa), **📝 Anotar** (anotación positiva, académica, de convivencia o general de un estudiante, o del grupo para el diario de campo; puedes dictar con el micrófono del teclado), **🏆 Puntos** de gamificación, **📖 Mi clase** (objetivo y momentos de la sesión) y **🎲 Azar** (sin repetir y sin los ausentes). En el inicio también están tus pendientes.
+
+Todo se guarda al instante en el computador. Si la señal se cae, el celular guarda lo marcado y lo envía al volver ("⏳ por enviar"). El computador debe estar encendido con el programa abierto. Si la red del colegio no deja que los equipos se vean, activa el **punto de acceso** del celular y conecta el computador a él. Si pierdes el celular, desautorízalo en Configuración. Las anotaciones de cada estudiante se ven en *Seguimiento del estudiante*.
 
 ### Evaluación y notas
 - **📅 Programación evaluativa:** componentes con porcentaje y actividades con fecha, técnica e instrumento. Word para padres; copiar a otros grupos.
 - **📊 Planilla de notas:** Enter baja al siguiente estudiante; notas en rojo bajo la aprobación. Botones: **✍️ Retroalimentación IA**, **⬇️ Retroalimentaciones** (Word), **📥 Importar notas** (Excel, Google Forms o Classroom; convierte 8/10 a la escala; si un estudiante envió dos veces, queda el último).
 - **🔒 Protección:** una actividad o componente con calificaciones **no se puede eliminar**. Para borrar una actividad creada por error, primero **🧹 Vaciar notas** en *Editar actividad*.
-- **📈 Consolidado anual.**
+- **📈 Consolidado anual**, con la columna de **recuperación final** del año.
+- **Recuperaciones (SIEE):** en *Configuración → Escala de valoración* eliges cómo se aplican (la nota de recuperación reemplaza la del periodo, se promedia, o un porcentaje de cada una) y la nota máxima después de recuperar (por ejemplo 3,0). En la planilla aparece la columna **Recup.** para quienes no alcanzan la nota aprobatoria; la nota con recuperación se marca con **R** y nunca baja la que el estudiante ya tenía. Se usa en boletín, informes, seguimiento y exportaciones.
 - **🆘 Planes de apoyo:** para quienes están en Bajo, con dificultades, desempeños, actividades (sugeridas con IA), compromisos y firmas.
 - **🚦 Semáforo de riesgo:** 🔴🟡🟢 por estudiante, con la **nota que necesita** en lo que falta del periodo y para el año.
 - **📝 Observaciones del boletín:** con banco de frases editable o IA; copiar a la plataforma, Excel o Word.
@@ -146,6 +155,12 @@ P (presente), A (ausente), T (tarde), E (excusa) por clase; *Todos presentes*; r
 
 ### Seguimiento del estudiante
 Por grupo: promedios por área, semáforo y asistencia. Por estudiante: **🧮 ¿Cuánto necesita para aprobar?**, gráficas por periodo y componente, notas, actividades pendientes, planes de apoyo, perfil de aprendizaje y **✉️ Comunicado al acudiente**.
+
+### Años anteriores (🗄️)
+Al iniciar un año lectivo, el que termina se **archiva completo**. Aquí lo abres con **👁️ Consultar**: el programa muestra ese año (planillas, consolidados, asistencia, seguimiento, observaciones, PIAR, informes y exportaciones) con una franja morada de **solo lectura**; **↩️ Volver** regresa al año en curso. También puedes **archivar una copia** del año actual o **importar un año desde un respaldo** (por ejemplo, el que se guardó al iniciar el año con versiones anteriores a la 1.15).
+
+### Portafolio docente (🎓)
+Evidencias para la **evaluación anual de desempeño (Decreto 1278)** y la ECDF, organizadas por competencia: gestión académica (dominio curricular, planeación, pedagógica y didáctica, evaluación), administrativa, comunitaria y comportamentales. El programa reúne solo las cifras de tu trabajo (planes de área, mallas, planeaciones, programación evaluativa, instrumentos, pruebas, planes de apoyo, recuperaciones, asistencia, diario, comunicados…), sin nombres de estudiantes. Agrega tus propias evidencias (con dónde está el soporte) y una reflexión por competencia, y **⬇️ Exporta a Word** con firmas. Puedes filtrar por fechas.
 
 ### Comunicados a padres
 Tipos: bajo desempeño, inasistencias, actividades pendientes, plan de apoyo, citación, felicitación (y los que crees en *Editar textos*). **✨ Sugerir** marca a quién enviar. Cada mensaje es editable: **🟢 WhatsApp** (abre el chat con el texto listo), **✉️ Correo**, **📋 Copiar** o **⬇️ Word** con desprendible para firma. Queda el historial.
@@ -158,7 +173,9 @@ Tipos: bajo desempeño, inasistencias, actividades pendientes, plan de apoyo, ci
 - **🔄 Actualizaciones**, **☁️ Respaldo en la nube**, **🤝 Compartir con otros docentes**.
 - SIEE: escala, desempeños, periodos y porcentajes, componentes de evaluación por defecto.
 - **✨ Inteligencia artificial** y **🎤 Dictado por voz.**
-- Respaldos y **Nuevo año lectivo** (conserva lo curricular, planeaciones y pruebas; borra grupos, estudiantes, notas, asistencia y demás datos del año; antes crea un respaldo).
+- **🔒 Clave de acceso:** el programa pide la clave al abrirse y se bloquea tras unos minutos sin uso (o con **Ctrl + L** o el botón 🔒 del menú). Al activarla recibes un **código de recuperación**: guárdalo, es la única forma de entrar si olvidas la clave.
+- **📱 Celular del docente:** vincular, ver y desautorizar celulares, y cambiar cuánto dura cada autorización.
+- Respaldos y **Nuevo año lectivo** (conserva lo curricular, planeaciones y pruebas; archiva el año que termina en *Años anteriores* y luego vacía grupos, estudiantes, notas, asistencia y demás datos del año).
 
 ## 6. Respaldos y cambio de computador
 - **🗑️ Papelera:** lo que eliminas con los botones de borrar (planeaciones, grupos, estudiantes, notas, actividades, tableros, eventos, pendientes…) se guarda 30 días. Justo después de borrar aparece un aviso con **Deshacer**; más tarde, abre **Papelera** en el menú lateral y pulsa **↩️ Recuperar**. Vuelve a su lugar (un grupo, por ejemplo, con sus estudiantes, asistencia y notas) sin cambiar lo que hiciste después. No guarda lo que cambias escribiendo encima de un dato, como una nota que reemplazas por otra: para eso están los respaldos.

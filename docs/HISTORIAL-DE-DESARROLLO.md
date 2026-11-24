@@ -204,6 +204,16 @@ A pedido del docente (*"analízalo todo, quiero que se consolide y quede bien ro
 - Respaldo manual y de la nube completos (con las imágenes de los tableros) y escritos de forma segura.
 - **Pruebas automáticas en el repositorio** (`npm test`) y en GitHub en cada cambio, incluida una revisión que detecta nombres repetidos entre módulos (el origen del error del boletín).
 
+### Versión 1.15.0 — Celular del docente, clave, años anteriores, recuperaciones y portafolio (24 de noviembre)
+El docente eligió cinco de las propuestas del análisis. Sobre el celular pidió *"que funcione como una extensión del PC"* y *"que el programa permita escoger el tiempo"* de la autorización.
+- **📱 Celular del docente:** página web servida por el computador en la red local (sin internet ni instalación). Vinculación con QR y PIN de un solo uso; autorización de 1 hora, solo hoy, 7 o 30 días, hasta el fin del periodo o indefinida; lista de celulares con último uso, cambio de autorización y desautorización. En el celular: clases de hoy, asistencia, notas por actividad, anotaciones (del estudiante o del grupo al diario de campo), puntos de gamificación, la sesión planeada, estudiante al azar y pendientes. Lo marcado sin señal queda en cola y se envía al volver. El celular solo guarda un permiso aleatorio; el computador guarda su resumen, nunca el permiso.
+- **🔒 Clave de acceso:** resumen con scrypt (la clave no se guarda), sin la clave el proceso principal no entrega los datos, bloqueo por inactividad y con Ctrl + L, freno a intentos repetidos y código de recuperación.
+- **🗄️ Años anteriores:** el nuevo año lectivo archiva el año completo; consulta de solo lectura con todas las vistas, importación desde respaldos de versiones anteriores, y los años viajan en los respaldos.
+- **Recuperaciones según el SIEE:** reemplaza, promedia o pondera, con nota máxima; columna en la planilla y en el consolidado anual; aplicada en todos los cálculos y exportaciones.
+- **🎓 Portafolio docente:** evidencias automáticas por competencia del Decreto 1278 (sin nombres de estudiantes), evidencias y reflexiones propias, exportación a Word.
+- **Anotaciones de estudiantes** en *Seguimiento del estudiante* (desde el celular o el PC).
+- Pruebas automáticas de las cinco funciones (`tests/e2e-funciones.js`), incluida una página de celular real marcando asistencia.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo

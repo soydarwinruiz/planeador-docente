@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4e79">
+<title>Planeador Docente · Celular</title>
+<style>
+*{box-sizing:border-box} html,body{margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f2f5fa;color:#16202c;font-size:16px;-webkit-tap-highlight-color:transparent;padding-bottom:70px}
+header{background:#1f4e79;color:#fff;padding:10px 14px;position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;min-height:52px}
+header .t{flex:1;min-width:0} header b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} header small{opacity:.85;font-size:12px}
+header button{background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:10px;padding:8px 12px;font-size:16px}
+main{max-width:680px;margin:0 auto;padding:12px}
+.tarjeta{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:12px}
+h2{font-size:17px;margin:2px 0 10px;color:#1f4e79} .ayuda{color:#5f6b7d;font-size:13px}
+input,select,textarea{width:100%;font-size:17px;padding:11px;border:2px solid #c9d3e0;border-radius:10px;font-family:inherit;background:#fff;color:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#2e75b6}
+label{display:block;font-size:13px;color:#5f6b7d;margin:8px 0 4px}
+button{font-family:inherit;font-size:16px;border:none;border-radius:12px;padding:12px 16px;cursor:pointer}
+.primario{background:#2e75b6;color:#fff;font-weight:700} .ancho{width:100%} .sec{background:#e3eaf3;color:#1f4e79}
+.clase{display:block;width:100%;text-align:left;background:#fff;border:2px solid #e1e7ef;margin-bottom:8px;padding:12px}
+.clase.actual{border-color:#2e75b6;background:#e8f0fb} .clase b{font-size:16px} .chip{display:inline-block;font-size:12px;border-radius:20px;padding:2px 8px;background:#e3eaf3;color:#1f4e79;margin-left:4px}
+.chip.ok{background:#e3f4e6;color:#2e7d32}
+nav.pestanas{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;border-top:1px solid #dde3ec;z-index:6;padding-bottom:env(safe-area-inset-bottom)}
+nav.pestanas button{flex:1;background:none;border-radius:0;padding:8px 2px 6px;font-size:11px;color:#5f6b7d;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.pestanas button span{font-size:21px} nav.pestanas button.on{color:#1f4e79;font-weight:700;background:#eef3fb}
+.fila{display:flex;align-items:center;gap:8px} .fila>*{min-width:0}
+.est{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #eef1f5} .est:last-child{border-bottom:none}
+.est .n{flex:1;min-width:0;font-size:15px;line-height:1.2} .est .n small{color:#5f6b7d}
+.asis{display:flex;gap:5px} .asis button{width:42px;height:42px;padding:0;font-weight:800;background:#eef1f5;color:#5f6b7d}
+.asis .P.on{background:#2e7d32;color:#fff} .asis .A.on{background:#c62828;color:#fff} .asis .T.on{background:#e67e22;color:#fff} .asis .E.on{background:#6a4c93;color:#fff}
+.nota{width:80px;text-align:center;font-weight:700} .nota.bajo{color:#c62828;border-color:#f3b4b4}
+.cuenta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px} .cuenta span{background:#eef1f5;border-radius:8px;padding:4px 8px;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px} .chips button{background:#eef1f5;color:#16202c;padding:9px 12px;font-size:14px} .chips button.on{background:#2e75b6;color:#fff}
+.azar{font-size:34px;font-weight:800;text-align:center;padding:30px 10px;min-height:120px;color:#1f4e79}
+.momento{border-left:4px solid #2e75b6;padding:4px 10px;margin:10px 0;white-space:pre-wrap;line-height:1.4} .momento b{display:block;color:#1f4e79}
+.hoja{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end} .hoja>div{background:#fff;width:100%;border-radius:16px 16px 0 0;padding:16px;max-height:80vh;overflow:auto}
+.motivo{display:flex;justify-content:space-between;width:100%;background:#f2f5fa;color:#16202c;margin-bottom:6px;text-align:left}
+.aviso{position:fixed;left:12px;right:12px;bottom:76px;background:#333;color:#fff;padding:12px 14px;border-radius:10px;font-size:15px;z-index:30;display:none}
+#cola{font-size:12px;background:#e67e22;color:#fff;border-radius:10px;padding:3px 8px;display:none}
+.error{color:#c62828;font-size:14px;margin-top:8px}
+@media (prefers-color-scheme:dark){body{background:#11161d;color:#e6ebf2}.tarjeta,.clase,nav.pestanas,.hoja>div{background:#19202a;border-color:#2a3442;color:#e6ebf2}
+.clase.actual{background:#1d3350}input,select,textarea{background:#11161d;border-color:#2a3442}.sec,.chip,.chips button,.asis button,.cuenta span,.motivo{background:#253246;color:#cfe0f5}
+.est{border-color:#2a3442} nav.pestanas button.on{background:#1d3350;color:#cfe0f5} h2,.azar,.momento b{color:#8fbcf0}}
+</style></head><body>
+<header><button id="atras" hidden onclick="volver()">←</button><div class="t"><b id="titulo">Planeador Docente</b><small id="sub"></small></div><span id="cola"></span></header>
+<main id="app"><div class="tarjeta">Cargando…</div></main>
+<nav class="pestanas" id="pestanas" hidden></nav>
+<div class="aviso" id="aviso"></div>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LS = { token: 'pd-cel-token', cola: 'pd-cel-cola' };
+let token = localStorage.getItem(LS.token) || '';
+let info = null;          // datos de inicio
+let ctx = null;           // { grupoId, areaId, fecha, datos }
+let pestana = 'asistencia';
+let actividadSel = '', notasAct = {}, anot = { alumnoId: '', tipo: 'positiva' }, azar = { usados: [], sinRepetir: true, ultimo: '' };
+
+function aviso(t, ms = 2600) { const a = $('#aviso'); a.textContent = t; a.style.display = 'block'; clearTimeout(aviso.t); aviso.t = setTimeout(() => { a.style.display = 'none'; }, ms); }
+async function api(accion, cuerpo = {}) {
+  let r;
+  try { r = await fetch('/cel/api/' + accion, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cuerpo, token }), signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined }); }
+  catch (e) { throw Object.assign(new Error('Sin conexión con el computador.'), { red: true }); }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    if (d.revincular) { token = ''; localStorage.removeItem(LS.token); pantallaVincular(d.error); }
+    throw Object.assign(new Error(d.error || 'Error'), { codigo: r.status, red: r.status >= 500 });
+  }
+  return d;
+}
+
+// ---------- Cola de envíos: lo que se marca sin señal se envía al volver la conexión ----------
+let cola = JSON.parse(localStorage.getItem(LS.cola) || '[]'), enviando = false;
+function guardarCola() { localStorage.setItem(LS.cola, JSON.stringify(cola)); const c = $('#cola'); c.style.display = cola.length ? 'inline' : 'none'; c.textContent = '⏳ ' + cola.length + ' por enviar'; }
+function enviar(accion, cuerpo) { cola.push({ accion, cuerpo }); guardarCola(); procesarCola(); }
+async function procesarCola() {
+  if (enviando || !cola.length || !token) return;
+  enviando = true;
+  try {
+    while (cola.length) {
+      const x = cola[0];
+      try { await api(x.accion, x.cuerpo); cola.shift(); guardarCola(); }
+      catch (e) { if (e.red) { setTimeout(procesarCola, 5000); break; } cola.shift(); guardarCola(); aviso(e.message, 4000); }
+    }
+  } finally { enviando = false; }
+}
+window.addEventListener('online', procesarCola);
+setInterval(procesarCola, 15000);
+
+// ---------- Vincular ----------
+function nombreSugerido() { const u = navigator.userAgent; return /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Celular Android' : 'Mi celular'; }
+function pantallaVincular(error) {
+  ctx = null; $('#pestanas').hidden = true; $('#atras').hidden = true;
+  $('#titulo').textContent = 'Vincular este celular'; $('#sub').textContent = '';
+  $('#app').innerHTML = `<div class="tarjeta"><h2>📱 Celular del docente</h2>
+    <p class="ayuda">En el computador abre <b>Configuración → Celular del docente → Vincular un celular</b> y escribe aquí el PIN de 6 dígitos que aparece.</p>
+    <form onsubmit="event.preventDefault();vincular()">
+      <label>PIN</label><input id="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="font-size:28px;letter-spacing:6px;text-align:center">
+      <label>Nombre de este celular</label><input id="nombre" value="${esc(nombreSugerido())}" maxlength="40">
+      <div class="error" id="err">${esc(error || '')}</div>
+      <button class="primario ancho" style="margin-top:10px">Vincular</button></form></div>`;
+  setTimeout(() => $('#pin')?.focus(), 100);
+}
+async function vincular() {
+  try {
+    const d = await api('vincular', { pin: $('#pin').value, nombre: $('#nombre').value });
+    token = d.token; localStorage.setItem(LS.token, token);
+    aviso('Celular vinculado ✔');
+    cargarInicio();
+  } catch (e) { $('#err').textContent = e.message; }
+}
+
+// ---------- Inicio ----------
+async function cargarInicio() {
+  ctx = null; $('#pestanas').hidden = true; $('#atras').hidden = true;
+  if (!token) return pantallaVincular();
+  try { info = await api('inicio'); } catch (e) { if (token) pantallaError(e.message, cargarInicio); return; }
+  $('#titulo').textContent = info.docente ? 'Hola, ' + info.docente.split(' ')[0] : 'Planeador Docente';
+  $('#sub').textContent = info.fechaTexto + (info.periodo ? ' · ' + info.periodo : '');
+  const grupos = info.grupos;
+  $('#app').innerHTML = `
+    <div class="tarjeta"><h2>Mis clases de hoy</h2>
+      ${info.clases.length ? info.clases.map((c, i) => `<button class="clase ${c.actual ? 'actual' : ''}" onclick="abrirClase('${c.grupoId}','${c.areaId}')">
+        <b>${esc(c.inicio)}–${esc(c.fin)} · ${esc(c.grupo)}</b>${c.actual ? '<span class="chip">Ahora</span>' : ''}${c.asistencia ? '<span class="chip ok">✔ Asistencia</span>' : ''}<br>
+        <span class="ayuda">${esc(c.area)}${c.plan ? ' · 📝 ' + esc(c.plan) : ''}</span></button>`).join('') : '<p class="ayuda">No hay clases en tu horario para hoy.</p>'}
+    </div>
+    <div class="tarjeta"><h2>Otro grupo o fecha</h2>
+      <label>Grupo</label><select id="g" onchange="dibujarAreas()">${grupos.map((g) => `<option value="${g.id}">${esc(g.nombre)}</option>`).join('')}</select>
+      <div class="fila"><div style="flex:1"><label>Área</label><select id="a"></select></div><div style="flex:1"><label>Fecha</label><input type="date" id="f" value="${esc(info.fecha)}"></div></div>
+      <button class="sec ancho" style="margin-top:10px" onclick="abrirClase($('#g').value,$('#a').value,$('#f').value)" ${grupos.length ? '' : 'disabled'}>Abrir</button></div>
+    <div class="tarjeta"><h2>✔️ Mis pendientes</h2>
+      ${info.pendientes.map((p) => `<div class="est"><div class="n">${esc(p.texto)}${p.fecha ? `<br><small>${esc(p.fecha)}</small>` : ''}</div><button class="sec" onclick="enviar('pendienteHecho',{id:'${p.id}'});this.parentNode.remove()">✔</button></div>`).join('') || '<p class="ayuda">Sin pendientes.</p>'}
+      <form class="fila" style="margin-top:8px" onsubmit="event.preventDefault();nuevoPendiente()"><input id="np" placeholder="Nuevo pendiente…"><button class="primario">＋</button></form></div>
+    <p class="ayuda" style="text-align:center">📱 ${esc(info.dispositivo.nombre)} · ${esc(info.dispositivo.vence)}<br><a href="#" onclick="desvincular();return false">Desvincular este celular</a></p>`;
+  dibujarAreas();
+}
+function dibujarAreas() { const g = info.grupos.find((x) => x.id === $('#g')?.value); if ($('#a')) $('#a').innerHTML = (g?.areas || []).map((a) => `<option value="${a.id}">${esc(a.nombre)}</option>`).join(''); }
+function nuevoPendiente() { const t = $('#np').value.trim(); if (!t) return; enviar('pendiente', { texto: t }); aviso('Pendiente agregado'); setTimeout(cargarInicio, 600); }
+async function desvincular() {
+  if (!confirm('¿Desvincular este celular? Tendrás que pedir un PIN nuevo en el computador.')) return;
+  try { await api('desvincular'); } catch (e) { /* igual se olvida aquí */ }
+  token = ''; localStorage.removeItem(LS.token); pantallaVincular();
+}
+function pantallaError(msg, reintentar) {
+  $('#app').innerHTML = `<div class="tarjeta"><h2>⚠️ ${esc(msg)}</h2><p class="ayuda">Revisa que el computador esté encendido, con el Planeador abierto y en la misma red que este celular.</p>
+    <button class="primario ancho" id="reint">Reintentar</button></div>`;
+  $('#reint').onclick = reintentar;
+}
+
+// ---------- Clase ----------
+async function abrirClase(grupoId, areaId, fecha) {
+  ctx = { grupoId, areaId, fecha: fecha || info.fecha, datos: null };
+  actividadSel = ''; anot = { alumnoId: '', tipo: 'positiva' }; azar = { usados: [], sinRepetir: true, ultimo: '' };
+  await recargarClase();
+}
+async function recargarClase() {
+  try { ctx.datos = await api('clase', { grupoId: ctx.grupoId, areaId: ctx.areaId, fecha: ctx.fecha }); }
+  catch (e) { pantallaError(e.message, recargarClase); return; }
+  // aplica lo que aún está en la cola para no mostrar datos viejos
+  for (const x of cola) if (x.accion === 'asistencia' && x.cuerpo.grupoId === ctx.grupoId && x.cuerpo.areaId === ctx.areaId && x.cuerpo.fecha === ctx.fecha) { if (x.cuerpo.estado) ctx.datos.asistencia[x.cuerpo.alumnoId] = x.cuerpo.estado; else delete ctx.datos.asistencia[x.cuerpo.alumnoId]; }
+  $('#atras').hidden = false;
+  $('#titulo').textContent = ctx.datos.grupo + (ctx.datos.area ? ' · ' + ctx.datos.area : '');
+  $('#sub').textContent = ctx.datos.fechaTexto;
+  dibujarPestanas(); dibujar();
+}
+function volver() { cargarInicio(); }
+const PESTANAS = [['asistencia', '✅', 'Asistencia'], ['notas', '📊', 'Notas'], ['anotar', '📝', 'Anotar'], ['puntos', '🏆', 'Puntos'], ['clase', '📖', 'Mi clase'], ['azar', '🎲', 'Azar']];
+function dibujarPestanas() {
+  const p = $('#pestanas'); p.hidden = false;
+  p.innerHTML = PESTANAS.map(([k, i, t]) => `<button class="${pestana === k ? 'on' : ''}" onclick="pestana='${k}';dibujarPestanas();dibujar()"><span>${i}</span>${t}</button>`).join('');
+}
+function dibujar() {
+  const d = ctx.datos;
+  if (!d.alumnos.length) { $('#app').innerHTML = '<div class="tarjeta">Este grupo no tiene estudiantes.</div>'; return; }
+  ({ asistencia: vAsistencia, notas: vNotas, anotar: vAnotar, puntos: vPuntos, clase: vClase, azar: vAzar })[pestana]();
+}
+
+function vAsistencia() {
+  const d = ctx.datos;
+  if (!ctx.areaId) { $('#app').innerHTML = '<div class="tarjeta">Elige un área para tomar asistencia.</div>'; return; }
+  const c = { P: 0, A: 0, T: 0, E: 0 }; Object.values(d.asistencia).forEach((e) => { if (c[e] != null) c[e]++; });
+  const sin = d.alumnos.length - Object.keys(d.asistencia).length;
+  $('#app').innerHTML = `<div class="tarjeta"><div class="cuenta"><span>✅ ${c.P}</span><span>❌ ${c.A}</span><span>⏰ ${c.T}</span><span>📄 ${c.E}</span>${sin ? `<span>Sin marcar: ${sin}</span>` : ''}</div>
+    <button class="primario ancho" onclick="todosPresentes()">Marcar a los demás como presentes</button></div>
+    <div class="tarjeta">${d.alumnos.map((a, i) => `<div class="est"><div class="n">${i + 1}. ${esc(a.nombre)}${a.piar ? ' <span class="chip">PIAR</span>' : ''}</div>
+      <div class="asis">${['P', 'A', 'T', 'E'].map((e) => `<button class="${e} ${d.asistencia[a.id] === e ? 'on' : ''}" onclick="marcar('${a.id}','${e}')">${e}</button>`).join('')}</div></div>`).join('')}</div>
+    <p class="ayuda" style="text-align:center">P presente · A ausente · T tarde · E excusa. Tocar de nuevo quita la marca.</p>`;
+}
+function marcar(alumnoId, e) {
+  const a = ctx.datos.asistencia; const estado = a[alumnoId] === e ? '' : e;
+  if (estado) a[alumnoId] = estado; else delete a[alumnoId];
+  enviar('asistencia', { grupoId: ctx.grupoId, areaId: ctx.areaId, fecha: ctx.fecha, alumnoId, estado });
+  vAsistencia();
+}
+function todosPresentes() {
+  ctx.datos.alumnos.forEach((x) => { if (!ctx.datos.asistencia[x.id]) { ctx.datos.asistencia[x.id] = 'P'; } });
+  enviar('todosPresentes', { grupoId: ctx.grupoId, areaId: ctx.areaId, fecha: ctx.fecha });
+  vAsistencia();
+}
+
+async function vNotas() {
+  const d = ctx.datos;
+  if (!d.actividades.length) { $('#app').innerHTML = `<div class="tarjeta">No hay actividades en la programación evaluativa de ${esc(d.periodo || 'este periodo')} para esta área. Créalas en el computador (Evaluación y notas).</div>`; return; }
+  if (!actividadSel || !d.actividades.some((a) => a.id === actividadSel)) actividadSel = d.actividades[0].id;
+  $('#app').innerHTML = `<div class="tarjeta"><label>Actividad (${esc(d.periodo)})</label><select id="act" onchange="actividadSel=this.value;vNotas()">${d.actividades.map((a) => `<option value="${a.id}" ${a.id === actividadSel ? 'selected' : ''}>${esc(a.componente)} · ${esc(a.nombre)}${a.rubrica ? ' (rúbrica)' : ''}</option>`).join('')}</select></div>
+    <div class="tarjeta" id="lista-notas">Cargando notas…</div>`;
+  try { notasAct = (await api('notas', { actividadId: actividadSel })).notas; } catch (e) { $('#lista-notas').innerHTML = esc(e.message); return; }
+  const act = d.actividades.find((a) => a.id === actividadSel);
+  for (const x of cola) if (x.accion === 'nota' && x.cuerpo.actividadId === actividadSel) notasAct[x.cuerpo.alumnoId] = x.cuerpo.valor;
+  const esc_ = info.escala;
+  $('#lista-notas').innerHTML = act.rubrica ? '<p class="ayuda">Esta actividad se califica con rúbrica: hazlo en el computador.</p>'
+    : d.alumnos.map((a, i) => { const n = notasAct[a.id]; return `<div class="est"><div class="n">${i + 1}. ${esc(a.nombre)}</div>
+      <input class="nota ${n !== '' && n != null && +String(n).replace(',', '.') < esc_.aprobacion ? 'bajo' : ''}" inputmode="decimal" value="${n ?? ''}" data-i="${i}" placeholder="—"
+        onchange="ponerNota('${a.id}',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.querySelector('[data-i=&quot;${i + 1}&quot;]')?.focus()}"></div>`; }).join('')
+      + `<p class="ayuda">Escala ${esc_.min} a ${esc_.max}. Se guarda al salir de cada casilla.</p>`;
+}
+function ponerNota(alumnoId, input) {
+  const v = input.value.replace(',', '.').trim(); const e = info.escala;
+  if (v !== '' && (isNaN(+v) || +v < e.min || +v > e.max)) { aviso(`La nota debe estar entre ${e.min} y ${e.max}`); input.value = notasAct[alumnoId] ?? ''; return; }
+  notasAct[alumnoId] = v; input.classList.toggle('bajo', v !== '' && +v < e.aprobacion);
+  enviar('nota', { actividadId: actividadSel, alumnoId, valor: v });
+}
+
+function vAnotar() {
+  const d = ctx.datos;
+  $('#app').innerHTML = `<div class="tarjeta"><label>¿Sobre quién?</label>
+    <select id="an-al" onchange="anot.alumnoId=this.value"><option value="">👥 Todo el grupo (va al diario de campo)</option>${d.alumnos.map((a) => `<option value="${a.id}" ${anot.alumnoId === a.id ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('')}</select>
+    <label>Tipo</label><div class="chips">${Object.entries(info.tipos).map(([k, t]) => `<button class="${anot.tipo === k ? 'on' : ''}" onclick="anot.tipo='${k}';vAnotar()">${esc(t)}</button>`).join('')}</div>
+    <label>Anotación</label><textarea id="an-tx" rows="4" placeholder="Escribe o dicta con el micrófono del teclado…"></textarea>
+    <button class="primario ancho" style="margin-top:10px" onclick="guardarAnotacion()">Guardar anotación</button></div>`;
+}
+function guardarAnotacion() {
+  const texto = $('#an-tx').value.trim(); if (!texto) return aviso('Escribe la anotación');
+  enviar('anotacion', { grupoId: ctx.grupoId, areaId: ctx.areaId, alumnoId: anot.alumnoId, tipo: anot.tipo, texto });
+  $('#an-tx').value = ''; aviso('Anotación guardada ✔');
+}
+
+function vPuntos() {
+  const d = ctx.datos;
+  $('#app').innerHTML = `<div class="tarjeta">${d.alumnos.map((a) => `<div class="est" onclick="hojaPuntos('${a.id}')"><div class="n">${esc(a.nombre)}</div><span class="chip">🏆 ${a.puntos}</span></div>`).join('')}</div>
+    <p class="ayuda" style="text-align:center">Toca un estudiante para darle puntos.</p>`;
+}
+function hojaPuntos(alumnoId) {
+  const a = ctx.datos.alumnos.find((x) => x.id === alumnoId);
+  const h = document.createElement('div'); h.className = 'hoja'; h.onclick = (e) => { if (e.target === h) h.remove(); };
+  h.innerHTML = `<div><h2>${esc(a.nombre)}</h2>${info.motivos.map((m) => `<button class="motivo" data-m="${m.i}"><span>${esc(m.ico)} ${esc(m.t)}</span><b>${m.p > 0 ? '+' : ''}${m.p}</b></button>`).join('')}<button class="sec ancho">Cancelar</button></div>`;
+  h.querySelectorAll('.motivo').forEach((b) => { b.onclick = () => { const m = info.motivos[+b.dataset.m]; a.puntos += m.p; enviar('puntos', { grupoId: ctx.grupoId, alumnoId, motivo: m.i }); h.remove(); aviso(`${m.p > 0 ? '+' : ''}${m.p} a ${a.corto}`); vPuntos(); }; });
+  h.querySelector('.sec').onclick = () => h.remove();
+  document.body.appendChild(h);
+}
+
+function vClase() {
+  const s = ctx.datos.sesion;
+  $('#app').innerHTML = s ? `<div class="tarjeta"><h2>📝 ${esc(s.titulo || 'Planeación')}</h2>${s.sesion ? `<p><b>${esc(s.sesion)}</b></p>` : ''}
+    ${s.objetivo ? `<div class="momento"><b>🎯 Objetivo</b>${esc(s.objetivo)}</div>` : ''}${s.pregunta ? `<div class="momento"><b>❓ Pregunta problematizadora</b>${esc(s.pregunta)}</div>` : ''}
+    ${s.momentos.map((m) => `<div class="momento"><b>${esc(m.t)}</b>${esc(m.texto)}${m.med ? `<br><small class="ayuda">🧰 ${esc(m.med)}</small>` : ''}</div>`).join('') || '<p class="ayuda">La sesión de esta fecha aún no tiene momentos escritos.</p>'}</div>`
+    : '<div class="tarjeta">No hay una planeación con sesión en esta fecha para este grupo y área.</div>';
+}
+
+function vAzar() {
+  const d = ctx.datos;
+  const presentes = d.alumnos.filter((a) => !['A', 'E'].includes(d.asistencia[a.id]));
+  $('#app').innerHTML = `<div class="tarjeta"><div class="azar" id="az">${esc(azar.ultimo || '¿Quién sigue?')}</div>
+    <button class="primario ancho" onclick="elegirAzar()" style="font-size:20px;padding:16px">🎲 Elegir estudiante</button>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" style="width:auto" ${azar.sinRepetir ? 'checked' : ''} onchange="azar.sinRepetir=this.checked;azar.usados=[]"> Sin repetir hasta que pasen todos</label>
+    <p class="ayuda">Se excluyen los ausentes y con excusa (${d.alumnos.length - presentes.length}). Quedan ${presentes.filter((a) => !azar.usados.includes(a.id)).length} por pasar.</p></div>`;
+}
+function elegirAzar() {
+  const d = ctx.datos;
+  let lista = d.alumnos.filter((a) => !['A', 'E'].includes(d.asistencia[a.id]));
+  if (azar.sinRepetir) { const quedan = lista.filter((a) => !azar.usados.includes(a.id)); if (!quedan.length) azar.usados = []; else lista = quedan; }
+  if (!lista.length) return;
+  let n = 0; const el = $('#az');
+  const t = setInterval(() => { el.textContent = lista[Math.floor(Math.random() * lista.length)].corto; if (++n > 12) { clearInterval(t); const a = lista[Math.floor(Math.random() * lista.length)]; azar.ultimo = a.corto; azar.usados.push(a.id); vAzar(); if (navigator.vibrate) navigator.vibrate(80); } }, 70);
+}
+
+guardarCola(); procesarCola(); cargarInicio();
+</script></body></html>
