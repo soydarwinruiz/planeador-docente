@@ -29,7 +29,6 @@ contextBridge.exposeInMainWorld('api', {
   abrirTabla: () => ipcRenderer.invoke('tabla:abrir'),
   transcribir: (d) => ipcRenderer.invoke('ia:transcribir', d),
   guardarPDF: (datos) => ipcRenderer.invoke('pdf:html', datos),
-  guardarPNG: (datos) => ipcRenderer.invoke('png:html', datos),
   qrIniciar: (d) => ipcRenderer.invoke('qr:iniciar', d),
   qrCerrar: () => ipcRenderer.invoke('qr:cerrar'),
   qrReabrir: (min) => ipcRenderer.invoke('qr:reabrir', min),
