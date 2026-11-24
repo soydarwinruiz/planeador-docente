@@ -213,6 +213,7 @@ El docente eligió cinco de las propuestas del análisis. Sobre el celular pidi�
 - **🎓 Portafolio docente:** evidencias automáticas por competencia del Decreto 1278 (sin nombres de estudiantes), evidencias y reflexiones propias, exportación a Word.
 - **Anotaciones de estudiantes** en *Seguimiento del estudiante* (desde el celular o el PC).
 - Pruebas automáticas de las cinco funciones (`tests/e2e-funciones.js`), incluida una página de celular real marcando asistencia.
+- **Nuevo año lectivo a elección:** el docente marca qué conservar (planeaciones, curricular, cronograma, plantillas, pruebas, fichas, tableros, grupos con opción de subir de grado, estudiantes, PIAR, programación evaluativa, planes de aula, horario, eventos, pendientes, portafolio).
 - **Corrector de ortografía** en español latinoamericano con sugerencias en el clic derecho y *Agregar al diccionario* (se puede apagar en Configuración → Apariencia).
 
 ---
