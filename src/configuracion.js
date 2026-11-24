@@ -86,7 +86,7 @@ RENDERS.configuracion = () => {
   </div>
 
   <div class="tarjeta"><h2>Nuevo año lectivo</h2>
-    <p class="ayuda">Prepara la aplicación para un nuevo año: conserva áreas, rúbricas, configuración, planes de área, mallas, planes de periodo, todas las planeaciones (para reutilizarlas desde el banco) y las pruebas (sin resultados), y elimina grupos, estudiantes, asistencia, notas, observaciones, diario de campo, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario (se conservan las franjas).
+    <p class="ayuda">Prepara la aplicación para un nuevo año. <b>Tú eliges qué conservar</b>: planeaciones, planeación curricular, cronograma, plantillas, pruebas, fichas, tableros, grupos (y si suben de grado), estudiantes, PIAR, programación evaluativa, horario, eventos, pendientes y portafolio. Asistencia, notas, observaciones y demás datos del año se vacían.
     <b>Antes, el año que termina se archiva completo</b> y queda para consultar en <a href="#" onclick="ir('anios');return false">Años anteriores</a>.</p>
     <button class="btn peligro" onclick="nuevoAnio()">Iniciar nuevo año lectivo…</button>
   </div>`;
@@ -144,26 +144,115 @@ async function restaurarAuto(nombre) {
   aplicarRespaldo(r.datos);
   aviso('Respaldo restaurado', 'ok');
 }
+// ---------- Nuevo año lectivo: el docente elige qué conservar ----------
+// [clave, título, detalle, marcado por defecto, requiere (otra clave)]
+const OPCIONES_NUEVO_ANIO = [
+  ['Planeación y recursos', [
+    ['planeaciones', 'Planeaciones de clase', 'Pasan al Banco de planeaciones para reutilizarlas (las fechas se ajustan al usarlas)', true],
+    ['curricular', 'Planes de área, mallas y planes de periodo', '', true],
+    ['cronograma', 'Cronograma de temas', 'Se corre a las mismas semanas del año nuevo, sin marcar como vistos', true],
+    ['plantillas', 'Plantillas de planeación', '', true],
+    ['pruebas', 'Pruebas y talleres', 'Sin las respuestas ni los resultados', true],
+    ['fichas', 'Fichas imprimibles', '', true],
+    ['pizarras', 'Tableros (pizarra)', '', true],
+  ]],
+  ['Grupos y estudiantes', [
+    ['grupos', 'Grados y grupos', 'Con sus áreas e intensidad horaria', true],
+    ['promover', 'Subir cada grupo un grado', 'Ej.: 7.° A pasa a 8.° A; los de 11.° se retiran', false, 'grupos'],
+    ['estudiantes', 'Estudiantes', 'Con acudiente, contactos, PIN y perfil de aprendizaje; quedan en su grupo (útil si sigues con los mismos)', false, 'grupos'],
+    ['piar', 'PIAR', 'Como base para actualizarlos', false, 'estudiantes'],
+    ['programacion', 'Programación evaluativa', 'Componentes, porcentajes y actividades de cada grupo, sin notas (fechas corridas un año)', true, 'grupos'],
+    ['planesAula', 'Planes de aula', '', false, 'grupos'],
+    ['horario', 'Clases del horario', 'Las franjas horarias se conservan siempre', false, 'grupos'],
+  ]],
+  ['Otros', [
+    ['eventos', 'Eventos del calendario', 'Se corren al año nuevo (los festivos se calculan solos)', false],
+    ['pendientes', 'Mis pendientes sin terminar', '', true],
+    ['portafolio', 'Evidencias del portafolio docente', '', false],
+  ]],
+];
 async function nuevoAnio() {
   if (ui.archivo) return aviso('Primero vuelve al año en curso.', 'error');
-  if (!(await confirmar(`El año ${S.config.anio} se archivará completo y podrás consultarlo en "Años anteriores". Después se vaciarán grupos, estudiantes, asistencia, notas, recuperaciones, observaciones, diario, comunicados, planes de apoyo, PIAR, eventos, cronograma y las clases del horario. Las planeaciones, pruebas, áreas, rúbricas, planes de área, mallas y planes de periodo se conservan. ¿Continuar?`, { boton: 'Archivar e iniciar nuevo año', papelera: false }))) return;
+  const anio = (+S.config.anio || new Date().getFullYear()) + 1;
+  abrirModal(`<h2>🗓️ Iniciar el año lectivo ${anio}</h2>
+    <p>El año <b>${esc(S.config.anio)}</b> se archivará completo en <b>Años anteriores</b>, donde lo puedes consultar cuando quieras. Elige qué quieres <b>conservar</b> para el año nuevo:</p>
+    ${OPCIONES_NUEVO_ANIO.map(([grupo, ops]) => `<h3 style="margin:12px 0 4px">${esc(grupo)}</h3>${ops.map(([k, t, d, def, req]) => `
+      <label class="opcion-anio" style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;color:inherit;font-size:14px;margin:5px 0 5px ${req ? '24px' : '0'}">
+        <input type="checkbox" data-na="${k}" ${req ? `data-req="${req}"` : ''} ${def ? 'checked' : ''} onchange="dependenciasNuevoAnio()" style="width:auto;margin-top:3px">
+        <span><b>${esc(t)}</b>${d ? `<br><span class="ayuda">${esc(d)}</span>` : ''}</span></label>`).join('')}`).join('')}
+    <p class="ayuda" style="margin-top:12px">Siempre se conservan la configuración, las áreas, el banco pedagógico, los instrumentos de evaluación y las franjas del horario. Siempre se vacían los datos propios del año: asistencia, notas, recuperaciones, observaciones, anotaciones, diario de campo, comunicados, planes de apoyo, retroalimentaciones y gamificación.</p>
+    <div class="botones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn peligro" onclick="ejecutarNuevoAnio()">Archivar ${esc(S.config.anio)} e iniciar ${anio}</button></div>`, { ancho: true });
+  dependenciasNuevoAnio();
+}
+// Una opción que depende de otra (p. ej. estudiantes → grupos) se desactiva si aquella no está marcada
+function dependenciasNuevoAnio() {
+  const caja = (k) => document.querySelector(`[data-na="${k}"]`);
+  for (let i = 0; i < 3; i++) document.querySelectorAll('[data-req]').forEach((c) => {
+    const base = caja(c.dataset.req);
+    const ok = base.checked && !base.disabled;
+    if (!ok && !c.disabled) { c.dataset.antes = c.checked ? '1' : ''; c.checked = false; } // recuerda lo marcado
+    else if (ok && c.disabled) c.checked = c.dataset.antes === '1';
+    c.disabled = !ok;
+    c.closest('label').style.opacity = ok ? 1 : 0.45;
+  });
+}
+async function ejecutarNuevoAnio() {
+  const op = Object.fromEntries([...document.querySelectorAll('[data-na]')].map((c) => [c.dataset.na, c.checked && !c.disabled]));
+  cerrarModal();
   const arch = await api.aniosArchivar(textoEstado());
   if (!arch?.ok) { aviso('No se pudo archivar el año: ' + (arch?.error || 'error desconocido') + '. No se borró nada.', 'error'); return; }
-  const anio = (+S.config.anio || new Date().getFullYear()) + 1;
-  S.planeaciones.forEach((p) => { const g = porId(S.grupos, p.grupoId); if (g) p.gradoOrigen = g.grado; });
-  Object.assign(S, { grupos: [], alumnos: [], asistencia: {}, planillas: [], notas: {}, notasRubrica: {}, recuperaciones: {}, anotaciones: [], eventos: [], cronograma: {}, planesAula: [],
-    observaciones: {}, diario: [], comunicadosEnviados: [], alertasOcultas: [], planesApoyo: [], piar: [], gamificacion: {}, retro: {} });
-  S.pendientes = (S.pendientes || []).filter((p) => !p.hecho);
-  (S.pruebas || []).forEach((p) => { p.grupoId = ''; p.respuestas = {}; p.abiertas = {}; p.actividadId = ''; p.periodoId = ''; });
-  if (S.horario) S.horario.celdas = {};
-  S.planeaciones.forEach((p) => { p.enBanco = true; p.grupoId = ''; });
-  S.config.anio = anio;
-  S.config.periodos.forEach((p) => {
-    if (p.inicio) p.inicio = p.inicio.replace(/^\d{4}/, (y) => String(+y + 1));
-    if (p.fin) p.fin = p.fin.replace(/^\d{4}/, (y) => String(+y + 1));
-  });
+  aplicarNuevoAnio(op);
   guardar(); ir('inicio');
-  aviso(`Año lectivo ${anio} listo. El año anterior quedó en "Años anteriores". Revisa las fechas de los periodos en Configuración.`, 'ok');
+  aviso(`Año lectivo ${S.config.anio} listo. El año anterior quedó en "Años anteriores". Revisa las fechas de los periodos en Configuración.`, 'ok');
+}
+function correrAnio(iso) { return iso ? String(iso).replace(/^(\d{4})/, (y) => String(+y + 1)) : iso; }
+function aplicarNuevoAnio(op) {
+  const anio = (+S.config.anio || new Date().getFullYear()) + 1;
+  // Planeaciones: recuerdan el grado para sugerirlas en el banco
+  S.planeaciones.forEach((p) => { const g = porId(S.grupos, p.grupoId); if (g) p.gradoOrigen = g.grado; });
+  if (op.planeaciones) S.planeaciones.forEach((p) => { p.enBanco = true; p.grupoId = ''; }); else S.planeaciones = [];
+  if (!op.curricular) Object.assign(S, { planesArea: [], mallas: [], planesPeriodo: [] });
+  S.cronograma = op.cronograma ? Object.fromEntries(Object.entries(S.cronograma || {}).map(([k, v]) => {
+    const partes = k.split('|'); partes[3] = sumarDias(partes[3], 364); // mismo lunes de la semana equivalente
+    const { hecho, ...resto } = v || {}; return [partes.join('|'), resto];
+  })) : {};
+  if (!op.plantillas) S.plantillas = [];
+  if (op.pruebas) (S.pruebas || []).forEach((p) => { p.grupoId = ''; p.respuestas = {}; p.abiertas = {}; p.textos = {}; p.actividadId = ''; p.periodoId = ''; }); else S.pruebas = [];
+  if (!op.fichas) S.fichas = [];
+  if (!op.pizarras) S.pizarras = [];
+
+  // Grupos y estudiantes
+  if (op.grupos) {
+    if (op.promover) {
+      const salen = new Set(S.grupos.filter((g) => +g.grado >= 11).map((g) => g.id));
+      S.grupos = S.grupos.filter((g) => !salen.has(g.id));
+      S.grupos.forEach((g) => { const ant = String(g.grado); g.grado = +g.grado + 1; if (String(g.nombre).startsWith(ant)) g.nombre = String(g.grado) + String(g.nombre).slice(ant.length); });
+      S.alumnos = S.alumnos.filter((a) => !salen.has(a.grupoId));
+    }
+    S.alumnos = op.estudiantes ? S.alumnos.filter((a) => a.activo !== false && porId(S.grupos, a.grupoId)) : [];
+    S.piar = op.piar ? S.piar.filter((x) => porId(S.alumnos, x.alumnoId)) : [];
+    if (op.programacion) {
+      S.planillas = S.planillas.filter((pl) => porId(S.grupos, pl.grupoId));
+      S.planillas.forEach((pl) => pl.criterios.forEach((c) => c.actividades.forEach((a) => { a.fecha = correrAnio(a.fecha); })));
+    } else S.planillas = [];
+    if (!op.planesAula) S.planesAula = [];
+    if (S.horario) S.horario.celdas = op.horario ? Object.fromEntries(Object.entries(S.horario.celdas || {}).filter(([, c]) => !c.grupoId || porId(S.grupos, c.grupoId))) : {};
+  } else {
+    Object.assign(S, { grupos: [], alumnos: [], piar: [], planillas: [], planesAula: [] });
+    if (S.horario) S.horario.celdas = {};
+  }
+  (S.pizarras || []).forEach((t) => { t.grupoIds = (t.grupoIds || []).filter((id) => porId(S.grupos, id)); });
+
+  // Otros
+  S.eventos = op.eventos ? S.eventos.filter((e) => e.tipo !== 'festivo').map((e) => ({ ...e, fecha: correrAnio(e.fecha), fechaFin: correrAnio(e.fechaFin) })) : [];
+  S.pendientes = op.pendientes ? (S.pendientes || []).filter((p) => !p.hecho) : [];
+  if (!op.portafolio) S.portafolio = { evidencias: [], reflexiones: {} };
+
+  // Datos propios del año: siempre se vacían (quedan en el año archivado)
+  Object.assign(S, { asistencia: {}, notas: {}, notasRubrica: {}, recuperaciones: {}, anotaciones: [], observaciones: {}, diario: [], comunicadosEnviados: [],
+    alertasOcultas: [], planesApoyo: [], gamificacion: {}, retro: {}, informes: {} });
+  S.config.anio = anio;
+  S.config.periodos.forEach((p) => { p.inicio = correrAnio(p.inicio); p.fin = correrAnio(p.fin); });
 }
 
 // ---------- Configuración de IA ----------

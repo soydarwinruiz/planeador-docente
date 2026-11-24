@@ -98,6 +98,7 @@ async function sembrarNotas(w) {
     await esperarGuardado(w);
     const anio = await w.evaluate(() => S.config.anio);
     await w.evaluate(() => { nuevoAnio(); });
+    await w.uncheck('[data-na="grupos"]');
     await w.click('#modal .btn.peligro'); // confirmar
     await w.waitForFunction(() => S.grupos.length === 0);
     await esperarGuardado(w);
@@ -119,6 +120,48 @@ async function sembrarNotas(w) {
     assert.deepStrictEqual(despues, { grupos: 0, anio: anio + 1, banda: false });
     await app.close();
     assert.deepStrictEqual(errores.filter((e) => !/no se guardan/.test(e)), []);
+  });
+
+  await prueba('Nuevo año: el docente elige qué conservar (grupos que suben de grado, estudiantes, programación…)', async () => {
+    const dir = nuevaCarpeta();
+    const { app, w, errores } = await abrir(dir);
+    await sembrar(w);
+    await sembrarNotas(w);
+    await w.evaluate(() => {
+      S.grupos.push({ id: 'g11', grado: 11, nombre: '11B', areas: [{ areaId: 'a1', horas: 3 }] });
+      S.alumnos.push({ id: 'x1', grupoId: 'g11', nombres: 'Grad', apellidos: 'Uado', activo: true });
+      S.grupos[0].nombre = '7A';
+      S.planillas[0].criterios[0].actividades[0].fecha = `${S.config.anio}-10-01`;
+      S.fichas.push({ id: 'f1', titulo: 'Sopa' });
+      S.pruebas.push({ id: 'pr1', titulo: 'Quiz', grupoId: 'g1', respuestas: { al0: 'ABC' }, preguntas: [] });
+      S.eventos.push({ id: 'e1', fecha: `${S.config.anio}-08-15`, titulo: 'Feria', tipo: 'institucional' });
+      guardar(); nuevoAnio();
+    });
+    await w.check('[data-na="promover"]');
+    await w.check('[data-na="estudiantes"]');
+    await w.uncheck('[data-na="fichas"]');
+    await w.check('[data-na="eventos"]');
+    // Sin grupos no se pueden conservar estudiantes
+    await w.uncheck('[data-na="grupos"]');
+    assert.ok(await w.isDisabled('[data-na="estudiantes"]'));
+    await w.check('[data-na="grupos"]'); await w.check('[data-na="promover"]'); await w.check('[data-na="estudiantes"]');
+    const anio = await w.evaluate(() => S.config.anio);
+    await w.click('#modal .btn.peligro');
+    await w.waitForFunction((a) => S.config.anio === a + 1, anio);
+    await esperarGuardado(w);
+    const d = datos(dir);
+    assert.deepStrictEqual(d.grupos.map((g) => [g.grado, g.nombre]), [[8, '8A']], 'el grupo debe subir a 8A y el de 11 salir');
+    assert.strictEqual(d.alumnos.length, 25);
+    assert.strictEqual(d.planillas.length, 1);
+    assert.strictEqual(d.planillas[0].criterios[0].actividades[0].fecha, `${anio + 1}-10-01`);
+    assert.deepStrictEqual(d.notas, {});
+    assert.deepStrictEqual(d.fichas, []);
+    assert.deepStrictEqual(d.pruebas[0].respuestas, {});
+    assert.strictEqual(d.eventos[0].fecha, `${anio + 1}-08-15`);
+    const archivado = await w.evaluate(async () => { const [m] = await api.aniosListar(); return (await api.aniosLeer(m.id)).grupos.length; });
+    assert.strictEqual(archivado, 2, 'el año archivado debe quedar completo');
+    await app.close();
+    assert.deepStrictEqual(errores, []);
   });
 
   await prueba('Celular del docente: vincular con PIN, asistencia, notas, anotaciones, puntos y vencimiento', async () => {
