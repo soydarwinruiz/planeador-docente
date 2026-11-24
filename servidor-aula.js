@@ -5,8 +5,28 @@ const crypto = require('crypto');
 const { ipcMain, powerSaveBlocker, shell } = require('electron');
 const QRCode = require('qrcode');
 const { paginaMovil } = require('./pagina-movil');
+const { paginaCelular } = require('./pagina-celular');
 
 let servidor = null, puerto = 0, sesion = null, ventana = null, bloqueo = null;
+let celularActivo = false; // el celular del docente usa el mismo servidor (rutas /cel)
+const solicitudesCelular = new Map(); // id → { ok, temporizador }
+
+// Las acciones del celular las resuelve la interfaz (que tiene los datos) y responde por 'cel:respuesta'
+function pedirAInterfaz(accion, cuerpo, ip) {
+  return new Promise((ok) => {
+    if (!ventana || ventana.isDestroyed()) return ok({ codigo: 503, datos: { error: 'El programa no está abierto en el computador.' } });
+    const id = crypto.randomBytes(8).toString('hex');
+    const temporizador = setTimeout(() => { solicitudesCelular.delete(id); ok({ codigo: 504, datos: { error: 'El computador no respondió. Revisa que el programa esté abierto.' } }); }, 15000);
+    solicitudesCelular.set(id, { ok, temporizador });
+    ventana.webContents.send('cel:solicitud', { id, accion, cuerpo, ip });
+  });
+}
+ipcMain.on('cel:respuesta', (_e, { id, codigo, datos }) => {
+  const s = solicitudesCelular.get(id);
+  if (!s) return;
+  clearTimeout(s.temporizador); solicitudesCelular.delete(id);
+  s.ok({ codigo: codigo || 200, datos });
+});
 
 function ipsLocales() {
   const r = [];
@@ -77,6 +97,18 @@ async function atender(req, res) {
     if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end(paginaMovil());
+    }
+    // Celular del docente
+    if (url.pathname === '/cel' || url.pathname.startsWith('/cel/')) {
+      if (!celularActivo) return json(res, 503, { error: 'El acceso desde el celular está apagado en el computador.' });
+      if (req.method === 'GET' && (url.pathname === '/cel' || url.pathname === '/cel/')) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer' });
+        return res.end(paginaCelular());
+      }
+      const m = url.pathname.match(/^\/cel\/api\/([a-zA-Z]+)$/);
+      if (req.method !== 'POST' || !m) return json(res, 404, { error: 'No encontrado' });
+      const r = await pedirAInterfaz(m[1], await leerCuerpo(req), req.socket.remoteAddress || '');
+      return json(res, r.codigo, r.datos);
     }
     if (!sesion) return json(res, 503, { error: 'No hay ninguna prueba abierta en este momento.' });
     if (url.pathname === '/api/info') {
@@ -159,10 +191,19 @@ async function iniciarServidor() {
   }
   throw new Error('No se pudo abrir el servidor local.');
 }
+function cerrarServidor() { if (servidor) { servidor.close(); servidor.closeAllConnections?.(); servidor = null; } }
+// Termina la prueba por QR; el servidor sigue si el celular del docente lo está usando
 function detener() {
   if (bloqueo != null) { try { powerSaveBlocker.stop(bloqueo); } catch (e) { /* */ } bloqueo = null; }
   sesion = null;
-  if (servidor) { servidor.close(); servidor.closeAllConnections?.(); servidor = null; }
+  if (!celularActivo) cerrarServidor();
+}
+function detenerTodo() { celularActivo = false; detener(); cerrarServidor(); }
+async function infoConexion(ruta) {
+  const ips = ipsLocales();
+  const urls = ips.map((x) => `http://${x.ip}:${puerto}${ruta}`);
+  const qr = urls[0] ? await QRCode.toString(urls[0], { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }) : '';
+  return { puerto, ips, urls, qr };
 }
 
 function iniciarAplicacionMovil(v) {
@@ -192,7 +233,15 @@ function iniciarAplicacionMovil(v) {
   ipcMain.handle('qr:reabrir', (_e, minutosExtra) => { if (sesion) { sesion.abierta = true; if (minutosExtra) sesion.fin = Math.max(sesion.fin || Date.now(), Date.now()) + minutosExtra * 60000; avisar('reabierta'); } return { fin: sesion?.fin }; });
   ipcMain.handle('qr:detener', () => { detener(); return true; });
   ipcMain.handle('qr:estado', () => (sesion ? { activa: true, codigo: sesion.codigo, abierta: sesion.abierta, fin: sesion.fin, alumnos: sesion.alumnos.map((a) => resumenAlumno(a.id)) } : { activa: false }));
+  ipcMain.handle('cel:activar', async (_e, activo) => {
+    try {
+      if (!activo) { celularActivo = false; if (!sesion) cerrarServidor(); return { ok: true, activo: false }; }
+      await iniciarServidor();
+      celularActivo = true;
+      return { ok: true, activo: true, ...(await infoConexion('/cel')) };
+    } catch (e) { return { ok: false, error: e.message }; }
+  });
   ipcMain.handle('qr:abrirEnEquipo', (_e, url) => { if (/^http:\/\/[\d.]+:\d+\//.test(url)) shell.openExternal(url); });
 }
 
-module.exports = { iniciarAplicacionMovil, detenerAplicacionMovil: detener };
+module.exports = { iniciarAplicacionMovil, detenerAplicacionMovil: detenerTodo };

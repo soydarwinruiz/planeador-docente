@@ -30,7 +30,7 @@ for (const f of scripts) {
 const todo = scripts.map((f) => fs.readFileSync(f, 'utf8')).join('\n');
 const nativas = new Set(['if', 'for', 'while', 'return', 'function', 'setTimeout', 'clearTimeout', 'Number', 'String', 'parseInt', 'parseFloat', 'alert', 'confirm', 'Object', 'Array', 'Boolean', 'encodeURIComponent', 'decodeURIComponent', 'JSON', 'Date', 'requestAnimationFrame', 'isNaN', 'switch', 'catch', 'structuredClone', 'Set', 'Map', 'await', 'typeof', 'async', 'fetch', 'Promise', 'prompt']);
 for (const m of todo.matchAll(/\son[a-z]+=\\?"([^"]*)"/g)) {
-  for (const c of m[1].matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\s*\(/g)) {
+  for (const c of m[1].matchAll(/(?<![.\w$]|\$\{)([A-Za-z_$][\w$]*)\s*\(/g)) {
     if (!declaradoEn.has(c[1]) && !nativas.has(c[1]) && !/\$\{/.test(c[1])) falla(`Manejador en línea llama a "${c[1]}", que no existe`);
   }
 }

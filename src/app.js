@@ -67,6 +67,9 @@ function estadoInicial() {
     retro: {},
     pizarras: [],
     papelera: [],
+    recuperaciones: {},
+    anotaciones: [],
+    portafolio: { evidencias: [], reflexiones: {} },
   };
 }
 
@@ -144,13 +147,22 @@ let temporizadorGuardado = null;
 let cadenaGuardado = Promise.resolve();
 let ultimoTextoGuardado = null;
 let ultimasClaves = null;
-function textoEstado() {
-  const ia = S.config?.ia;
-  return JSON.stringify(S, function (k, v) { return k === 'claves' && this === ia ? undefined : v; });
+// Estado del año en curso (durante la consulta de un año anterior, S es ese año y no se guarda)
+function estadoActual() { return ui.archivo ? ui.archivo.actual : S; }
+function textoEstado(E = estadoActual()) {
+  const ia = E.config?.ia;
+  return JSON.stringify(E, function (k, v) { return k === 'claves' && this === ia ? undefined : v; });
+}
+// Ejecuta fn sobre el año en curso aunque se esté consultando un año anterior (lo usan las acciones del celular)
+function conAnioActual(fn) {
+  if (!ui.archivo) return fn();
+  const consultado = S;
+  S = ui.archivo.actual; ui.archivo.guardandoActual = true;
+  try { return fn(); } finally { ui.archivo.actual = S; S = consultado; ui.archivo.guardandoActual = false; }
 }
 // Pasa a su propio archivo las imágenes de los tableros que aún estén dentro del estado
 async function externalizarRecursos() {
-  for (const t of S.pizarras || []) {
+  for (const t of estadoActual().pizarras || []) {
     if (!t || t.assets === undefined) continue;
     const a = t.assets;
     await api.guardarRecursosTablero(t.id, a || {});
@@ -163,8 +175,9 @@ async function pasoGuardado() {
     await externalizarRecursos();
     const texto = textoEstado();
     if (texto !== ultimoTextoGuardado) { await api.guardar(texto); ultimoTextoGuardado = texto; }
-    const claves = JSON.stringify(S.config.ia?.claves || {});
-    if (claves !== ultimasClaves) { await api.guardarClaves(S.config.ia?.claves || {}); ultimasClaves = claves; }
+    const E = estadoActual();
+    const claves = JSON.stringify(E.config.ia?.claves || {});
+    if (claves !== ultimasClaves) { await api.guardarClaves(E.config.ia?.claves || {}); ultimasClaves = claves; }
     marcarGuardado('Guardado ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }));
   } catch (e) {
     marcarGuardado('⚠️ Error al guardar');
@@ -180,7 +193,8 @@ window.addEventListener('beforeunload', () => {
   if (texto !== ultimoTextoGuardado) { api.guardarAlCerrar(texto); ultimoTextoGuardado = texto; }
 });
 function guardar() {
-  if (typeof cerrarPapelera === 'function') cerrarPapelera();
+  if (ui.archivo && !ui.archivo.guardandoActual && !ui.archivo.avisado) { ui.archivo.avisado = true; aviso('Estás consultando un año anterior: los cambios que hagas aquí no se guardan.', 'error'); }
+  if (typeof cerrarPapelera === 'function' && !ui.archivo) cerrarPapelera();
   clearTimeout(temporizadorGuardado);
   marcarGuardado('Guardando…');
   temporizadorGuardado = setTimeout(() => {
@@ -190,6 +204,7 @@ function guardar() {
 }
 // Reemplaza todos los datos por los de un respaldo (conserva las claves de IA de este equipo si el respaldo no trae)
 function aplicarRespaldo(datos) {
+  if (ui.archivo) salirDeArchivo(false);
   const claves = S?.config?.ia?.claves || {};
   S = migrar(datos);
   if (!Object.values(S.config.ia.claves || {}).some(Boolean)) S.config.ia.claves = { ...claves };
@@ -309,6 +324,8 @@ const VISTAS = [
   { id: 'calificaciones', ico: '📊', nombre: 'Evaluación y notas' },
   { id: 'seguimiento', ico: '📈', nombre: 'Seguimiento del estudiante' },
   { id: 'comunicados', ico: '✉️', nombre: 'Comunicados a padres' },
+  { id: 'anios', ico: '🗄️', nombre: 'Años anteriores' },
+  { id: 'portafolio', ico: '🎓', nombre: 'Portafolio docente' },
   { id: 'papelera', ico: '🗑️', nombre: 'Papelera' },
   { id: 'configuracion', ico: '⚙️', nombre: 'Configuración' },
 ];
@@ -386,7 +403,7 @@ const RENDERS = {};
 function render() {
   renderNav();
   const fn = RENDERS[ui.vista] || RENDERS.inicio;
-  document.getElementById('contenido').innerHTML = fn(ui.params);
+  document.getElementById('contenido').innerHTML = (ui.archivo ? bandaArchivo() : '') + fn(ui.params);
   aplicarMenu();
   if (RENDERS[ui.vista + '_despues']) RENDERS[ui.vista + '_despues'](ui.params);
 }
@@ -452,6 +469,8 @@ RENDERS.inicio = () => {
 // ---------- Arranque ----------
 async function iniciar() {
   const datos = await api.cargar();
+  if (datos && datos.__bloqueado) { await refrescarEstadoAcceso(); mostrarBloqueo(iniciar); return; }
+  refrescarEstadoAcceso();
   if (datos && datos.__error) {
     S = estadoInicial();
     render();
@@ -485,4 +504,5 @@ async function iniciar() {
     for (const e of S.papelera || []) for (const o of e.ops) if (o.ruta?.[0] === 'pizarras' && o.id) ids.push(o.id);
     api.limpiarRecursosTableros(ids).catch(() => {});
   }, 15000);
+  iniciarCelular();
 }

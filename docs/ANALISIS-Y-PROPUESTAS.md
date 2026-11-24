@@ -79,8 +79,8 @@ Ordenadas por impacto para el docente colombiano:
 | Versión | Contenido |
 |---|---|
 | 1.14 (hecha) | Consolidación: corrección del boletín y los comunicados, recuperación automática, respaldos, rendimiento de tableros, claves cifradas, pruebas automáticas |
-| 1.15 | Archivo de años anteriores + clave de acceso a la app + bitácora de cambios de notas |
-| 1.16 | Observador del estudiante y convivencia (Ley 1620) + reuniones con acudientes |
-| 1.17 | Recuperaciones según el SIEE + análisis por pregunta + exportar al formato de la plataforma institucional |
+| 1.15 (hecha) | Años anteriores, clave de acceso, recuperaciones según el SIEE, celular del docente como extensión del PC y portafolio docente |
+| 1.16 | Observador del estudiante y convivencia (Ley 1620), a partir de las anotaciones de la 1.15 + reuniones con acudientes + bitácora de cambios de notas |
+| 1.17 | Análisis por pregunta + exportar al formato de la plataforma institucional |
 | 1.18 | IA en vivo con cancelar, perfil institucional y modelo por tarea |
 | 2.0 | Módulos JavaScript en lugar de scripts globales, carga diferida de referentes y almacenamiento dividido o SQLite; sincronización entre equipos |

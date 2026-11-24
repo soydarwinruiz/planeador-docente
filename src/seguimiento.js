@@ -179,5 +179,6 @@ function vistaAlumno(c) {
   ${(() => { const pa = S.planesApoyo.filter((x) => x.alumnoId === al.id); return pa.length ? `<div class="tarjeta"><h3>Planes de apoyo</h3><table class="tabla"><thead><tr><th>Área</th><th>Periodo</th><th class="num">Nota del periodo</th><th>Entrega</th><th>Estado</th><th class="num">Nota del plan</th></tr></thead><tbody>
     ${pa.map((x) => `<tr><td>${esc(nombreArea(x.areaId))}</td><td>${esc(nombrePeriodo(x.periodoId))}</td><td class="num ${claseNota(x.notaInicial)}">${fmtNota(x.notaInicial)}</td><td>${x.fechaEntrega ? esc(fechaCorta(x.fechaEntrega)) : '—'}</td><td><span class="chip ${x.estado === 'superado' ? 'terminada' : x.estado === 'no_superado' ? 'Bajo' : 'borrador'}">${esc(ESTADOS_APOYO[x.estado])}</span></td><td class="num">${esc(x.notaFinal || '—')}</td></tr>`).join('')}
     </tbody></table></div>` : ''; })()}
+  ${tarjetaAnotaciones(al.id, c.grupoId)}
   ${pendientes.length ? `<div class="tarjeta"><h3>Actividades pendientes en todas las áreas</h3><ul class="lista-simple">${pendientes.map((p) => `<li><span><b>${esc(p.ar.nombre)}</b> · ${esc(p.a.nombre)}</span><span class="ayuda">${esc(fechaCorta(p.a.fecha))}</span></li>`).join('')}</ul></div>` : ''}`;
 }

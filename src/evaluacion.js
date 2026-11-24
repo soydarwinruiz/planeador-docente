@@ -131,7 +131,8 @@ function promedioCriterio(crit, alumnoId) {
   }
   return vals.length ? vals.reduce((x, y) => x + y, 0) / vals.length : null;
 }
-function notaFinal(planilla, alumnoId) {
+// Nota del periodo antes de recuperaciones
+function notaDefinitiva(planilla, alumnoId) {
   let suma = 0, pesos = 0;
   for (const c of planilla.criterios) {
     const pr = promedioCriterio(c, alumnoId);
@@ -139,7 +140,11 @@ function notaFinal(planilla, alumnoId) {
   }
   return pesos ? suma / pesos : null;
 }
-function notaAnual(grupoId, areaId, alumnoId) {
+// Nota del periodo que vale (con la recuperación aplicada según el SIEE)
+function notaFinal(planilla, alumnoId) {
+  return aplicarRecuperacion(notaDefinitiva(planilla, alumnoId), recuperacion(planilla.grupoId, planilla.areaId, planilla.periodoId, alumnoId));
+}
+function notaAnualSinRecuperacion(grupoId, areaId, alumnoId) {
   let suma = 0, pesos = 0;
   for (const per of S.config.periodos) {
     const pl = buscarPlanilla(grupoId, areaId, per.id);
@@ -147,6 +152,73 @@ function notaAnual(grupoId, areaId, alumnoId) {
     if (f != null) { suma += redondear(f) * (+per.peso || 0); pesos += +per.peso || 0; }
   }
   return pesos ? suma / pesos : null;
+}
+function notaAnual(grupoId, areaId, alumnoId) {
+  return aplicarRecuperacion(notaAnualSinRecuperacion(grupoId, areaId, alumnoId), recuperacion(grupoId, areaId, 'anual', alumnoId));
+}
+
+// ---------- Recuperaciones (según el SIEE de la institución) ----------
+// S.recuperaciones = { "grupo|área|periodoId": { alumnoId: { nota, fecha, obs } } }; periodoId = 'anual' para la recuperación final del año
+const MODOS_RECUPERACION = {
+  reemplaza: 'La nota de recuperación reemplaza la del periodo',
+  promedio: 'Se promedia la nota del periodo con la de recuperación',
+  ponderada: 'Porcentaje de la nota del periodo + porcentaje de la recuperación',
+};
+function configRecuperacion() {
+  return { modo: 'reemplaza', tope: +S.config.notaAprobacion, peso: 50, ...(S.config.recuperacion || {}) };
+}
+function claveRecuperacion(grupoId, areaId, periodoId) { return `${grupoId}|${areaId}|${periodoId}`; }
+function registroRecuperacion(grupoId, areaId, periodoId, alumnoId) { return S.recuperaciones?.[claveRecuperacion(grupoId, areaId, periodoId)]?.[alumnoId] || null; }
+function recuperacion(grupoId, areaId, periodoId, alumnoId) {
+  const r = registroRecuperacion(grupoId, areaId, periodoId, alumnoId);
+  return r && r.nota !== '' && r.nota != null && !isNaN(+r.nota) ? +r.nota : null;
+}
+// Combina la definitiva con la recuperación. Nunca baja la nota que el estudiante ya tenía.
+function aplicarRecuperacion(def, rec) {
+  if (rec == null) return def;
+  const r = configRecuperacion();
+  let v = rec;
+  if (r.modo === 'promedio' && def != null) v = (def + rec) / 2;
+  else if (r.modo === 'ponderada' && def != null) { const p = Math.min(100, Math.max(0, +r.peso || 0)) / 100; v = def * (1 - p) + rec * p; }
+  if (r.tope !== '' && r.tope != null && !isNaN(+r.tope)) v = Math.min(v, +r.tope);
+  return def == null ? v : Math.max(def, v);
+}
+function necesitaRecuperacion(def) { return def != null && redondear(def) < +S.config.notaAprobacion; }
+function ponerRecuperacion(grupoId, areaId, periodoId, alumnoId, input) {
+  const txt = input.value.replace(',', '.').trim();
+  const k = claveRecuperacion(grupoId, areaId, periodoId);
+  const reg = ((S.recuperaciones ||= {})[k] ||= {});
+  if (txt === '') delete reg[alumnoId];
+  else {
+    let v = +txt;
+    if (isNaN(v)) { aviso('Nota no válida', 'error'); input.value = reg[alumnoId]?.nota ?? ''; return; }
+    if (v < +S.config.escalaMin || v > +S.config.escalaMax) { aviso(`La nota debe estar entre ${S.config.escalaMin} y ${S.config.escalaMax}`, 'error'); v = Math.min(+S.config.escalaMax, Math.max(+S.config.escalaMin, v)); input.value = v; }
+    reg[alumnoId] = { ...(reg[alumnoId] || {}), nota: v, fecha: hoyISO() };
+  }
+  if (!Object.keys(reg).length) delete S.recuperaciones[k];
+  guardar();
+  if (periodoId === 'anual') render(); else actualizarFilaPlanilla(alumnoId);
+}
+function celdaRecuperacion(grupoId, areaId, periodoId, alumnoId, def) {
+  const rec = recuperacion(grupoId, areaId, periodoId, alumnoId);
+  const visible = rec != null || necesitaRecuperacion(def);
+  return `<td class="nota" data-rec><input type="number" step="0.1" min="${S.config.escalaMin}" max="${S.config.escalaMax}" value="${rec == null ? '' : rec}" placeholder="—"
+    title="Nota de la actividad de recuperación (${esc(MODOS_RECUPERACION[configRecuperacion().modo])})" style="${visible ? '' : 'visibility:hidden'}"
+    onchange="ponerRecuperacion('${grupoId}','${areaId}','${periodoId}','${alumnoId}',this)"></td>`;
+}
+function textoFinal(def, fin) {
+  return fmtNota(fin) + (def != null && fin != null && redondear(fin) !== redondear(def) ? ' <sup title="Con recuperación. Antes: ' + fmtNota(def) + '">R</sup>' : '');
+}
+function tarjetaRecuperaciones() {
+  const r = configRecuperacion();
+  const cambiar = (k, v) => `(S.config.recuperacion ||= {}).${k}=${v};guardar();render()`;
+  return `<h3>Recuperaciones</h3>
+    <div class="rejilla r3">
+      <div class="campo"><label>Cómo se aplica la recuperación</label><select onchange="${cambiar('modo', 'this.value')}">${Object.entries(MODOS_RECUPERACION).map(([k, t]) => `<option value="${k}" ${r.modo === k ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+      ${r.modo === 'ponderada' ? `<div class="campo"><label>Peso de la recuperación (%)</label><input type="number" min="0" max="100" value="${esc(r.peso)}" onchange="${cambiar('peso', '+this.value')}"></div>` : ''}
+      <div class="campo"><label>Nota máxima después de recuperar <span class="ayuda">(vacío = sin tope)</span></label><input type="number" step="0.1" value="${r.tope === '' || r.tope == null ? '' : esc(r.tope)}" onchange="${cambiar('tope', "this.value===''?'':+this.value")}"></div>
+    </div>
+    <p class="ayuda">En la planilla de notas aparece la columna <b>Recup.</b> para los estudiantes que no alcanzan ${esc(S.config.notaAprobacion)}, y en el consolidado anual la recuperación final del año. La recuperación nunca baja la nota que el estudiante ya tenía.</p>`;
 }
 function claseNota(n) { return n != null && redondear(n) < +S.config.notaAprobacion ? 'bajo' : ''; }
 
@@ -182,11 +254,12 @@ function vistaPlanilla(c) {
     <button class="btn pequeno" onclick="importarNotas()" title="Desde Excel, Google Forms o Classroom">📥 Importar notas</button>
     <button class="btn pequeno" onclick="ui.cal.pestana='programacion';render()">✏️ Editar programación</button></span></div>
   ${alumnos.length ? `<div class="envoltura-tabla"><table class="tabla planilla"><thead>
-    <tr><th class="alumno" rowspan="2">Estudiante</th>${pl.criterios.map((cr) => `<th class="criterio" colspan="${cr.actividades.length + 1}" style="text-align:center">${esc(cr.nombre)} (${esc(cr.peso)}%)</th>`).join('')}<th rowspan="2" class="num">Nota<br>periodo</th><th rowspan="2">Desempeño</th></tr>
+    <tr><th class="alumno" rowspan="2">Estudiante</th>${pl.criterios.map((cr) => `<th class="criterio" colspan="${cr.actividades.length + 1}" style="text-align:center">${esc(cr.nombre)} (${esc(cr.peso)}%)</th>`).join('')}<th rowspan="2" class="num" title="Actividad de recuperación (SIEE)">Recup.</th><th rowspan="2" class="num">Nota<br>periodo</th><th rowspan="2">Desempeño</th></tr>
     <tr>${pl.criterios.map((cr) => cr.actividades.map((a) => `<th title="${esc(a.descripcion || '')}${a.fecha ? ' · ' + esc(fechaCorta(a.fecha)) : ''}" style="cursor:pointer" onclick="editarActividad('${pl.id}','${cr.id}','${a.id}')">${a.rubricaId ? '📋 ' : ''}${esc(a.nombre.length > 14 ? a.nombre.slice(0, 13) + '…' : a.nombre)}</th>`).join('') + '<th class="num">Prom.</th>').join('')}</tr>
   </thead><tbody>
   ${alumnos.map((al, fila) => {
     col = 0;
+    const def = notaDefinitiva(pl, al.id);
     const f = notaFinal(pl, al.id);
     return `<tr data-al="${al.id}"><td class="alumno">${fila + 1}. ${esc(nombreAlumno(al))} ${al.piar ? '<span class="chip piar">PIAR</span>' : ''}</td>
     ${pl.criterios.map((cr) => cr.actividades.map((a) => {
@@ -196,7 +269,8 @@ function vistaPlanilla(c) {
         ? `<td class="nota num"><button class="btn pequeno ${claseNota(n)}" data-fila="${fila}" data-col="${ci}" onclick="calificarConRubrica('${a.id}','${al.id}')">${n == null ? 'Calificar' : fmtNota(n)}</button></td>`
         : `<td class="nota"><input type="number" step="0.1" min="${S.config.escalaMin}" max="${S.config.escalaMax}" class="${claseNota(n)}" value="${n == null ? '' : n}" data-fila="${fila}" data-col="${ci}" onchange="ponerNota('${a.id}','${al.id}',this)" onkeydown="navegarNotas(event,this)"></td>`;
     }).join('') + (() => { const pr = promedioCriterio(cr, al.id); return `<td class="prom ${claseNota(pr)}" data-prom="${cr.id}">${fmtNota(pr)}</td>`; })()).join('')}
-    <td class="final ${claseNota(f)}" data-final>${fmtNota(f)}</td><td data-des>${chipDesempeno(f)}</td></tr>`;
+    ${celdaRecuperacion(pl.grupoId, pl.areaId, pl.periodoId, al.id, def)}
+    <td class="final ${claseNota(f)}" data-final>${textoFinal(def, f)}</td><td data-des>${chipDesempeno(f)}</td></tr>`;
   }).join('')}
   </tbody></table></div>
   <p class="ayuda">Consejo: usa <b>Enter</b> para bajar al siguiente estudiante. Las notas en rojo están por debajo de ${S.config.notaAprobacion}.
@@ -234,9 +308,12 @@ function actualizarFilaPlanilla(alumnoId) {
     const pr = promedioCriterio(cr, alumnoId);
     if (td) { td.textContent = fmtNota(pr); td.className = 'prom ' + claseNota(pr); }
   }
+  const def = notaDefinitiva(pl, alumnoId);
   const f = notaFinal(pl, alumnoId);
   const tf = tr.querySelector('[data-final]');
-  tf.textContent = fmtNota(f); tf.className = 'final ' + claseNota(f);
+  tf.innerHTML = textoFinal(def, f); tf.className = 'final ' + claseNota(f);
+  const ri = tr.querySelector('[data-rec] input');
+  if (ri) ri.style.visibility = ri.value !== '' || necesitaRecuperacion(def) ? '' : 'hidden';
   tr.querySelector('[data-des]').innerHTML = chipDesempeno(f);
 }
 function navegarNotas(e, input) {
@@ -342,15 +419,17 @@ function vistaAnual(c) {
   const alumnos = alumnosDe(c.grupoId);
   const pers = S.config.periodos;
   return `<div class="envoltura-tabla"><table class="tabla planilla"><thead><tr><th class="alumno">Estudiante</th>
-    ${pers.map((p) => `<th class="num">${esc(p.nombre)}<br><span style="font-weight:normal">${esc(p.peso)}%</span></th>`).join('')}<th class="num">Acumulado</th><th>Desempeño</th></tr></thead><tbody>
+    ${pers.map((p) => `<th class="num">${esc(p.nombre)}<br><span style="font-weight:normal">${esc(p.peso)}%</span></th>`).join('')}<th class="num" title="Recuperación final del año (SIEE)">Recup.<br>final</th><th class="num">Acumulado</th><th>Desempeño</th></tr></thead><tbody>
     ${alumnos.map((a, i) => {
+      const base = notaAnualSinRecuperacion(c.grupoId, c.areaId, a.id);
       const anual = notaAnual(c.grupoId, c.areaId, a.id);
       return `<tr><td class="alumno">${i + 1}. ${esc(nombreAlumno(a))}</td>
       ${pers.map((p) => { const pl = buscarPlanilla(c.grupoId, c.areaId, p.id); const f = pl ? notaFinal(pl, a.id) : null; return `<td class="prom ${claseNota(f)}">${fmtNota(f)}</td>`; }).join('')}
-      <td class="final ${claseNota(anual)}">${fmtNota(anual)}</td><td>${chipDesempeno(anual)}</td></tr>`;
+      ${celdaRecuperacion(c.grupoId, c.areaId, 'anual', a.id, base)}
+      <td class="final ${claseNota(anual)}">${textoFinal(base, anual)}</td><td>${chipDesempeno(anual)}</td></tr>`;
     }).join('')}
   </tbody></table></div>
-  <p class="ayuda">El acumulado pondera cada periodo con su porcentaje (Configuración). Solo se tienen en cuenta los periodos con notas.</p>`;
+  <p class="ayuda">El acumulado pondera cada periodo con su porcentaje (Configuración). Solo se tienen en cuenta los periodos con notas. La recuperación final se aplica según el SIEE (Configuración → Escala de valoración).</p>`;
 }
 
 function exportarCalificaciones() {
@@ -358,18 +437,21 @@ function exportarCalificaciones() {
   const alumnos = alumnosDe(c.grupoId);
   let filas, nombre;
   if (c.pestana === 'anual') {
-    filas = [['Estudiante', ...S.config.periodos.map((p) => p.nombre), 'Acumulado', 'Desempeño']];
+    filas = [['Estudiante', ...S.config.periodos.map((p) => p.nombre), 'Recuperación final', 'Acumulado', 'Desempeño']];
     for (const a of alumnos) {
       const anual = notaAnual(c.grupoId, c.areaId, a.id);
-      filas.push([nombreAlumno(a), ...S.config.periodos.map((p) => { const pl = buscarPlanilla(c.grupoId, c.areaId, p.id); const f = pl ? notaFinal(pl, a.id) : null; return f == null ? '' : fmtNota(f); }), anual == null ? '' : fmtNota(anual), desempeno(anual) || '']);
+      const rec = recuperacion(c.grupoId, c.areaId, 'anual', a.id);
+      filas.push([nombreAlumno(a), ...S.config.periodos.map((p) => { const pl = buscarPlanilla(c.grupoId, c.areaId, p.id); const f = pl ? notaFinal(pl, a.id) : null; return f == null ? '' : fmtNota(f); }), rec == null ? '' : fmtNota(rec), anual == null ? '' : fmtNota(anual), desempeno(anual) || '']);
     }
     nombre = `Consolidado ${nombreGrupoId(c.grupoId)} ${nombreArea(c.areaId)}`;
   } else {
     const pl = obtenerPlanilla(c.grupoId, c.areaId, c.periodoId);
-    filas = [['Estudiante', ...pl.criterios.flatMap((cr) => [...cr.actividades.map((a) => `${cr.nombre}: ${a.nombre}`), `PROMEDIO ${cr.nombre} (${cr.peso}%)`]), 'Nota periodo', 'Desempeño']];
+    filas = [['Estudiante', ...pl.criterios.flatMap((cr) => [...cr.actividades.map((a) => `${cr.nombre}: ${a.nombre}`), `PROMEDIO ${cr.nombre} (${cr.peso}%)`]), 'Definitiva', 'Recuperación', 'Nota periodo', 'Desempeño']];
     for (const al of alumnos) {
       const f = notaFinal(pl, al.id);
-      filas.push([nombreAlumno(al), ...pl.criterios.flatMap((cr) => [...cr.actividades.map((a) => { const n = nota(a.id, al.id); return n == null ? '' : fmtNota(n); }), (() => { const p = promedioCriterio(cr, al.id); return p == null ? '' : fmtNota(p); })()]), f == null ? '' : fmtNota(f), desempeno(f) || '']);
+      const def = notaDefinitiva(pl, al.id);
+      const rec = recuperacion(pl.grupoId, pl.areaId, pl.periodoId, al.id);
+      filas.push([nombreAlumno(al), ...pl.criterios.flatMap((cr) => [...cr.actividades.map((a) => { const n = nota(a.id, al.id); return n == null ? '' : fmtNota(n); }), (() => { const p = promedioCriterio(cr, al.id); return p == null ? '' : fmtNota(p); })()]), def == null ? '' : fmtNota(def), rec == null ? '' : fmtNota(rec), f == null ? '' : fmtNota(f), desempeno(f) || '']);
     }
     nombre = `Planilla ${nombreGrupoId(c.grupoId)} ${nombreArea(c.areaId)} ${nombrePeriodo(c.periodoId)}`;
   }

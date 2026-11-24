@@ -1,4 +1,4 @@
-# Documentación técnica – Planeador Docente 1.14.0
+# Documentación técnica – Planeador Docente 1.15.0
 
 Para quien quiera mantener, modificar o compilar la aplicación.
 
@@ -45,11 +45,13 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 |---|---|
 | `main.js` | Ventana y menú (una sola instancia, `sandbox`, sin navegación externa); `PLANEADOR_DATA_DIR` permite otra carpeta de datos (pruebas); datos (recibe el estado como texto JSON y no reescribe si no cambió); Word (`word:planeacion`, `word:curricular` con generadores `informe, tabla, comunicados, prueba, malla, planArea, planPeriodo, planAula, programacion, apoyo, piar`); Excel y CSV; respaldo en carpeta de nube (cada 20 min y al cerrar, 14 días); paquetes `.planeador`; PDF desde HTML (`pdf:html`, ventana oculta + `printToPDF`, tamaño carta); exportaciones de los tableros con diálogo de guardar (`will-download`); lectura de tablas (`tabla:abrir`: .xlsx con exceljs, CSV con detección de separador y codificación); IA (`ia:sugerir`, `ia:transcribir`) |
 | `almacen.js` | Escritura atómica con `fsync` y reintentos (bloqueos de antivirus/OneDrive en Windows); carga con recuperación automática desde el último respaldo válido si `datos.json` está dañado (guarda `datos-danado_*.json`); respaldos automáticos al abrir y cada hora si hubo cambios (`respaldo_*` 15 recientes, `diario_*` 30 días); claves de IA cifradas con `safeStorage` en `claves.dat`; imágenes de los tableros en `tableros/<id>.json`; respaldo completo (con imágenes, sin claves) para la nube y el respaldo manual |
+| `acceso.js` | Clave de acceso: `acceso.json` con resumen scrypt + sal de la clave y del código de recuperación, minutos de bloqueo; `estaBloqueado()` impide `datos:cargar` y otras lecturas; freno a intentos (5 fallos → 30 s, doblando hasta 5 min) |
+| `pagina-celular.html` / `pagina-celular.js` | Página del celular del docente (`/cel`): vincular con PIN, inicio, pestañas de clase, cola de envíos en `localStorage` |
 | `preload.js` | Puente `window.api` |
 | `exportar-word.js` | Membrete (logos, color, líneas, lema, pie), páginas horizontales y verticales, todos los documentos |
 | `ia.js` | Prompt de sistema (contexto colombiano, JSON estricto), tareas: `clase, malla, planArea, apoyo, boletin, retro, ficha, saber, prueba`; imágenes para Claude, OpenAI/compatibles y Gemini; transcripción de audio WAV (OpenAI `audio/transcriptions`, Gemini con audio en línea, o compatible como Groq) |
 | `actualizaciones.js` | Instalada: `autoUpdater` (sin descarga automática). Portable o desarrollo: consulta la última versión en la API de GitHub y solo avisa |
-| `servidor-aula.js` | Servidor HTTP en `0.0.0.0` (puertos 8765…); sesión con código de 4 letras, PIN con límite de intentos, token por estudiante, orden de preguntas y opciones propio de cada uno (semilla), conversión de letras mostradas a originales, la clave nunca se envía; eventos en vivo al renderer (`qr:evento`); evita que la pantalla se suspenda |
+| `servidor-aula.js` | Servidor HTTP en `0.0.0.0` (puertos 8765…). Rutas `/cel` y `POST /cel/api/<acción>` para el celular del docente: se reenvían a la interfaz (`cel:solicitud` → `cel:respuesta`, 15 s de espera), que valida el permiso y ejecuta la acción; el servidor sigue encendido mientras el celular esté activo aunque termine una prueba. Pruebas por QR: sesión con código de 4 letras, PIN con límite de intentos, token por estudiante, orden de preguntas y opciones propio de cada uno (semilla), conversión de letras mostradas a originales, la clave nunca se envía; eventos en vivo al renderer (`qr:evento`); evita que la pantalla se suspenda |
 | `pagina-movil.js` | HTML autocontenido para el celular: código, nombre y PIN, una pregunta por pantalla, guardado inmediato con reintentos sin señal, temporizador, detección de salida de la página, entrega automática al cerrar el docente o acabarse el tiempo |
 
 ### Interfaz (`src/`)
@@ -89,6 +91,10 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `compartir.js` | Actualizaciones, respaldo en nube, paquetes para compartir |
 | `voz.js` | Dictado por voz |
 | `configuracion.js` | Configuración, asistente inicial, nuevo año lectivo |
+| `bloqueo.js` | Pantalla de bloqueo, recuperación con código, bloqueo por inactividad (también cuenta la actividad dentro de los tableros) y tarjeta de configuración |
+| `anios.js` | Años anteriores: lista, consulta (`ui.archivo = { actual, meta }`: `S` pasa a ser el año consultado, `estadoActual()` y `conAnioActual()` mantienen el guardado sobre el año en curso), archivar copia, importar desde respaldo |
+| `celular.js` | Celular del docente: vinculación (PIN de 6 dígitos, 10 min, un uso; límites por IP y totales), dispositivos en `config.celular.dispositivos` con el SHA-256 del permiso y su vencimiento, `ACCIONES_CEL` (inicio, clase, asistencia, todosPresentes, notas, nota, anotacion, puntos, pendiente, pendienteHecho, desvincular), repintado de la vista del PC y anotaciones de estudiantes |
+| `portafolio.js` | Portafolio docente: competencias del Decreto 1278, `evidenciasAutomaticas(desde, hasta)`, evidencias y reflexiones propias, Word con `generarDocxInforme` |
 | `papelera.js` | Papelera: al confirmar un borrado (`confirmar()` o `iniciarPapelera()`) toma una foto de `S`; en el siguiente `guardar()` guarda solo las diferencias (`ops`: elementos que desaparecieron por `id` o clave, y valores cambiados) y las puede volver a aplicar sobre el estado actual |
 
 ## 4. Modelo de datos (`datos.json`)
@@ -102,6 +108,9 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `planesArea`, `mallas`, `planesPeriodo`, `planesAula` | Planeación curricular |
 | `planillas` | Por grupo, área y periodo: componentes (`criterios`) con peso y actividades |
 | `notas` | `{ actividadId: { alumnoId: nota } }` |
+| `recuperaciones` | `{ "grupo\|área\|periodoId": { alumnoId: { nota, fecha } } }` (`periodoId = 'anual'` para la recuperación final); la forma de aplicarlas está en `config.recuperacion = { modo: 'reemplaza'\|'promedio'\|'ponderada', tope, peso }`. `notaDefinitiva()` es la nota sin recuperación y `notaFinal()`/`notaAnual()` ya la incluyen |
+| `anotaciones` | `{ id, alumnoId, grupoId, areaId, fecha, tipo: positiva\|academica\|convivencia\|general, texto, origen: celular\|pc }` |
+| `portafolio` | `{ evidencias: [{ id, competencia, titulo, fecha, descripcion, ubicacion }], reflexiones: { competencia: texto } }` |
 | `notasRubrica` | Niveles marcados en cada instrumento |
 | `rubricas` | Instrumentos de evaluación |
 | `asistencia` | `{ "grupo|área": { fecha: { alumnoId: P/A/T/E } } }` |
@@ -113,6 +122,8 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `comunicadosEnviados` | Historial de comunicados |
 | `pruebas` | Preguntas, respuestas por estudiante (letras), puntos de abiertas, textos escritos en el celular |
 | `pizarras` | Tableros (las imágenes van en `tableros/<id>.json`, no en `datos.json`): `titulo`, `planeacionId`, `sesionId`, `grupoIds`, `areaId`, `fecha`, `formato: 'pizarra-local'`, `items` (elementos de Pizarra Local: sticky, shape, text, connector, pen, image, frame, emoji, comment; el texto con formato va en `rich`, con fuente, tamaño y resaltado por fragmento), `assets` (imágenes en `data:`; solo mientras están por escribir en su archivo), `view` y `miniatura` (JPEG pequeño para la lista) |
+| `config.celular` | `{ duracion, apagado, dispositivos: [{ id, nombre, hash (SHA-256 del permiso), creado, expira, ultimo }] }` |
+| Fuera de `datos.json` | `claves.dat` (claves de IA cifradas), `acceso.json` (clave de acceso), `tableros/<id>.json` (imágenes), `anios-anteriores/<id>.json` y `.meta.json` (años archivados; van en los respaldos completos como `aniosAnteriores`) |
 | `papelera` | Elementos eliminados (30 días, máximo 200): `{ id, fecha, etiqueta, ops: [{ op: 'agregar', ruta, id/clave, indice, valor } \| { op: 'valor', ruta, antes, despues }] }`; `ruta` usa `{ id }` para entrar en listas con identificador |
 | `fichas`, `gamificacion`, `retro`, `informes` | Fichas guardadas; puntos, equipos e insignias por grupo; retroalimentaciones; textos del informe de cierre |
 
@@ -133,6 +144,6 @@ npm start
 - **Firma digital (opcional):** con un certificado de firma de código (OV/EV o Azure Trusted Signing), crear los secretos `CSC_LINK` (pfx en base64) y `CSC_KEY_PASSWORD` en GitHub.
 
 ## 7. Pruebas
-`npm test` ejecuta `tests/estatico.js` (sintaxis y nombres globales repetidos entre los scripts de `src/`, que comparten ámbito, y funciones inexistentes en `onclick`) y `tests/e2e.js` (vistas, plantillas, claves cifradas, migración de datos anteriores, imágenes de tableros, respaldo en nube, recuperación de un `datos.json` dañado, papelera y rendimiento del guardado). En Linux: `xvfb-run -a npm test`. El flujo `.github/workflows/pruebas.yml` las corre en cada cambio y la compilación de Windows corre la revisión estática antes de compilar.
+`npm test` ejecuta `tests/estatico.js`, `tests/e2e-funciones.js` (recuperaciones, clave de acceso, años anteriores, celular con una página real y portafolio) y (sintaxis y nombres globales repetidos entre los scripts de `src/`, que comparten ámbito, y funciones inexistentes en `onclick`) y `tests/e2e.js` (vistas, plantillas, claves cifradas, migración de datos anteriores, imágenes de tableros, respaldo en nube, recuperación de un `datos.json` dañado, papelera y rendimiento del guardado). En Linux: `xvfb-run -a npm test`. El flujo `.github/workflows/pruebas.yml` las corre en cada cambio y la compilación de Windows corre la revisión estática antes de compilar.
 
 Las pruebas de punta a punta usan Playwright con Electron (`_electron.launch`) y una carpeta de datos aparte (`PLANEADOR_DATA_DIR`); en Linux se ejecutan con `xvfb-run`. Simulan diálogos de guardar/abrir, proveedores de IA (reemplazando el manejador IPC), celulares (Chromium con perfil de teléfono contra el servidor local), micrófono (`--use-fake-device-for-media-stream`) y fotos de hojas de respuestas (generadas, rellenadas y deformadas con Python/PIL).

@@ -9,6 +9,7 @@ const DATOS = () => path.join(DIR(), 'datos.json');
 const RESPALDOS = () => path.join(DIR(), 'respaldos-automaticos');
 const TABLEROS = () => path.join(DIR(), 'tableros');
 const CLAVES = () => path.join(DIR(), 'claves.dat');
+const ANIOS = () => path.join(DIR(), 'anios-anteriores');
 const MAX_RECIENTES = 15; // respaldo_AAAA-MM-DD_HHMM.json
 const MAX_DIARIOS = 30; // diario_AAAA-MM-DD.json
 
@@ -152,15 +153,62 @@ function quitarClaves(datos) {
   if (datos?.config?.ia) datos.config.ia = { ...datos.config.ia, claves: {} };
   return datos;
 }
-// Respaldo completo y autocontenido (datos + imágenes de tableros, sin claves de IA)
+// ---------- Años anteriores (archivo de consulta) ----------
+// Cada año archivado es un archivo con todos los datos de ese año y un archivo pequeño con su resumen.
+function metaAnio(id, d) {
+  const activos = (d.alumnos || []).filter((a) => a && a.activo !== false);
+  return { id, anio: d.config?.anio || '', institucion: d.config?.institucion || '', docente: d.config?.docente || '', archivado: new Date().toISOString(),
+    grupos: (d.grupos || []).length, estudiantes: activos.length, planeaciones: (d.planeaciones || []).length };
+}
+function guardarAnio(datos, meta) {
+  const d = typeof datos === 'string' ? JSON.parse(datos) : datos;
+  if (!d || typeof d !== 'object' || !d.config) throw new Error('Datos no válidos para archivar.');
+  quitarClaves(d);
+  delete d.papelera; delete d.__recuperado; delete d.aniosAnteriores;
+  const id = meta?.id && idValido(meta.id) ? meta.id : `anio-${String(d.config.anio || 'sin-anio').replace(/[^\w-]/g, '')}-${Date.now().toString(36)}`;
+  const m = { ...metaAnio(id, d), ...(meta || {}), id };
+  escribirSeguro(path.join(ANIOS(), `${id}.json`), JSON.stringify(d));
+  escribirSeguro(path.join(ANIOS(), `${id}.meta.json`), JSON.stringify(m));
+  return m;
+}
+function listarAnios() {
+  if (!fs.existsSync(ANIOS())) return [];
+  return fs.readdirSync(ANIOS()).filter((f) => f.endsWith('.meta.json'))
+    .map((f) => { try { return leerJSON(path.join(ANIOS(), f)); } catch { return null; } })
+    .filter((m) => m && fs.existsSync(path.join(ANIOS(), `${m.id}.json`)))
+    .sort((a, b) => String(b.anio).localeCompare(String(a.anio)) || String(b.archivado).localeCompare(String(a.archivado)));
+}
+function leerAnio(id) { if (!idValido(id)) throw new Error('Año no válido'); return leerJSON(path.join(ANIOS(), `${id}.json`)); }
+function eliminarAnio(id) {
+  if (!idValido(id)) throw new Error('Año no válido');
+  fs.rmSync(path.join(ANIOS(), `${id}.json`), { force: true });
+  fs.rmSync(path.join(ANIOS(), `${id}.meta.json`), { force: true });
+  return true;
+}
+// Los respaldos traen los años archivados: se recuperan los que no estén en este equipo
+function restaurarAniosDeRespaldo(datos) {
+  const lista = Array.isArray(datos?.aniosAnteriores) ? datos.aniosAnteriores : [];
+  delete datos.aniosAnteriores;
+  const existentes = new Set(listarAnios().map((m) => m.id));
+  let n = 0;
+  for (const a of lista) {
+    if (!a?.meta?.id || !a.datos || existentes.has(a.meta.id)) continue;
+    try { guardarAnio(a.datos, a.meta); n++; } catch (e) { console.error(e); }
+  }
+  return n;
+}
+
+// Respaldo completo y autocontenido (datos + imágenes de tableros + años anteriores, sin claves de IA)
 function textoRespaldoCompleto(textoDatos, sangria) {
   const d = quitarClaves(incrustarRecursos(JSON.parse(textoDatos)));
   delete d.__recuperado;
+  const anios = listarAnios();
+  if (anios.length) d.aniosAnteriores = anios.map((meta) => { try { return { meta, datos: leerAnio(meta.id) }; } catch { return null; } }).filter(Boolean);
   return JSON.stringify(d, null, sangria);
 }
 
 module.exports = {
   DIR, DATOS, RESPALDOS, fechaArchivo, escribirSeguro, leerJSON, respaldoAutomatico, listarRespaldos, cargarDatos,
   leerClaves, guardarClaves, cifradoDisponible, leerRecursosTablero, guardarRecursosTablero, limpiarRecursosTableros,
-  textoRespaldoCompleto, quitarClaves,
+  textoRespaldoCompleto, quitarClaves, guardarAnio, listarAnios, leerAnio, eliminarAnio, restaurarAniosDeRespaldo,
 };
