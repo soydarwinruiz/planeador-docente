@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   leerRecursosTablero: (id) => ipcRenderer.invoke('tablero:leerRecursos', id),
   guardarRecursosTablero: (id, assets) => ipcRenderer.invoke('tablero:guardarRecursos', { id, assets }),
   limpiarRecursosTableros: (ids) => ipcRenderer.invoke('tablero:limpiar', ids),
+  ortografia: (activo) => ipcRenderer.invoke('ortografia:activar', activo),
   ubicacionDatos: () => ipcRenderer.invoke('datos:ubicacion'),
   abrirCarpetaDatos: () => ipcRenderer.invoke('datos:abrirCarpeta'),
   exportarRespaldo: (estado) => ipcRenderer.invoke('respaldo:exportar', estado),

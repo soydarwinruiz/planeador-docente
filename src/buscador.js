@@ -95,6 +95,8 @@ function tarjetaApariencia() {
     <div class="campo"><label>Tema</label><div class="fila">${[['claro', '☀️ Claro'], ['oscuro', '🌙 Oscuro'], ['sistema', '💻 Como el sistema']].map(([k, t]) => `<button class="btn ${(ap.tema || 'claro') === k ? 'primario' : ''}" onclick="cambiarTema('${k}')">${t}</button>`).join('')}</div></div>
     <div class="campo"><label>Tamaño de la letra</label><div class="fila">${TAMANOS.map((z) => `<button class="btn ${(ap.zoom || 1) === z ? 'primario' : ''}" onclick="S.config.apariencia={...(S.config.apariencia||{}),zoom:${z}};guardar();aplicarApariencia();render()">${Math.round(z * 100)}%</button>`).join('')}</div>
       <div class="ayuda">También con los botones A− / A+ del menú lateral.</div></div>
+    <div class="campo"><label><input type="checkbox" ${ap.ortografia !== false ? 'checked' : ''} onchange="S.config.apariencia={...(S.config.apariencia||{}),ortografia:this.checked};guardar();api.ortografia(this.checked)"> Corrector de ortografía</label>
+      <div class="ayuda">Subraya en rojo las palabras mal escritas; clic derecho sobre la palabra para ver sugerencias o agregarla al diccionario.</div></div>
   </div></div>`;
 }
 

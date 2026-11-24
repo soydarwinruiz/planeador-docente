@@ -49,7 +49,21 @@ function crearVentana() {
       spellcheck: true,
     },
   });
-  ventana.webContents.session.setSpellCheckerLanguages(['es-ES']);
+  const ses = ventana.webContents.session;
+  const idiomas = ['es-419', 'es-ES', 'es'].filter((l) => ses.availableSpellCheckerLanguages.includes(l));
+  if (idiomas.length) ses.setSpellCheckerLanguages(idiomas.slice(0, 1));
+  // Menú del clic derecho: sugerencias de ortografía, agregar al diccionario y editar
+  ventana.webContents.on('context-menu', (_e, p) => {
+    const items = [];
+    if (p.misspelledWord) {
+      p.dictionarySuggestions.slice(0, 6).forEach((s) => items.push({ label: s, click: () => ventana.webContents.replaceMisspelling(s) }));
+      if (!p.dictionarySuggestions.length) items.push({ label: 'Sin sugerencias', enabled: false });
+      items.push({ label: `Agregar "${p.misspelledWord}" al diccionario`, click: () => ses.addWordToSpellCheckerDictionary(p.misspelledWord) }, { type: 'separator' });
+    }
+    if (p.isEditable) items.push({ role: 'undo', label: 'Deshacer' }, { type: 'separator' }, { role: 'cut', label: 'Cortar' }, { role: 'copy', label: 'Copiar' }, { role: 'paste', label: 'Pegar' }, { role: 'selectAll', label: 'Seleccionar todo' });
+    else if (p.selectionText) items.push({ role: 'copy', label: 'Copiar' });
+    if (items.length) Menu.buildFromTemplate(items).popup({ window: ventana });
+  });
   ventana.loadFile(path.join(__dirname, 'src', 'index.html'));
   // Exportaciones de los tableros (PNG, SVG, JSON): preguntar siempre dónde guardar
   ventana.webContents.session.on('will-download', (_e, item) => {
@@ -146,6 +160,7 @@ ipcMain.handle('tablero:guardarRecursos', (_e, { id, assets }) => almacen.guarda
 ipcMain.handle('tablero:limpiar', (_e, ids) => almacen.limpiarRecursosTableros(ids));
 
 ipcMain.handle('datos:ubicacion', () => DATA_DIR());
+ipcMain.handle('ortografia:activar', (_e, activo) => { ventana?.webContents.session.setSpellCheckerEnabled(!!activo); return true; });
 ipcMain.handle('datos:abrirCarpeta', () => shell.openPath(DATA_DIR()));
 
 // ---------- Respaldos ----------
