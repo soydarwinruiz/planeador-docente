@@ -99,5 +99,193 @@ if (require.main === module) (async () => {
     assert.deepStrictEqual(errores, []);
   });
 
+  await prueba('Entregas y nota por lote: alimentan pendientes y comunicados; el lote respeta notas existentes', async () => {
+    const dir = nuevaCarpeta();
+    const { app, w, errores } = await abrir(dir);
+    await sembrar(w);
+    const per = await sembrarPlanilla(w);
+    const r = await w.evaluate((per) => {
+      ui.cal = { grupoId: 'g1', areaId: 'a1', periodoId: per, pestana: 'entregas' }; ui.ent = null; ir('calificaciones');
+      ui.ent.actId = 'act1';
+      marcarEntrega('act1', 'al2', 'N'); marcarEntrega('act1', 'al3', 'T');
+      entregasTodos('E');
+      const estados = ['al0', 'al2', 'al3', 'al4'].map((x) => entrega('act1', x));
+      ui.ent.nota = '4.5'; ui.ent.a = 'E'; ui.ent.respetar = true; aplicarNotaLote();
+      const tras = ['al0', 'al1', 'al4', 'al2'].map((x) => S.notas.act1[x] ?? null);
+      ui.ent.sel = { al2: true }; ui.ent.nota = '1'; ui.ent.a = 'seleccionados'; aplicarNotaLote();
+      ui.com = null; ui.com = contextoCom(); ui.com.grupoId = 'g1'; ui.com.areaId = 'a1'; ui.com.periodoId = per;
+      const v = variablesComunicado(ui.com, porId(S.alumnos, 'al2'));
+      return { estados, tras, al2: S.notas.act1.al2, pendientes: v.pendientes, html: !!document.querySelector('.asis') };
+    }, per);
+    await esperarGuardado(w);
+    assert.deepStrictEqual(r.estados, ['E', 'N', 'T', 'E']);
+    assert.deepStrictEqual(r.tras, [3, 4, 4.5, null], 'el lote no debe pisar notas ni tocar a quien no entregó');
+    assert.strictEqual(r.al2, 1);
+    assert.strictEqual(r.pendientes, 2, 'act1 (no entregó) y act2 (fecha cumplida sin nota)');
+    assert.ok(datos(dir).registroNotas.some((x) => x.o === 'lote' && x.despues === 4.5));
+    await app.close();
+    assert.deepStrictEqual(errores, []);
+  });
+
+  await prueba('Mi clase ahora, resumen semanal y proyección de la sesión', async () => {
+    const { app, w, errores } = await abrir(nuevaCarpeta());
+    await sembrar(w);
+    await sembrarPlanilla(w);
+    const r = await w.evaluate(() => {
+      const hoy = hoyISO();
+      S.planeaciones.push({ id: 'p1', titulo: 'Fracciones', grupoId: 'g1', areaId: 'a1', objetivo: 'Comparar fracciones', sesiones: [{ ...nuevaSesion(hoy), id: 's1', titulo: 'Sesión 1', exploracion: 'Pregunta inicial', practica: 'Taller' }] });
+      S.pendientes.push({ id: 'pe1', texto: 'Llevar regletas', fecha: hoy, hecho: false });
+      ir('inicio');
+      const semana = document.querySelector('details.semana').textContent;
+      abrirMiClase();
+      mcTodosPresentes(); mcAsistencia('al0'); // P → A
+      mcMomento('p1', 's1', 'exploracion', true);
+      proyectarClase(); moverProyeccion(1); const diapo = document.querySelector('#proyeccion h1').textContent; cerrarProyeccion();
+      return { semana, asis: S.asistencia['g1|a1'][hoy].al0, presentes: Object.values(S.asistencia['g1|a1'][hoy]).filter((x) => x === 'P').length,
+        hecho: S.planeaciones.at(-1).sesiones[0].hechos.exploracion, diapo, titulo: document.querySelector('#contenido h1').textContent };
+    });
+    await app.close();
+    assert.match(r.semana, /Tu semana/);
+    assert.match(r.semana, /Taller.*sin nota|sin nota/);
+    assert.match(r.semana, /Llevar regletas/);
+    assert.strictEqual(r.asis, 'A');
+    assert.strictEqual(r.presentes, 24);
+    assert.ok(r.hecho);
+    assert.strictEqual(r.diapo, 'Exploración');
+    assert.match(r.titulo, /7° – A · Matemáticas/);
+    assert.deepStrictEqual(errores, []);
+  });
+
+  await prueba('Banco de preguntas: reúne sin repetir y arma pruebas', async () => {
+    const { app, w, errores } = await abrir(nuevaCarpeta());
+    await sembrar(w);
+    const r = await w.evaluate(() => {
+      const q = (id, e) => ({ id, tipo: 'multiple', contexto: '', enunciado: e, opciones: ['1', '2', '3', '4'], correcta: 'B', competencia: 'Razonamiento' });
+      S.pruebas.push({ id: 'pA', titulo: 'A', tipo: 'prueba', areaId: 'a1', grado: 7, grupoId: '', preguntas: [q('q1', '¿Cuánto es 1+1?'), q('q2', '¿Cuánto es 2+2?')], respuestas: {} });
+      S.pruebas.push({ id: 'pB', titulo: 'B', tipo: 'prueba', areaId: 'a1', grado: 7, grupoId: '', preguntas: [q('q3', '¿Cuánto es  1+1?'), q('q4', '¿Cuánto es 3+3?')], respuestas: {} });
+      const total = bancoPreguntas().length;
+      abrirBancoPreguntas(); ui.bq.sel = { q1: true, q4: true }; usarSeleccionBanco();
+      const nueva = S.pruebas.at(-1);
+      abrirBancoPreguntas('pA'); ui.bq.sel = { q4: true }; usarSeleccionBanco();
+      return { total, nueva: nueva.preguntas.map((x) => x.enunciado), idsNuevos: nueva.preguntas.every((x) => !['q1', 'q4'].includes(x.id)), pA: porId(S.pruebas, 'pA').preguntas.length, vista: ui.vista };
+    });
+    await app.close();
+    assert.strictEqual(r.total, 3, 'la pregunta repetida debe aparecer una sola vez');
+    assert.deepStrictEqual(r.nueva, ['¿Cuánto es 1+1?', '¿Cuánto es 3+3?']);
+    assert.ok(r.idsNuevos);
+    assert.strictEqual(r.pA, 3);
+    assert.strictEqual(r.vista, 'pruebaEditor');
+    assert.deepStrictEqual(errores, []);
+  });
+
+  await prueba('Material con IA desde una sesión: guía, quiz de salida y rúbrica', async () => {
+    const { app, w, errores } = await abrir(nuevaCarpeta());
+    await sembrar(w);
+    await app.evaluate(({ ipcMain }) => {
+      ipcMain.removeHandler('ia:sugerir');
+      ipcMain.handle('ia:sugerir', (_e, p) => (p.tarea === 'rubrica'
+        ? { ok: true, datos: { nombre: 'Rúbrica – Taller de fracciones', producto: 'Taller', criterios: [{ nombre: 'Representa fracciones', descriptores: ['a', 'b', 'c', 'd'] }, { nombre: 'Compara', descriptores: ['e', 'f', 'g', 'h'] }] } }
+        : { ok: false, error: 'no simulado' }));
+    });
+    const r = await w.evaluate(async () => {
+      S.config.ia.claves.anthropic = 'sk-prueba';
+      S.planeaciones.push({ id: 'p1', titulo: 'Fracciones', grupoId: 'g1', areaId: 'a1', objetivo: 'Comparar fracciones', sesiones: [{ ...nuevaSesion(hoyISO()), id: 's1', titulo: 'Sesión 1', exploracion: 'Pregunta', practica: 'Taller' }] });
+      dialogoMaterialSesion('p1', 's1');
+      materialGuia('p1', 's1');
+      const guia = { tipo: ui.ficha.tipo, det: document.getElementById('fia-det').value };
+      dialogoMaterialSesion('p1', 's1');
+      materialQuiz('p1', 's1');
+      const quiz = { titulo: S.pruebas.at(-1).titulo, mult: document.getElementById('pia-mult').value, grupo: S.pruebas.at(-1).grupoId };
+      dialogoMaterialSesion('p1', 's1');
+      await materialRubrica('p1', 's1');
+      const rub = S.rubricas.at(-1);
+      return { guia, quiz, rub: { nombre: rub.nombre, crit: rub.criterios.length, desc: rub.descriptores[rub.criterios[0].id] } };
+    });
+    await app.close();
+    assert.strictEqual(r.guia.tipo, 'guia');
+    assert.match(r.guia.det, /Objetivo: Comparar fracciones[\s\S]*Exploración: Pregunta/);
+    assert.deepStrictEqual(r.quiz, { titulo: 'Quiz de salida – Sesión 1', mult: '5', grupo: 'g1' });
+    assert.deepStrictEqual(r.rub.crit, 2);
+    assert.strictEqual(r.rub.nombre, 'Rúbrica – Taller de fracciones');
+    assert.deepStrictEqual(r.rub.desc.length, 4);
+    assert.deepStrictEqual(errores, []);
+  });
+
+  await prueba('Celular: entregas, fotos de trabajos para la retroalimentación y hoja de respuestas ilegible', async () => {
+    const dir = nuevaCarpeta();
+    const { app, w, errores } = await abrir(dir);
+    await sembrar(w);
+    await sembrarPlanilla(w);
+    await w.evaluate(() => { dialogoVincularCelular(); return generarVinculo(); });
+    const { puerto, pin } = await w.evaluate(() => ({ puerto: CEL.conexion.puerto, pin: CEL.pin }));
+    const post = async (accion, cuerpo) => { const r = await fetch(`http://127.0.0.1:${puerto}/cel/api/${accion}`, { method: 'POST', body: JSON.stringify(cuerpo) }); return { status: r.status, d: await r.json() }; };
+    const token = (await post('vincular', { pin })).d.token;
+    const ini = await post('inicio', { token });
+    assert.ok(ini.d.frases.length >= 3, 'las frases rápidas llegan al celular');
+    assert.strictEqual((await post('entrega', { token, actividadId: 'act1', alumnoId: 'al5', estado: 'N' })).status, 200);
+    const cl = await post('clase', { token, grupoId: 'g1', areaId: 'a1', fecha: ini.d.fecha });
+    assert.strictEqual(cl.d.entregas.act1.al5, 'N');
+    // foto blanca de 400x300 (sin marcas de hoja de respuestas)
+    const foto = await w.evaluate(() => { const c = document.createElement('canvas'); c.width = 400; c.height = 300; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 400, 300); x.fillStyle = '#000'; x.fillText('Mi cuento', 20, 40); return c.toDataURL('image/jpeg', 0.8); });
+    await w.evaluate(() => { S.pruebas.push({ id: 'pq', titulo: 'Quiz', tipo: 'prueba', grupoId: 'g1', areaId: 'a1', grado: 7, preguntas: [{ id: 'q1', tipo: 'multiple', enunciado: 'x', opciones: ['a', 'b'], correcta: 'A' }], respuestas: {} }); });
+    const omr = await post('foto', { token, tipo: 'omr', pruebaId: 'pq', imagen: foto });
+    assert.strictEqual(omr.status, 422);
+    assert.match(omr.d.error, /marcas/);
+    assert.strictEqual((await post('foto', { token, tipo: 'trabajo', grupoId: 'g1', alumnoId: 'al3', actividadId: 'act1', imagen: foto })).status, 200);
+    assert.strictEqual((await post('foto', { token, tipo: 'trabajo', grupoId: 'g1', alumnoId: 'al3', imagen: 'data:text/html;base64,PHNjcmlwdD4=' })).status, 400);
+    const retro = await w.evaluate(() => { verFotosCelular(); const n = document.querySelectorAll('#modal img').length; retroDesdeFoto(CEL.fotos[0].id); return { n, imagenes: window._retro.imagenes.length, alumno: window._retro.alumnoId, act: window._retro.actId, quedan: CEL.fotos.length }; });
+    assert.deepStrictEqual(retro, { n: 1, imagenes: 1, alumno: 'al3', act: 'act1', quedan: 0 });
+    // La página del celular muestra la cámara y el botón de entrega
+    await app.evaluate(({ BrowserWindow }, url) => { const b = new BrowserWindow({ width: 400, height: 820 }); b.loadURL(url); }, `http://127.0.0.1:${puerto}/cel`);
+    const tel = await app.waitForEvent('window', (p) => p.url().includes('/cel'));
+    await tel.waitForSelector('#pin');
+    const pin2 = await w.evaluate(() => { cerrarModal(); dialogoVincularCelular(); return generarVinculo().then(() => CEL.pin); });
+    await tel.fill('#pin', pin2); await tel.click('button:has-text("Vincular")');
+    await tel.waitForSelector('text=Otro grupo o fecha'); await tel.click('button:has-text("Abrir")');
+    await tel.click('nav >> text=Notas'); await tel.waitForSelector('button.ent');
+    await tel.locator('button.ent').first().click();
+    await tel.click('nav >> text=Cámara'); await tel.waitForSelector('text=Tomar foto');
+    await w.waitForFunction(() => S.entregas.act1?.al0 === 'E', null, { timeout: 10000 });
+    await app.close();
+    assert.deepStrictEqual(errores, []);
+  });
+
+  await prueba('Celular: una hoja de respuestas fotografiada se califica al instante', async () => {
+    const { app, w, errores } = await abrir(nuevaCarpeta());
+    await sembrar(w);
+    const html = await w.evaluate(() => {
+      const preguntas = ['A', 'B', 'C', 'D', 'A'].map((c, i) => ({ id: 'q' + i, tipo: 'multiple', enunciado: 'P' + i, opciones: ['1', '2', '3', '4'], correcta: c }));
+      S.pruebas.push({ id: 'pq', titulo: 'Quiz', tipo: 'prueba', grupoId: 'g1', areaId: 'a1', grado: 7, preguntas, respuestas: {} });
+      const a = alumnosDe('g1')[3];
+      return htmlHojaOMR(porId(S.pruebas, 'pq'), [{ nombre: nombreAlumno(a), numero: 4 }]);
+    });
+    // La hoja se "imprime" en una ventana oculta, se rellenan las respuestas A, B, C, D, B y se toma la foto
+    const foto = await app.evaluate(async ({ BrowserWindow }, html) => {
+      const b = new BrowserWindow({ show: false, width: 735, height: 951, useContentSize: true, autoHideMenuBar: true, webPreferences: { zoomFactor: 0.9 } });
+      b.setMenu(null);
+      await b.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+      await b.webContents.executeJavaScript(`document.querySelectorAll('.num').forEach((n, i) => { let x = n.nextElementSibling; for (let j = 0; j < 'ABCDB'.charCodeAt(i) - 65; j++) x = x.nextElementSibling; x.classList.add('llena'); x.textContent = ''; }); true`);
+      await new Promise((r) => setTimeout(r, 200));
+      const img = await b.webContents.capturePage();
+      globalThis.__tam = img.getSize();
+      b.destroy();
+      return 'data:image/jpeg;base64,' + img.toJPEG(90).toString('base64');
+    }, html);
+    await w.evaluate(() => { dialogoVincularCelular(); return generarVinculo(); });
+    const { puerto, pin } = await w.evaluate(() => ({ puerto: CEL.conexion.puerto, pin: CEL.pin }));
+    const post = async (accion, cuerpo) => { const r = await fetch(`http://127.0.0.1:${puerto}/cel/api/${accion}`, { method: 'POST', body: JSON.stringify(cuerpo) }); return { status: r.status, d: await r.json() }; };
+    const token = (await post('vincular', { pin })).d.token;
+    const r = await post('foto', { token, tipo: 'omr', pruebaId: 'pq', imagen: foto });
+    const tam = await app.evaluate(() => globalThis.__tam);
+    const esperado = await w.evaluate(() => nombreAlumno(alumnosDe('g1')[3]));
+    const guardada = await w.evaluate(() => porId(S.pruebas, 'pq').respuestas[alumnosDe('g1')[3].id]);
+    await app.close();
+    assert.strictEqual(r.status, 200, JSON.stringify(r.d) + ' ' + JSON.stringify(tam));
+    assert.strictEqual(r.d.nombre, esperado);
+    assert.deepStrictEqual([r.d.correctas, r.d.total], [4, 5]);
+    assert.strictEqual(guardada, 'ABCDB');
+    assert.deepStrictEqual(errores, []);
+  });
+
   terminar();
 })();

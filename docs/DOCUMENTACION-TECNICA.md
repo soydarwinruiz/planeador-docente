@@ -1,4 +1,4 @@
-# Documentación técnica – Planeador Docente 1.15.1
+# Documentación técnica – Planeador Docente 1.16.0
 
 Para quien quiera mantener, modificar o compilar la aplicación.
 
@@ -88,14 +88,21 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `aula.js` | Herramientas de aula |
 | `pizarra.js` | Tableros: lista, asignación a planeación/sesión/grupos/área, botones en las sesiones y en las clases de hoy, inserción de estudiantes, momentos de la sesión y objetivo, estudiante al azar, conversión de los tableros de la versión anterior. El editor es **Pizarra Local** (`src/pizarra-local/index.html`) dentro de un iframe; se comunican por `postMessage` (ver `src/pizarra-local/ORIGEN.md`) |
 | `gamificacion.js` | Gamificación |
-| `buscador.js` | Buscador, apariencia y menú personalizable |
+| `buscador.js` | Buscador, apariencia (tema, `colorMenu`, `colorAcento`, `fuente`, validados) y menú personalizable |
 | `compartir.js` | Actualizaciones, respaldo en nube, paquetes para compartir |
 | `voz.js` | Dictado por voz |
-| `configuracion.js` | Configuración, asistente inicial, nuevo año lectivo |
+| `configuracion.js` | Configuración en secciones `<details>` (`seccionConfig`, `config.apariencia.secciones`, `filtrarConfig`, `irAConfig`), asistente inicial, nuevo año lectivo |
 | `bloqueo.js` | Pantalla de bloqueo, recuperación con código, bloqueo por inactividad (también cuenta la actividad dentro de los tableros) y tarjeta de configuración |
 | `anios.js` | Años anteriores: lista, consulta (`ui.archivo = { actual, meta }`: `S` pasa a ser el año consultado, `estadoActual()` y `conAnioActual()` mantienen el guardado sobre el año en curso), archivar copia, importar desde respaldo |
-| `celular.js` | Celular del docente: vinculación (PIN de 6 dígitos, 10 min, un uso; límites por IP y totales), dispositivos en `config.celular.dispositivos` con el SHA-256 del permiso y su vencimiento, `ACCIONES_CEL` (inicio, clase, asistencia, todosPresentes, notas, nota, anotacion, puntos, pendiente, pendienteHecho, desvincular), repintado de la vista del PC y anotaciones de estudiantes |
+| `celular.js` | Celular del docente: vinculación (PIN de 6 dígitos, 10 min, un uso; límites por IP y totales), dispositivos en `config.celular.dispositivos` con el SHA-256 del permiso y su vencimiento, `ACCIONES_CEL` (inicio, clase, asistencia, todosPresentes, notas, nota, entrega, foto, anotacion, puntos, pendiente, pendienteHecho, desvincular). `foto` acepta hasta 6 MB: hoja de respuestas (se lee con `leerHojaOMR` y se registra) o trabajo de un estudiante (queda en `CEL.fotos`, en memoria, para la retroalimentación), repintado de la vista del PC y anotaciones de estudiantes |
 | `portafolio.js` | Portafolio docente: competencias del Decreto 1278, `evidenciasAutomaticas(desde, hasta)`, evidencias y reflexiones propias, Word con `generarDocxInforme` |
+| `registro-notas.js` | Registro de cambios de notas: en cada guardado `registrarCambiosNotas()` compara `S.notas` y `S.recuperaciones` con la foto anterior (`REG`) y anota `{ f, act, al, antes, despues, o, g, ar, p, n, c }` en `S.registroNotas` (máx. 40 000). `origenNotas()` marca el origen (celular, importación, rúbrica, retro, lote, restaurada, papelera). `reiniciarRegistroNotas()` al abrir, restaurar un respaldo e iniciar un año |
+| `entregas.js` | `S.entregas[actId][alId] = 'E'\|'T'\|'N'`, `actividadPendiente()` (usada en seguimiento y comunicados), pestaña de entregas y nota por lote |
+| `miclase.js` | Vista `miClase` (clase actual por horario), asistencia rápida, avance de momentos (`sesion.hechos`), proyección en pantalla completa |
+| `semana.js` | Tarjeta "Tu semana" en Inicio |
+| `banco-preguntas.js` | Vista `bancoPreguntas`: preguntas de todas las pruebas sin repetir (estado en `ui.bq`) |
+| `material.js` | Material con IA desde una sesión: guía (ficha tipo guía), quiz de salida (prueba con `dialogoIAPrueba`) y rúbrica (tarea `rubrica` de `ia.js`) |
+| `frases.js` | Frases rápidas (`config.frases`): reemplazo de `;atajo` al escribir y selector con Ctrl + Espacio |
 | `papelera.js` | Papelera: al confirmar un borrado (`confirmar()` o `iniciarPapelera()`) toma una foto de `S`; en el siguiente `guardar()` guarda solo las diferencias (`ops`: elementos que desaparecieron por `id` o clave, y valores cambiados) y las puede volver a aplicar sobre el estado actual |
 
 ## 4. Modelo de datos (`datos.json`)
@@ -145,6 +152,6 @@ npm start
 - **Firma digital (opcional):** con un certificado de firma de código (OV/EV o Azure Trusted Signing), crear los secretos `CSC_LINK` (pfx en base64) y `CSC_KEY_PASSWORD` en GitHub.
 
 ## 7. Pruebas
-`npm test` ejecuta `tests/estatico.js`, `tests/e2e-completo.js` (todas las pantallas y pestañas con un año completo; paquete con identificadores manipulados), `tests/e2e-funciones.js` (recuperaciones, clave de acceso, años anteriores, celular con una página real y portafolio) y (sintaxis y nombres globales repetidos entre los scripts de `src/`, que comparten ámbito, y funciones inexistentes en `onclick`) y `tests/e2e.js` (vistas, plantillas, claves cifradas, migración de datos anteriores, imágenes de tableros, respaldo en nube, recuperación de un `datos.json` dañado, papelera y rendimiento del guardado). En Linux: `xvfb-run -a npm test`. El flujo `.github/workflows/pruebas.yml` las corre en cada cambio, en Linux y en Windows, y la compilación de Windows corre la revisión estática antes de compilar.
+`npm test` ejecuta `tests/estatico.js`, `tests/e2e-productividad.js` (registro de notas, personalización, secciones, frases, entregas y lote, Mi clase, semana, banco de preguntas, material con IA simulada, celular con cámara y una hoja de respuestas rellenada y fotografiada), `tests/e2e-completo.js` (todas las pantallas y pestañas con un año completo; paquete con identificadores manipulados), `tests/e2e-funciones.js` (recuperaciones, clave de acceso, años anteriores, celular con una página real y portafolio) y (sintaxis y nombres globales repetidos entre los scripts de `src/`, que comparten ámbito, y funciones inexistentes en `onclick`) y `tests/e2e.js` (vistas, plantillas, claves cifradas, migración de datos anteriores, imágenes de tableros, respaldo en nube, recuperación de un `datos.json` dañado, papelera y rendimiento del guardado). En Linux: `xvfb-run -a npm test`. El flujo `.github/workflows/pruebas.yml` las corre en cada cambio, en Linux y en Windows, y la compilación de Windows corre la revisión estática antes de compilar.
 
 Las pruebas de punta a punta usan Playwright con Electron (`_electron.launch`) y una carpeta de datos aparte (`PLANEADOR_DATA_DIR`); en Linux se ejecutan con `xvfb-run`. Simulan diálogos de guardar/abrir, proveedores de IA (reemplazando el manejador IPC), celulares (Chromium con perfil de teléfono contra el servidor local), micrófono (`--use-fake-device-for-media-stream`) y fotos de hojas de respuestas (generadas, rellenadas y deformadas con Python/PIL).

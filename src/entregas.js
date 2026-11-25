@@ -53,7 +53,7 @@ function vistaEntregas(c) {
         <td>${i + 1}. ${esc(nombreAlumno(al))}</td>
         <td class="asis" style="white-space:nowrap">${Object.entries(ESTADOS_ENTREGA).map(([k, v]) => `<button class="${k === 'E' ? 'P' : k === 'T' ? 'T' : 'A'} ${x === k ? 'on' : ''}" title="${v.t}" onclick="marcarEntrega('${a.id}','${al.id}','${k}');render()">${v.ico}</button>`).join('')}</td>
         <td class="nota">${a.rubricaId ? `<button class="btn pequeno" onclick="calificarConRubrica('${a.id}','${al.id}')">${n == null ? 'Calificar' : fmtNota(n)}</button>`
-          : `<input type="number" step="0.1" class="${claseNota(n)}" value="${n == null ? '' : n}" data-fila="${i}" data-col="0" onchange="ponerNota('${a.id}','${al.id}',this)" onkeydown="navegarNotas(event,this)" oncontextmenu="event.preventDefault();verHistorialNota('${a.id}','${al.id}')">`}</td></tr>`; }).join('')}
+          : `<input type="number" step="0.1" style="width:90px" class="${claseNota(n)}" value="${n == null ? '' : n}" data-fila="${i}" data-col="0" onchange="ponerNota('${a.id}','${al.id}',this)" onkeydown="navegarNotas(event,this)" oncontextmenu="event.preventDefault();verHistorialNota('${a.id}','${al.id}')">`}</td></tr>`; }).join('')}
       </tbody></table>
       <p class="ayuda">Componente: ${esc(cr.nombre)}. Lo marcado como "no entregó" aparece en las actividades pendientes del seguimiento y en los comunicados a padres. Las entregas también se marcan desde el celular.</p>
     </div>`;

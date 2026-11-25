@@ -128,6 +128,16 @@ PIAR según el Decreto 1421: información general, entorno de salud, hogar y esc
 ### Diario de campo
 Al terminar cada clase (botón 📓 en Inicio): cómo te fue, qué se alcanzó, qué quedó pendiente y novedades. Lo pendiente aparece al planear la siguiente clase. Filtros y exportación a Word y Excel como evidencia.
 
+### Mi clase ahora (🎯)
+Al llegar al salón, pulsa **🎯 Mi clase ahora** (en Inicio o en el menú). Se abre la clase que toca según *Mi horario* (o la siguiente del día; puedes elegir otra arriba a la derecha), con:
+- **Asistencia** con un clic por estudiante (P → A → T → E) y *Marcar a los demás como presentes*.
+- **La sesión de hoy**: objetivo, pregunta y momentos, con una casilla para marcar lo que ya hiciste; las actividades con fecha de hoy y el pendiente que quedó de la clase anterior.
+- Botones para **📽️ Proyectar la clase** (objetivo y momentos en pantalla completa; flechas para avanzar, Esc para salir), el **tablero** de la sesión, **estudiante al azar**, **temporizador**, **grupos de trabajo**, la planeación y las **entregas**.
+- **✅ Terminar clase** abre el diario de campo para registrar en segundos qué se alcanzó y qué quedó pendiente.
+
+### Tu semana (en Inicio)
+Un resumen de lo que hay que resolver esta semana, con un botón para cada cosa: clases del horario sin planear, actividades con fecha cumplida sin calificar, entregas marcadas como "no entregó", estudiantes en rojo en el semáforo y tus pendientes con fecha. Se abre solo los lunes; el resto de la semana queda plegado.
+
 ### Asistencia
 P (presente), A (ausente), T (tarde), E (excusa) por clase; *Todos presentes*; resumen con % de asistencia; Excel. También se toma desde el celular (ver *Celular del docente*).
 
@@ -135,7 +145,7 @@ P (presente), A (ausente), T (tarde), E (excusa) por clase; *Todos presentes*; r
 Tu celular funciona como una extensión del computador durante la clase, sin instalar nada y sin internet:
 1. En el computador: **Configuración → Celular del docente → ＋ Vincular un celular**. Elige cuánto tiempo queda autorizado (1 hora, solo hoy, 7 días, 30 días, hasta el fin del periodo o hasta que lo desautorices).
 2. Conecta el celular a la **misma red** que el computador, escanea el código QR y escribe el **PIN** de 6 dígitos (sirve una vez durante 10 minutos).
-3. En el celular aparecen **tus clases de hoy** (de *Mi horario*) y puedes abrir cualquier grupo, área y fecha. Pestañas: **✅ Asistencia** (todos empiezan sin marcar; *Marcar a los demás como presentes*), **📊 Notas** (por actividad de la programación evaluativa), **📝 Anotar** (anotación positiva, académica, de convivencia o general de un estudiante, o del grupo para el diario de campo; puedes dictar con el micrófono del teclado), **🏆 Puntos** de gamificación, **📖 Mi clase** (objetivo y momentos de la sesión) y **🎲 Azar** (sin repetir y sin los ausentes). En el inicio también están tus pendientes.
+3. En el celular aparecen **tus clases de hoy** (de *Mi horario*) y puedes abrir cualquier grupo, área y fecha. Pestañas: **✅ Asistencia** (todos empiezan sin marcar; *Marcar a los demás como presentes*), **📊 Notas** (por actividad de la programación evaluativa), **📝 Anotar** (anotación positiva, académica, de convivencia o general de un estudiante, o del grupo para el diario de campo; puedes dictar con el micrófono del teclado), **🏆 Puntos** de gamificación, **📖 Clase** (objetivo y momentos de la sesión) y **🎲 Azar** (sin repetir y sin los ausentes). En **📊 Notas**, el botón de la izquierda de cada estudiante marca la **entrega** (✔ entregó, ⏰ tarde, ✖ no entregó). En **📷 Cámara**: fotografía una **hoja de respuestas** de una prueba y se califica al instante (aparece el nombre y la nota), o fotografía el **trabajo de un estudiante** para hacer en el computador la retroalimentación con IA (las fotos de trabajos no se guardan hasta que las usas). En el inicio también están tus pendientes.
 
 Todo se guarda al instante en el computador. Si la señal se cae, el celular guarda lo marcado y lo envía al volver ("⏳ por enviar"). El computador debe estar encendido con el programa abierto. Si la red del colegio no deja que los equipos se vean, activa el **punto de acceso** del celular y conecta el computador a él. Si pierdes el celular, desautorízalo en Configuración. Las anotaciones de cada estudiante se ven en *Seguimiento del estudiante*.
 
@@ -143,6 +153,8 @@ Todo se guarda al instante en el computador. Si la señal se cae, el celular gua
 - **📅 Programación evaluativa:** componentes con porcentaje y actividades con fecha, técnica e instrumento. Word para padres; copiar a otros grupos.
 - **📊 Planilla de notas:** Enter baja al siguiente estudiante; notas en rojo bajo la aprobación. Botones: **✍️ Retroalimentación IA**, **⬇️ Retroalimentaciones** (Word), **📥 Importar notas** (Excel, Google Forms o Classroom; convierte 8/10 a la escala; si un estudiante envió dos veces, queda el último).
 - **🔒 Protección:** una actividad o componente con calificaciones **no se puede eliminar**. Para borrar una actividad creada por error, primero **🧹 Vaciar notas** en *Editar actividad*.
+- **📥 Entregas y nota por lote:** elige la actividad y marca quién **entregó**, quién **entregó tarde** y quién **no entregó** (o usa *Todos entregaron* y *Los que faltan: no entregaron*). Luego pon una **nota por lote**: a los seleccionados, a los que entregaron, a los que entregaron tarde, a los que no entregaron o a todos los que no tienen nota, sin cambiar las notas que ya están (opcional). Lo marcado como "no entregó" aparece en el seguimiento y en el comunicado de actividades pendientes.
+- **🕘 Registro de cambios:** cada vez que una nota se pone, se cambia o se borra (en el computador, desde el celular, al importar, con rúbrica, por lote o al eliminar una actividad) queda registrada con fecha y hora, nota anterior, nota nueva y desde dónde se hizo. Filtra por estudiante, fechas u origen y exporta a Excel. En la planilla, **clic derecho sobre una nota** muestra su historial y permite volver a un valor anterior. Sirve ante reclamos y para recuperar una nota borrada por error.
 - **📈 Consolidado anual**, con la columna de **recuperación final** del año.
 - **Recuperaciones (SIEE):** en *Configuración → Escala de valoración* eliges cómo se aplican (la nota de recuperación reemplaza la del periodo, se promedia, o un porcentaje de cada una) y la nota máxima después de recuperar (por ejemplo 3,0). En la planilla aparece la columna **Recup.** para quienes no alcanzan la nota aprobatoria; la nota con recuperación se marca con **R** y nunca baja la que el estudiante ya tenía. Se usa en boletín, informes, seguimiento y exportaciones.
 - **🆘 Planes de apoyo:** para quienes están en Bajo, con dificultades, desempeños, actividades (sugeridas con IA), compromisos y firmas.
@@ -162,13 +174,23 @@ Al iniciar un año lectivo, el que termina se **archiva completo**. Aquí lo abr
 ### Portafolio docente (🎓)
 Evidencias para la **evaluación anual de desempeño (Decreto 1278)** y la ECDF, organizadas por competencia: gestión académica (dominio curricular, planeación, pedagógica y didáctica, evaluación), administrativa, comunitaria y comportamentales. El programa reúne solo las cifras de tu trabajo (planes de área, mallas, planeaciones, programación evaluativa, instrumentos, pruebas, planes de apoyo, recuperaciones, asistencia, diario, comunicados…), sin nombres de estudiantes. Agrega tus propias evidencias (con dónde está el soporte) y una reflexión por competencia, y **⬇️ Exporta a Word** con firmas. Puedes filtrar por fechas.
 
+### Banco de preguntas
+En *Pruebas y talleres* → **📚 Banco de preguntas**: todas las preguntas de tus pruebas y talleres (también las de paquetes recibidos), sin repetir, con filtros por área, grado, tipo y texto. Marca las que quieras y **crea una prueba nueva**, o desde una prueba abierta usa **📚 Traer del banco** para agregarlas.
+
+### Material con IA para una sesión
+En cada sesión de la planeación, **✨ Material** propone, a partir de lo que planeaste (objetivo, desempeños y momentos): una **guía del estudiante** (ficha imprimible), un **quiz de salida** de 5 preguntas (prueba que se aplica en papel o por QR) o una **rúbrica** de la actividad (queda en tus instrumentos). Revisa siempre lo que propone la IA.
+
+### Frases rápidas
+Escribe **;atajo** seguido de un espacio en cualquier campo y se reemplaza por la frase guardada (por ejemplo, `;refuerzo` → "Debe reforzar los temas vistos…"). Con **Ctrl + Espacio** eliges de la lista. Créalas y edítalas en *Configuración → Frases rápidas*. También funcionan en el celular.
+
 ### Comunicados a padres
 Tipos: bajo desempeño, inasistencias, actividades pendientes, plan de apoyo, citación, felicitación (y los que crees en *Editar textos*). **✨ Sugerir** marca a quién enviar. Cada mensaje es editable: **🟢 WhatsApp** (abre el chat con el texto listo), **✉️ Correo**, **📋 Copiar** o **⬇️ Word** con desprendible para firma. Queda el historial.
 
 ## 5. Configuración
+Las opciones están agrupadas en **secciones desplegables** (Institución y docente, Evaluación, Apariencia y menú, Frases rápidas, Inteligencia artificial, Seguridad y celular, Respaldos, Año lectivo); el programa recuerda cuáles dejaste abiertas, y el **buscador** de arriba abre la sección donde está lo que buscas.
 - Datos institucionales, docente, coordinador, año lectivo.
 - **Hoja membrete:** logos, color, líneas (NIT, DANE…), lema y pie de página.
-- **Apariencia:** tema claro, oscuro o como el sistema; tamaño de letra; **corrector de ortografía** (subraya en rojo; clic derecho sobre la palabra para ver sugerencias o agregarla al diccionario).
+- **Apariencia:** tema claro, oscuro o como el sistema; **color de la barra lateral**, **color de botones y resaltados** y **tipo de letra** (con vista previa y botón para volver a lo original); tamaño de letra; **corrector de ortografía** (subraya en rojo; clic derecho sobre la palabra para ver sugerencias o agregarla al diccionario).
 - **🧭 Menú lateral:** desmarca para ocultar un módulo (queda atenuado en la lista y lo vuelves a mostrar marcándolo); ordena arrastrando o con ▲▼. Ocultar no borra datos.
 - **🔄 Actualizaciones**, **☁️ Respaldo en la nube**, **🤝 Compartir con otros docentes**.
 - SIEE: escala, desempeños, periodos y porcentajes, componentes de evaluación por defecto.

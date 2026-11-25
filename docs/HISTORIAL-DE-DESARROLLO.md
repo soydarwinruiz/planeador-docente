@@ -224,6 +224,20 @@ A pedido del docente (*"revisa nuevamente todo el código… que todo esté func
 - Mensaje claro cuando la respuesta de la IA queda incompleta por larga.
 - Prueba nueva que recorre todas las pantallas y pestañas con un año completo de datos, y otra con un paquete malicioso. Las pruebas corren ahora también en Windows en GitHub.
 
+### Versión 1.16.0 — Productividad en el aula (25 de noviembre)
+El docente pidió el registro de cambios de notas, más personalización y una configuración por secciones, y aprobó *"vamos con todo"* para las demás propuestas de productividad:
+- **Registro de cambios de notas** (antes, después, fecha, origen), historial con clic derecho y restaurar.
+- **Personalización:** color de la barra lateral, color de acento y tipo de letra.
+- **Configuración por secciones desplegables** con buscador.
+- **🎯 Mi clase ahora:** la clase que toca con asistencia, sesión con avance por momentos, proyección, herramientas de aula y cierre con el diario.
+- **Entregas y nota por lote**, conectadas con pendientes y comunicados.
+- **Frases rápidas** (;atajo y Ctrl + Espacio), también en el celular.
+- **Tu semana** en Inicio.
+- **Banco de preguntas** reutilizable.
+- **Material con IA** desde cada sesión: guía, quiz de salida y rúbrica.
+- **Cámara del celular:** hojas de respuesta calificadas al instante y fotos de trabajos para la retroalimentación con IA; entregas desde el celular.
+- Correcciones encontradas por las pruebas: el banco de preguntas y el banco pedagógico compartían el estado de sus filtros; calificar una hoja por foto fallaba si la cámara del computador no estaba abierta.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo

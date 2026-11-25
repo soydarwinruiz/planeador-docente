@@ -49,16 +49,15 @@ Verificado sin cambios necesarios: el uso de la API de Claude (modelo vigente, r
 
 ## 2. Mejoras a lo que ya existe
 
-### Lo que se hizo en la 1.15
-Celular del docente, clave de acceso, años anteriores, recuperaciones según el SIEE, portafolio docente, nuevo año a elección y corrector de ortografía.
+### Lo que ya se hizo
+- 1.15: celular del docente, clave de acceso, años anteriores, recuperaciones según el SIEE, portafolio docente, nuevo año a elección y corrector de ortografía.
+- 1.16: registro de cambios de notas, personalización, configuración por secciones, Mi clase ahora, entregas y nota por lote, frases rápidas, Tu semana, banco de preguntas, material con IA y cámara del celular.
 
 ### Celular del docente
-- **Fotos con la cámara del celular**: leer las hojas de respuesta de las pruebas (hoy se hace con la cámara o fotos del PC) y fotografiar trabajos para la retroalimentación con IA. Funciona sin instalar nada.
 - **Calificar con rúbrica** desde el celular (hoy solo notas numéricas).
 - Ver el **semáforo de riesgo** y el resumen del estudiante antes de hablar con un acudiente.
 
 ### Evaluación
-- **Bitácora de cambios de notas** (cuándo y qué valor tenía antes): respaldo ante reclamos de acudientes.
 - **Recuperaciones conectadas con los planes de apoyo**: al calificar el plan, que su nota pase a la columna de recuperación, y un informe de recuperaciones para la comisión de evaluación.
 - **Exportar con el formato de la plataforma institucional** (columnas configurables y plantillas guardadas) para pegar las notas sin reescribirlas.
 - **Análisis por pregunta** en las pruebas tipo Saber: dificultad de cada ítem y qué opción incorrecta eligió la mayoría.
@@ -105,7 +104,8 @@ Celular del docente, clave de acceso, años anteriores, recuperaciones según el
 | 1.14 (hecha) | Consolidación: corrección del boletín y los comunicados, recuperación automática, respaldos, rendimiento de tableros, claves cifradas, pruebas automáticas |
 | 1.15 (hecha) | Años anteriores, clave de acceso, recuperaciones según el SIEE, celular del docente, portafolio docente, nuevo año a elección, corrector de ortografía |
 | 1.15.1 (hecha) | Segunda revisión: protección contra identificadores manipulados en paquetes y respaldos, PDF sin ruta libre, buscadores, avisos de la IA, pruebas en Windows |
-| 1.16 | Observador del estudiante y convivencia + bitácora de cambios de notas + comisión de evaluación y promoción |
-| 1.17 | Cámara del celular (hojas de respuesta y trabajos) + análisis por pregunta + exportar al formato de la plataforma institucional |
-| 1.18 | IA en vivo con cancelar, perfil institucional y modelo por tarea |
+| 1.16 (hecha) | Registro de cambios de notas, personalización, configuración por secciones, Mi clase ahora, entregas y nota por lote, frases rápidas, Tu semana, banco de preguntas, material con IA y cámara del celular |
+| 1.17 | Observador del estudiante y convivencia + comisión de evaluación y promoción |
+| 1.18 | Análisis por pregunta + exportar al formato de la plataforma institucional |
+| 1.19 | IA en vivo con cancelar, perfil institucional y modelo por tarea |
 | 2.0 | Módulos JavaScript sin `onclick`, almacenamiento dividido o SQLite, sincronización entre equipos |

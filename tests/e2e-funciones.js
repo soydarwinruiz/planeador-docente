@@ -216,8 +216,8 @@ async function sembrarNotas(w) {
     await tel.click('button:has-text("Abrir")');
     await tel.waitForSelector('.asis');
     await tel.locator('.est').nth(4).locator('button.T').click();
-    await tel.click('text=Mi clase');
-    await tel.click('text=Azar');
+    await tel.click('nav >> text=Clase');
+    await tel.click('nav >> text=Azar');
     await tel.click('text=Elegir estudiante');
     await w.waitForFunction(() => S.asistencia['g1|a1'][hoyISO()][alumnosDe('g1')[4].id] === 'T', null, { timeout: 10000 });
     // vencimiento

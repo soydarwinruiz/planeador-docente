@@ -13,7 +13,8 @@ function bancoPreguntas() {
   return r;
 }
 RENDERS.bancoPreguntas = ({ destino } = {}) => {
-  const f = (ui.bp ||= { texto: '', areaId: '', grado: '', tipo: '', sel: {} });
+  const f = (ui.bq ||= { texto: '', areaId: '', grado: '', tipo: '', sel: {} });
+  f.sel ||= {};
   if (destino !== undefined) f.destino = destino;
   const todas = bancoPreguntas();
   const t = normalizar(f.texto);
@@ -25,21 +26,21 @@ RENDERS.bancoPreguntas = ({ destino } = {}) => {
     <div class="acciones"><button class="btn" onclick="ir(${destinoP ? `'pruebaEditor',{id:'${destinoP.id}'}` : "'pruebas'"})">← Volver</button>
       <button class="btn primario" onclick="usarSeleccionBanco()" ${nSel ? '' : 'disabled'}>${destinoP ? `＋ Agregar ${nSel} a la prueba` : `＋ Crear prueba con ${nSel}`}</button></div></div>
   <div class="filtros tarjeta">
-    <div style="flex:1;min-width:200px"><label>Buscar</label><input value="${esc(f.texto)}" placeholder="Tema, palabra, competencia…" oninput="ui.bp.texto=this.value;clearTimeout(window._tbp);window._tbp=setTimeout(()=>{render();reenfocar('.filtros input')},300)"></div>
-    <div><label>Área</label><select onchange="ui.bp.areaId=this.value;render()">${opcionesAreas(f.areaId, 'Todas')}</select></div>
-    <div><label>Grado</label><select onchange="ui.bp.grado=this.value;render()"><option value="">Todos</option>${GRADOS.map((g) => `<option value="${g}" ${String(f.grado) === String(g) ? 'selected' : ''}>${g}°</option>`).join('')}</select></div>
-    <div><label>Tipo</label><select onchange="ui.bp.tipo=this.value;render()"><option value="">Todas</option><option value="multiple" ${f.tipo === 'multiple' ? 'selected' : ''}>Selección múltiple</option><option value="abierta" ${f.tipo === 'abierta' ? 'selected' : ''}>Abiertas</option></select></div>
+    <div style="flex:1;min-width:200px"><label>Buscar</label><input value="${esc(f.texto)}" placeholder="Tema, palabra, competencia…" oninput="ui.bq.texto=this.value;clearTimeout(window._tbp);window._tbp=setTimeout(()=>{render();reenfocar('.filtros input')},300)"></div>
+    <div><label>Área</label><select onchange="ui.bq.areaId=this.value;render()">${opcionesAreas(f.areaId, 'Todas')}</select></div>
+    <div><label>Grado</label><select onchange="ui.bq.grado=this.value;render()"><option value="">Todos</option>${GRADOS.map((g) => `<option value="${g}" ${String(f.grado) === String(g) ? 'selected' : ''}>${g}°</option>`).join('')}</select></div>
+    <div><label>Tipo</label><select onchange="ui.bq.tipo=this.value;render()"><option value="">Todas</option><option value="multiple" ${f.tipo === 'multiple' ? 'selected' : ''}>Selección múltiple</option><option value="abierta" ${f.tipo === 'abierta' ? 'selected' : ''}>Abiertas</option></select></div>
   </div>
-  ${lista.length ? lista.slice(0, 300).map((x) => `<label class="tarjeta bp-preg ${f.sel[x.q.id] ? 'sel' : ''}"><input type="checkbox" ${f.sel[x.q.id] ? 'checked' : ''} onchange="ui.bp.sel['${x.q.id}']=this.checked;render()">
+  ${lista.length ? lista.slice(0, 300).map((x) => `<label class="tarjeta bp-preg ${f.sel[x.q.id] ? 'sel' : ''}"><input type="checkbox" ${f.sel[x.q.id] ? 'checked' : ''} onchange="ui.bq.sel['${x.q.id}']=this.checked;render()">
       <div><div class="ayuda">${esc(nombreArea(x.areaId))}${x.grado ? ' · ' + esc(x.grado) + '°' : ''} · ${x.q.tipo === 'abierta' ? 'Abierta' : 'Selección múltiple'}${x.q.competencia ? ' · ' + esc(x.q.competencia) : ''} · de "${esc(x.p.titulo || 'Sin título')}"</div>
       ${x.q.contexto ? `<div class="bp-contexto">${esc(x.q.contexto)}</div>` : ''}<b>${esc(x.q.enunciado)}</b>
       ${x.q.tipo !== 'abierta' ? `<ol type="A">${(x.q.opciones || []).map((o, i) => `<li ${String.fromCharCode(65 + i) === x.q.correcta ? 'style="font-weight:600;color:var(--verde)"' : ''}>${esc(o)}</li>`).join('')}</ol>` : ''}</div></label>`).join('')
     : '<div class="tarjeta vacio">No hay preguntas con estos filtros. Las preguntas de cada prueba que crees (a mano o con IA) aparecen aquí.</div>'}
   ${lista.length > 300 ? `<p class="ayuda">Se muestran 300 de ${lista.length}. Usa los filtros.</p>` : ''}`;
 };
-function abrirBancoPreguntas(destino = '') { ui.bp = { texto: '', areaId: '', grado: '', tipo: '', sel: {} }; ir('bancoPreguntas', { destino }); }
+function abrirBancoPreguntas(destino = '') { ui.bq = { texto: '', areaId: '', grado: '', tipo: '', sel: {} }; ir('bancoPreguntas', { destino }); }
 function usarSeleccionBanco() {
-  const f = ui.bp;
+  const f = ui.bq;
   const elegidas = bancoPreguntas().filter((x) => f.sel[x.q.id]);
   if (!elegidas.length) return;
   const copias = elegidas.map((x) => ({ ...structuredClone(x.q), id: uid() }));
@@ -52,7 +53,7 @@ function usarSeleccionBanco() {
   }
   p.preguntas.push(...copias);
   tocarPrueba(p);
-  ui.bp.sel = {};
+  ui.bq.sel = {};
   aviso(`${copias.length} pregunta(s) agregadas`, 'ok');
   ir('pruebaEditor', { id: p.id });
 }
