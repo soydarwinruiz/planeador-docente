@@ -27,7 +27,7 @@ function variablesComunicado(c, a) {
   const pl = buscarPlanilla(c.grupoId, c.areaId, c.periodoId);
   const n = pl ? notaFinal(pl, a.id) : null;
   const hoy = hoyISO();
-  const pend = pl ? pl.criterios.flatMap((cr) => cr.actividades).filter((x) => x.fecha && x.fecha <= hoy && nota(x.id, a.id) == null) : [];
+  const pend = pl ? pl.criterios.flatMap((cr) => cr.actividades).filter((x) => actividadPendiente(x, a.id, hoy)) : [];
   const asis = asistenciaAlumno(a.id, c.grupoId, per);
   const plan = planApoyoDe(a.id, c.areaId, c.periodoId);
   return {

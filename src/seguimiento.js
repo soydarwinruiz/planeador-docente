@@ -139,7 +139,7 @@ function vistaAlumno(c) {
   for (const ar of areas) {
     const pl = buscarPlanilla(c.grupoId, ar.id, c.periodoId);
     if (!pl) continue;
-    for (const cr of pl.criterios) for (const a of cr.actividades) if (a.fecha && a.fecha <= hoy && nota(a.id, al.id) == null) pendientes.push({ ar, a });
+    for (const cr of pl.criterios) for (const a of cr.actividades) if (actividadPendiente(a, al.id, hoy)) pendientes.push({ ar, a });
   }
   const bajas = areas.filter((ar) => { const pl = buscarPlanilla(c.grupoId, ar.id, c.periodoId); const n = pl ? notaFinal(pl, al.id) : null; return n != null && redondear(n) < +S.config.notaAprobacion; });
   const serie = pers.map((p) => ({ etiqueta: p.nombre.replace(/ periodo$/i, '').replace(/^Periodo /i, 'P'), nombre: p.nombre, v: promedioPeriodoAlumno(al.id, c.grupoId, p.id, areas) }));

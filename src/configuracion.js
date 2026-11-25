@@ -283,7 +283,7 @@ function aplicarNuevoAnio(op) {
   if (!op.portafolio) S.portafolio = { evidencias: [], reflexiones: {} };
 
   // Datos propios del año: siempre se vacían (quedan en el año archivado)
-  Object.assign(S, { asistencia: {}, notas: {}, notasRubrica: {}, recuperaciones: {}, registroNotas: [], anotaciones: [], observaciones: {}, diario: [], comunicadosEnviados: [],
+  Object.assign(S, { asistencia: {}, notas: {}, notasRubrica: {}, recuperaciones: {}, registroNotas: [], entregas: {}, anotaciones: [], observaciones: {}, diario: [], comunicadosEnviados: [],
     alertasOcultas: [], planesApoyo: [], gamificacion: {}, retro: {}, informes: {} });
   S.config.anio = anio;
   S.config.periodos.forEach((p) => { p.inicio = correrAnio(p.inicio); p.fin = correrAnio(p.fin); });

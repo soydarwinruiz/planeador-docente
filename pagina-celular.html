@@ -28,7 +28,8 @@ nav.pestanas button span{font-size:21px} nav.pestanas button.on{color:#1f4e79;fo
 .est .n{flex:1;min-width:0;font-size:15px;line-height:1.2} .est .n small{color:#5f6b7d}
 .asis{display:flex;gap:5px} .asis button{width:42px;height:42px;padding:0;font-weight:800;background:#eef1f5;color:#5f6b7d}
 .asis .P.on{background:#2e7d32;color:#fff} .asis .A.on{background:#c62828;color:#fff} .asis .T.on{background:#e67e22;color:#fff} .asis .E.on{background:#6a4c93;color:#fff}
-.nota{width:80px;text-align:center;font-weight:700} .nota.bajo{color:#c62828;border-color:#f3b4b4}
+.nota{width:80px;text-align:center;font-weight:700}
+.ent{width:42px;height:42px;padding:0;background:#eef1f5;color:#5f6b7d;font-size:17px}.ent.E{background:#2e7d32;color:#fff}.ent.T{background:#e67e22;color:#fff}.ent.N{background:#c62828;color:#fff} .nota.bajo{color:#c62828;border-color:#f3b4b4}
 .cuenta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px} .cuenta span{background:#eef1f5;border-radius:8px;padding:4px 8px;font-size:13px}
 .chips{display:flex;flex-wrap:wrap;gap:6px} .chips button{background:#eef1f5;color:#16202c;padding:9px 12px;font-size:14px} .chips button.on{background:#2e75b6;color:#fff}
 .azar{font-size:34px;font-weight:800;text-align:center;padding:30px 10px;min-height:120px;color:#1f4e79}
@@ -165,7 +166,7 @@ async function recargarClase() {
   dibujarPestanas(); dibujar();
 }
 function volver() { cargarInicio(); }
-const PESTANAS = [['asistencia', '✅', 'Asistencia'], ['notas', '📊', 'Notas'], ['anotar', '📝', 'Anotar'], ['puntos', '🏆', 'Puntos'], ['clase', '📖', 'Mi clase'], ['azar', '🎲', 'Azar']];
+const PESTANAS = [['asistencia', '✅', 'Lista'], ['notas', '📊', 'Notas'], ['camara', '📷', 'Cámara'], ['anotar', '📝', 'Anotar'], ['puntos', '🏆', 'Puntos'], ['clase', '📖', 'Clase'], ['azar', '🎲', 'Azar']];
 function dibujarPestanas() {
   const p = $('#pestanas'); p.hidden = false;
   p.innerHTML = PESTANAS.map(([k, i, t]) => `<button class="${pestana === k ? 'on' : ''}" onclick="pestana='${k}';dibujarPestanas();dibujar()"><span>${i}</span>${t}</button>`).join('');
@@ -173,7 +174,7 @@ function dibujarPestanas() {
 function dibujar() {
   const d = ctx.datos;
   if (!d.alumnos.length) { $('#app').innerHTML = '<div class="tarjeta">Este grupo no tiene estudiantes.</div>'; return; }
-  ({ asistencia: vAsistencia, notas: vNotas, anotar: vAnotar, puntos: vPuntos, clase: vClase, azar: vAzar })[pestana]();
+  ({ asistencia: vAsistencia, notas: vNotas, camara: vCamara, anotar: vAnotar, puntos: vPuntos, clase: vClase, azar: vAzar })[pestana]();
 }
 
 function vAsistencia() {
@@ -210,11 +211,75 @@ async function vNotas() {
   for (const x of cola) if (x.accion === 'nota' && x.cuerpo.actividadId === actividadSel) notasAct[x.cuerpo.alumnoId] = x.cuerpo.valor;
   const esc_ = info.escala;
   $('#lista-notas').innerHTML = act.rubrica ? '<p class="ayuda">Esta actividad se califica con rúbrica: hazlo en el computador.</p>'
-    : d.alumnos.map((a, i) => { const n = notasAct[a.id]; return `<div class="est"><div class="n">${i + 1}. ${esc(a.nombre)}</div>
+    : d.alumnos.map((a, i) => { const n = notasAct[a.id]; return `<div class="est"><div class="n">${i + 1}. ${esc(a.nombre)}</div>${botonEntrega(a.id)}
       <input class="nota ${n !== '' && n != null && +String(n).replace(',', '.') < esc_.aprobacion ? 'bajo' : ''}" inputmode="decimal" value="${n ?? ''}" data-i="${i}" placeholder="—"
         onchange="ponerNota('${a.id}',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.querySelector('[data-i=&quot;${i + 1}&quot;]')?.focus()}"></div>`; }).join('')
-      + `<p class="ayuda">Escala ${esc_.min} a ${esc_.max}. Se guarda al salir de cada casilla.</p>`;
+      + `<p class="ayuda">Escala ${esc_.min} a ${esc_.max}. Se guarda al salir de cada casilla. El botón de la izquierda marca la entrega: — sin marcar, ✔ entregó, ⏰ tarde, ✖ no entregó.</p>`;
 }
+const CICLO_ENTREGA = ['', 'E', 'T', 'N'], ICONO_ENTREGA = { '': '—', E: '✔', T: '⏰', N: '✖' };
+function botonEntrega(alumnoId) {
+  const e = (ctx.datos.entregas[actividadSel] || {})[alumnoId] || '';
+  return `<button class="ent ${e}" title="Entrega" onclick="cambiarEntrega('${alumnoId}',this)">${ICONO_ENTREGA[e]}</button>`;
+}
+function cambiarEntrega(alumnoId, boton) {
+  const m = (ctx.datos.entregas[actividadSel] ||= {});
+  const sig = CICLO_ENTREGA[(CICLO_ENTREGA.indexOf(m[alumnoId] || '') + 1) % CICLO_ENTREGA.length];
+  if (sig) m[alumnoId] = sig; else delete m[alumnoId];
+  boton.className = 'ent ' + sig; boton.textContent = ICONO_ENTREGA[sig];
+  enviar('entrega', { actividadId: actividadSel, alumnoId, estado: sig });
+}
+
+// ---------- Cámara: hojas de respuesta y trabajos ----------
+let cam = { modo: 'omr', pruebaId: '', alumnoId: '', resultados: [] };
+function vCamara() {
+  const d = ctx.datos;
+  if (!cam.pruebaId && d.pruebas.length) cam.pruebaId = d.pruebas[0].id;
+  $('#app').innerHTML = `<div class="tarjeta"><div class="chips"><button class="${cam.modo === 'omr' ? 'on' : ''}" onclick="cam.modo='omr';vCamara()">🧾 Hoja de respuestas</button><button class="${cam.modo === 'trabajo' ? 'on' : ''}" onclick="cam.modo='trabajo';vCamara()">📄 Trabajo de un estudiante</button></div>
+    ${cam.modo === 'omr' ? (d.pruebas.length ? `<label>Prueba</label><select onchange="cam.pruebaId=this.value">${d.pruebas.map((p) => `<option value="${p.id}" ${p.id === cam.pruebaId ? 'selected' : ''}>${esc(p.titulo)} (${p.n} preg.)</option>`).join('')}</select>
+      <p class="ayuda">Usa las hojas de respuesta que imprime el programa. Toma la foto de frente, con buena luz y la hoja completa: se califica al instante.</p>`
+      : '<p class="ayuda">Este grupo no tiene pruebas de selección múltiple. Créalas en el computador (Pruebas y talleres).</p>')
+    : `<label>Estudiante</label><select onchange="cam.alumnoId=this.value">${d.alumnos.map((a) => `<option value="${a.id}" ${a.id === cam.alumnoId ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('')}</select>
+      <label>Actividad (opcional)</label><select id="cam-act"><option value="">—</option>${d.actividades.map((a) => `<option value="${a.id}">${esc(a.componente)} · ${esc(a.nombre)}</option>`).join('')}</select>
+      <p class="ayuda">La foto llega al computador para la retroalimentación con IA.</p>`}
+    <label class="primario ancho" style="display:block;text-align:center;padding:14px;border-radius:12px;margin-top:10px;color:#fff;${cam.modo === 'omr' && !d.pruebas.length ? 'opacity:.4;pointer-events:none' : ''}">📷 Tomar foto<input type="file" accept="image/*" capture="environment" hidden onchange="enviarFoto(this)"></label>
+    <div id="cam-estado" class="ayuda" style="margin-top:10px"></div></div>
+    ${cam.resultados.length ? `<div class="tarjeta"><h2>Calificadas</h2>${cam.resultados.map((r) => `<div class="est"><div class="n">${esc(r.nombre)}<br><small>${r.correctas} de ${r.total}${r.multiples ? ' · ⚠ ' + r.multiples + ' con doble marca' : ''}</small></div><b style="font-size:20px">${esc(r.nota)}</b></div>`).join('')}</div>` : ''}`;
+  if (cam.modo === 'trabajo' && !cam.alumnoId && d.alumnos[0]) cam.alumnoId = d.alumnos[0].id;
+}
+function reducirFoto(archivo, max = 1600) {
+  return new Promise((ok, mal) => {
+    const url = URL.createObjectURL(archivo), img = new Image();
+    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.85)); };
+    img.onerror = () => { URL.revokeObjectURL(url); mal(new Error('No se pudo abrir la foto')); };
+    img.src = url;
+  });
+}
+async function enviarFoto(input) {
+  const f = input.files[0]; input.value = '';
+  if (!f) return;
+  const est = $('#cam-estado');
+  est.textContent = '⏳ Enviando la foto al computador…';
+  try {
+    const imagen = await reducirFoto(f, cam.modo === 'omr' ? 1800 : 1600);
+    const cuerpo = cam.modo === 'omr' ? { tipo: 'omr', pruebaId: cam.pruebaId, imagen } : { tipo: 'trabajo', grupoId: ctx.grupoId, alumnoId: cam.alumnoId, actividadId: $('#cam-act')?.value || '', imagen };
+    const r = await api('foto', cuerpo);
+    if (cam.modo === 'omr') { cam.resultados.unshift(r); vCamara(); $('#cam-estado').innerHTML = `✔ <b>${esc(r.nombre)}</b>: ${esc(r.nota)} (${r.correctas} de ${r.total}). Toma la siguiente.`; if (navigator.vibrate) navigator.vibrate(80); }
+    else { est.textContent = '✔ Foto enviada al computador. Abre la retroalimentación con IA allí.'; }
+  } catch (e) { est.textContent = '⚠ ' + e.message; }
+}
+
+// ---------- Frases rápidas: ";atajo" + espacio ----------
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (!info?.frases?.length || !(el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type === 'text')) || e.inputType === undefined) return;
+  const fin = el.selectionStart;
+  const m = /(^|[\s(¿¡"]);([\p{L}\d_-]{1,30})([ \n])$/u.exec(el.value.slice(Math.max(0, fin - 40), fin));
+  if (!m) return;
+  const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const f = info.frases.find((x) => norm(x.atajo) === norm(m[2]));
+  if (f) el.setRangeText(f.texto + m[3], fin - m[2].length - 2, fin, 'end');
+});
 function ponerNota(alumnoId, input) {
   const v = input.value.replace(',', '.').trim(); const e = info.escala;
   if (v !== '' && (isNaN(+v) || +v < e.min || +v > e.max)) { aviso(`La nota debe estar entre ${e.min} y ${e.max}`); input.value = notasAct[alumnoId] ?? ''; return; }

@@ -77,10 +77,10 @@ function preguntasPara(e) {
 function aOriginal(e, qid, letraMostrada) { const i = LETRAS.indexOf(letraMostrada); return i < 0 ? '' : LETRAS[e.perm[qid][i]]; }
 function aMostrada(e, qid, letraOriginal) { const i = LETRAS.indexOf(letraOriginal); return i < 0 ? '' : LETRAS[e.perm[qid].indexOf(i)]; }
 
-function leerCuerpo(req) {
+function leerCuerpo(req, max = 100000) {
   return new Promise((res, rej) => {
     let d = '';
-    req.on('data', (c) => { d += c; if (d.length > 100000) { req.destroy(); rej(new Error('demasiado grande')); } });
+    req.on('data', (c) => { d += c; if (d.length > max) { req.destroy(); rej(new Error('demasiado grande')); } });
     req.on('end', () => { try { res(d ? JSON.parse(d) : {}); } catch (e) { rej(e); } });
   });
 }
@@ -107,7 +107,8 @@ async function atender(req, res) {
       }
       const m = url.pathname.match(/^\/cel\/api\/([a-zA-Z]+)$/);
       if (req.method !== 'POST' || !m) return json(res, 404, { error: 'No encontrado' });
-      const r = await pedirAInterfaz(m[1], await leerCuerpo(req), req.socket.remoteAddress || '');
+      // Las fotos (hojas de respuesta, trabajos) llegan ya reducidas por el celular: se aceptan hasta 6 MB
+      const r = await pedirAInterfaz(m[1], await leerCuerpo(req, m[1] === 'foto' ? 6000000 : 100000), req.socket.remoteAddress || '');
       return json(res, r.codigo, r.datos);
     }
     if (!sesion) return json(res, 503, { error: 'No hay ninguna prueba abierta en este momento.' });

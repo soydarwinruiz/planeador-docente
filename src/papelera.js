@@ -17,7 +17,7 @@ const PAPELERA_NOMBRES = {
   planesApoyo: 'planes de apoyo', piar: 'PIAR', observaciones: 'observaciones', diario: 'diario de campo', pendientes: 'pendientes',
   pruebas: 'pruebas y talleres', gamificacion: 'gamificación', fichas: 'fichas', retro: 'retroalimentación', pizarras: 'tableros',
   config: 'configuración', horario: 'horario', comunicadosEnviados: 'comunicados',
-  recuperaciones: 'recuperaciones', anotaciones: 'anotaciones', portafolio: 'portafolio',
+  recuperaciones: 'recuperaciones', entregas: 'entregas', registroNotas: 'registro de notas', anotaciones: 'anotaciones', portafolio: 'portafolio',
 };
 
 function textoSinPapelera(estado) { return JSON.stringify(estado, (k, v) => (k === 'papelera' ? undefined : v)); }

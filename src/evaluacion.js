@@ -226,7 +226,7 @@ function claseNota(n) { return n != null && redondear(n) < +S.config.notaAprobac
 RENDERS.calificaciones = () => {
   const c = ui.cal || (ui.cal = { grupoId: '', areaId: '', periodoId: '', pestana: 'programacion' });
   contextoPorDefecto(c);
-  const pestanas = `<div class="pestanas">${[['programacion', '📅 Programación evaluativa'], ['planilla', '📊 Planilla de notas'], ['anual', '📈 Consolidado anual'], ['apoyo', '🆘 Planes de apoyo'], ['riesgo', '🚦 Semáforo de riesgo'], ['observaciones', '📝 Observaciones del boletín'], ['rubricas', '📋 Instrumentos de evaluación'], ['registro', '🕘 Registro de cambios']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
+  const pestanas = `<div class="pestanas">${[['programacion', '📅 Programación evaluativa'], ['planilla', '📊 Planilla de notas'], ['entregas', '📥 Entregas y nota por lote'], ['anual', '📈 Consolidado anual'], ['apoyo', '🆘 Planes de apoyo'], ['riesgo', '🚦 Semáforo de riesgo'], ['observaciones', '📝 Observaciones del boletín'], ['rubricas', '📋 Instrumentos de evaluación'], ['registro', '🕘 Registro de cambios']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
   const cab = `<div class="cabecera"><div><h1>Evaluación y notas</h1><p class="sub">Escala ${S.config.escalaMin} a ${S.config.escalaMax} · Aprobación desde ${S.config.notaAprobacion} · Decreto 1290 de 2009</p></div>
     <div class="acciones">${c.pestana === 'planilla' || c.pestana === 'anual' ? `<button class="btn" onclick="exportarCalificaciones()">⬇️ Exportar a Excel</button>` : ''}
       <button class="btn" onclick="dialogoInformeCierre()" title="Informe del periodo para coordinación">📑 Informe de cierre</button></div></div>`;
@@ -236,6 +236,7 @@ RENDERS.calificaciones = () => {
   if (c.pestana === 'riesgo') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaRiesgo(c);
   if (c.pestana === 'observaciones') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaObservaciones(c);
   if (c.pestana === 'apoyo') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaApoyo(c);
+  if (c.pestana === 'entregas') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaEntregas(c);
   if (c.pestana === 'registro') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaRegistroNotas(c);
   if (c.pestana === 'programacion') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaProgramacion(c);
   return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaPlanilla(c);

@@ -69,6 +69,7 @@ function estadoInicial() {
     papelera: [],
     recuperaciones: {},
     registroNotas: [],
+    entregas: {},
     anotaciones: [],
     portafolio: { evidencias: [], reflexiones: {} },
   };
@@ -335,6 +336,7 @@ function ordenGrupos(a, b) { return (a.grado - b.grado) || String(a.nombre).loca
 // ---------- Navegación ----------
 const VISTAS = [
   { id: 'inicio', ico: '🏠', nombre: 'Inicio' },
+  { id: 'miClase', ico: '🎯', nombre: 'Mi clase ahora' },
   { id: 'curricular', ico: '🧩', nombre: 'Planeación curricular' },
   { id: 'planeaciones', ico: '📝', nombre: 'Planeaciones de clase' },
   { id: 'plantillas', ico: '📋', nombre: 'Plantillas de planeación' },
@@ -425,7 +427,7 @@ function vistaVisible(id) { return !(S.config.menu?.ocultos || []).includes(id);
 function renderNav() {
   const insignia = typeof numeroAlertas === 'function' ? numeroAlertas() : 0;
   document.getElementById('nav').innerHTML = vistasMenu().map((v) =>
-    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') || (ui.vista === 'pruebaEditor' && v.id === 'pruebas') || (ui.vista === 'pizarra' && v.id === 'pizarras') ? 'activo' : ''}" onclick="ir('${v.id}')" title="${esc(v.nombre)}"><span class="ico">${v.ico}</span><span class="nom">${v.nombre}</span>${v.id === 'inicio' && insignia ? `<span class="insignia" title="Alertas y pendientes">${insignia}</span>` : ''}</button>`
+    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') || ((ui.vista === 'pruebaEditor' || ui.vista === 'bancoPreguntas') && v.id === 'pruebas') || (ui.vista === 'pizarra' && v.id === 'pizarras') ? 'activo' : ''}" onclick="ir('${v.id}')" title="${esc(v.nombre)}"><span class="ico">${v.ico}</span><span class="nom">${v.nombre}</span>${v.id === 'inicio' && insignia ? `<span class="insignia" title="Alertas y pendientes">${insignia}</span>` : ''}</button>`
   ).join('');
   document.getElementById('marca-sub').textContent = S.config.institucion || 'Educación básica y media';
 }
@@ -461,7 +463,8 @@ RENDERS.inicio = () => {
     <h1>${c.docente ? '¡Hola, ' + esc(c.docente.split(' ')[0]) + '!' : 'Bienvenido(a) al Planeador Docente'}</h1>
     <p class="sub">${esc(fechaLarga(hoy))}${periodo ? ' · ' + esc(periodo.nombre) : ''}${c.institucion ? ' · ' + esc(c.institucion) : ''}</p>
   </div><div class="acciones">
-    <button class="btn primario" onclick="nuevaPlaneacion()">＋ Nueva planeación</button>
+    <button class="btn primario" onclick="abrirMiClase()" title="La clase que toca según tu horario, con todo lo necesario">🎯 Mi clase ahora</button>
+    <button class="btn" onclick="nuevaPlaneacion()">＋ Nueva planeación</button>
     <button class="btn" onclick="ir('asistencia')">✅ Tomar asistencia</button>
     <button class="btn" onclick="abrirAula()">🎲 Herramientas de aula</button>
     <button class="btn" onclick="ir('pizarras')">🖍️ Tableros</button>
@@ -477,6 +480,8 @@ RENDERS.inicio = () => {
     <div class="estadistica"><div class="num">${borradores}</div><div class="eti">En borrador</div></div>
     <div class="estadistica"><div class="num">${S.planeaciones.filter((p) => p.enBanco).length}</div><div class="eti">En el banco</div></div>
   </div>
+
+  ${tarjetaSemana()}
 
   ${tarjetaAlertas()}
 
