@@ -253,35 +253,32 @@ if (require.main === module) (async () => {
   await prueba('Celular: una hoja de respuestas fotografiada se califica al instante', async () => {
     const { app, w, errores } = await abrir(nuevaCarpeta());
     await sembrar(w);
-    const html = await w.evaluate(() => {
+    await w.evaluate(() => {
       const preguntas = ['A', 'B', 'C', 'D', 'A'].map((c, i) => ({ id: 'q' + i, tipo: 'multiple', enunciado: 'P' + i, opciones: ['1', '2', '3', '4'], correcta: c }));
       S.pruebas.push({ id: 'pq', titulo: 'Quiz', tipo: 'prueba', grupoId: 'g1', areaId: 'a1', grado: 7, preguntas, respuestas: {} });
-      const a = alumnosDe('g1')[3];
-      return htmlHojaOMR(porId(S.pruebas, 'pq'), [{ nombre: nombreAlumno(a), numero: 4 }]);
     });
-    // La hoja se "imprime" en una ventana oculta, se rellenan las respuestas A, B, C, D, B y se toma la foto
-    const foto = await app.evaluate(async ({ BrowserWindow }, html) => {
-      // Tamaño pensado para caber en pantallas de 768 px de alto (Windows en GitHub)
-      const b = new BrowserWindow({ show: false, width: 560, height: 725, useContentSize: true, autoHideMenuBar: true, webPreferences: { zoomFactor: 0.686 } });
-      b.setMenu(null);
-      await b.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-      await b.webContents.executeJavaScript(`document.querySelectorAll('.num').forEach((n, i) => { let x = n.nextElementSibling; for (let j = 0; j < 'ABCDB'.charCodeAt(i) - 65; j++) x = x.nextElementSibling; x.classList.add('llena'); x.textContent = ''; }); true`);
-      await new Promise((r) => setTimeout(r, 200));
-      const img = await b.webContents.capturePage();
-      globalThis.__tam = img.getSize();
-      b.destroy();
-      return 'data:image/jpeg;base64,' + img.toJPEG(90).toString('base64');
-    }, html);
+    // Se dibuja la hoja con las mismas medidas que la hoja impresa (marcas y burbujas), número de lista 04 y
+    // respuestas A, B, C, D, B. Se dibuja directamente en una imagen para no depender del tamaño de la pantalla.
+    const foto = await w.evaluate(() => {
+      const k = 4, c = document.createElement('canvas'); c.width = Math.round(OMR.pagina.ancho * k); c.height = Math.round(OMR.pagina.alto * k);
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+      const m = OMR.marcas, g = geometriaOMR(5, 4);
+      x.fillStyle = '#000';
+      for (const mx of [m.x0, m.x1]) for (const my of [m.y0, m.y1]) x.fillRect((mx - m.lado / 2) * k, (my - m.lado / 2) * k, m.lado * k, m.lado * k);
+      const burbuja = (b, llena) => { x.beginPath(); x.arc((m.x0 + b.u) * k, (m.y0 + b.v) * k, (OMR.burbuja / 2) * k, 0, Math.PI * 2); if (llena) x.fill(); else { x.lineWidth = 1; x.strokeStyle = '#444'; x.stroke(); } };
+      g.id[0].forEach((b, d) => burbuja(b, d === 0)); g.id[1].forEach((b, d) => burbuja(b, d === 4));
+      g.resp.forEach((fila, i) => fila.forEach((b, j) => burbuja(b, j === 'ABCDB'.charCodeAt(i) - 65)));
+      return c.toDataURL('image/jpeg', 0.9);
+    });
     await w.evaluate(() => { dialogoVincularCelular(); return generarVinculo(); });
     const { puerto, pin } = await w.evaluate(() => ({ puerto: CEL.conexion.puerto, pin: CEL.pin }));
     const post = async (accion, cuerpo) => { const r = await fetch(`http://127.0.0.1:${puerto}/cel/api/${accion}`, { method: 'POST', body: JSON.stringify(cuerpo) }); return { status: r.status, d: await r.json() }; };
     const token = (await post('vincular', { pin })).d.token;
     const r = await post('foto', { token, tipo: 'omr', pruebaId: 'pq', imagen: foto });
-    const tam = await app.evaluate(() => globalThis.__tam);
     const esperado = await w.evaluate(() => nombreAlumno(alumnosDe('g1')[3]));
     const guardada = await w.evaluate(() => porId(S.pruebas, 'pq').respuestas[alumnosDe('g1')[3].id]);
     await app.close();
-    assert.strictEqual(r.status, 200, JSON.stringify(r.d) + ' ' + JSON.stringify(tam));
+    assert.strictEqual(r.status, 200, JSON.stringify(r.d));
     assert.strictEqual(r.d.nombre, esperado);
     assert.deepStrictEqual([r.d.correctas, r.d.total], [4, 5]);
     assert.strictEqual(guardada, 'ABCDB');
