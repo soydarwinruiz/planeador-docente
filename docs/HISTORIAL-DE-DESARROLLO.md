@@ -244,6 +244,9 @@ El docente pidió el registro de cambios de notas, más personalización y una c
 - **Revisión final:** el registro de cambios de notas pasó a un archivo propio (`registro-notas.jsonl`) al que solo se agregan líneas. En un año completo habría sumado unos 5 MB a cada guardado. Viaja en los respaldos y en los años archivados, y los datos de la 1.16 se pasan solos al formato nuevo.
 - Límite de 40 fotos de trabajos pendientes desde el celular.
 
+### Versión 1.17.1 — Logo de Tiza (25 de noviembre)
+El logo anterior (un cuaderno con un lápiz) no concordaba con el nombre. Entre varias propuestas, el docente eligió un tablero verde con una **p minúscula de "planear"** trazada con tiza blanca y una tiza amarilla. El logo está en el ícono del programa y del instalador, el acceso directo, el menú lateral, la pantalla de bloqueo, el "Acerca de" y la página del celular.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo

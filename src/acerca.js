@@ -20,7 +20,7 @@ async function abrirAcercaDe() {
   abrirModal(`<div class="acerca">
     <img src="icono.svg" alt="" style="width:72px;height:72px">
     <h1>Tiza</h1>
-    <p class="sub">Planeador y asistente del docente · educación básica y media (Colombia, grados 1.° a 11.°)</p>
+    <p class="sub">Planeador y asistente del docente · educación básica y media <span style="white-space:nowrap">(Colombia, grados 1.° a 11.°)</span></p>
     <p class="ayuda">Versión ${esc(i.version || '')}${i.portable ? ' · portable' : ''}</p>
     ${CREDITOS.autor ? `<div class="acerca-autor"><span class="ayuda">Creado por</span><b>${esc(CREDITOS.autor)}</b>${CREDITOS.detalle ? `<span class="ayuda">${esc(CREDITOS.detalle)}</span>` : ''}</div>` : ''}
     <p>Hecho para que los docentes colombianos dediquen menos tiempo al papeleo y más a sus estudiantes. Tus datos se guardan solo en este equipo.</p>
