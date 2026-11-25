@@ -1,4 +1,4 @@
-# Planeador Docente
+# Tiza (antes Planeador Docente)
 
 Aplicación de escritorio para Windows para planear clases de **educación básica y media en Colombia (grados 1.° a 11.°)**.
 Funciona **sin internet**: todos los datos quedan guardados en tu computador.

@@ -68,7 +68,6 @@ function estadoInicial() {
     pizarras: [],
     papelera: [],
     recuperaciones: {},
-    registroNotas: [],
     entregas: {},
     anotaciones: [],
     portafolio: { evidencias: [], reflexiones: {} },
@@ -177,9 +176,11 @@ function marcarGuardado(texto) { const el = document.getElementById('estado-guar
 async function pasoGuardado() {
   try {
     await externalizarRecursos();
-    if (typeof registrarCambiosNotas === 'function') registrarCambiosNotas();
+    await externalizarRegistro();
+    registrarCambiosNotas();
     const texto = textoEstado();
     if (texto !== ultimoTextoGuardado) { await api.guardar(texto); ultimoTextoGuardado = texto; }
+    await enviarRegistroPendiente();
     const E = estadoActual();
     const claves = JSON.stringify(E.config.ia?.claves || {});
     if (claves !== ultimasClaves) { await api.guardarClaves(E.config.ia?.claves || {}); ultimasClaves = claves; }
@@ -194,9 +195,10 @@ window.addEventListener('beforeunload', () => {
   if (typeof S === 'undefined' || !S) return;
   clearTimeout(temporizadorGuardado); temporizadorGuardado = null;
   if (typeof cerrarPapelera === 'function') cerrarPapelera();
-  if (typeof registrarCambiosNotas === 'function') registrarCambiosNotas();
+  registrarCambiosNotas();
   const texto = textoEstado();
   if (texto !== ultimoTextoGuardado) { api.guardarAlCerrar(texto); ultimoTextoGuardado = texto; }
+  if (REG.pend.length) api.registroAgregarSync(REG.pend.splice(0));
 });
 function guardar() {
   if (ui.archivo && !ui.archivo.guardandoActual && !ui.archivo.avisado) { ui.archivo.avisado = true; aviso('Estás consultando un año anterior: los cambios que hagas aquí no se guardan.', 'error'); }
@@ -213,6 +215,8 @@ function aplicarRespaldo(datos) {
   if (ui.archivo) salirDeArchivo(false);
   const claves = S?.config?.ia?.claves || {};
   S = migrar(datos);
+  if (!Array.isArray(S.registroNotas)) S.registroNotas = []; // el registro pasa a ser el del respaldo
+  REG.cache = S.registroNotas.slice(); REG.pend = [];
   reiniciarRegistroNotas();
   if (!Object.values(S.config.ia.claves || {}).some(Boolean)) S.config.ia.claves = { ...claves };
   aplicarApariencia();
@@ -429,7 +433,7 @@ function renderNav() {
   document.getElementById('nav').innerHTML = vistasMenu().map((v) =>
     `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') || ((ui.vista === 'pruebaEditor' || ui.vista === 'bancoPreguntas') && v.id === 'pruebas') || (ui.vista === 'pizarra' && v.id === 'pizarras') ? 'activo' : ''}" onclick="ir('${v.id}')" title="${esc(v.nombre)}"><span class="ico">${v.ico}</span><span class="nom">${v.nombre}</span>${v.id === 'inicio' && insignia ? `<span class="insignia" title="Alertas y pendientes">${insignia}</span>` : ''}</button>`
   ).join('');
-  document.getElementById('marca-sub').textContent = S.config.institucion || 'Educación básica y media';
+  document.getElementById('marca-sub').textContent = S.config.institucion || 'Planeador docente';
 }
 
 const RENDERS = {};
@@ -460,7 +464,7 @@ RENDERS.inicio = () => {
 
   return `
   <div class="cabecera"><div>
-    <h1>${c.docente ? '¡Hola, ' + esc(c.docente.split(' ')[0]) + '!' : 'Bienvenido(a) al Planeador Docente'}</h1>
+    <h1>${c.docente ? '¡Hola, ' + esc(c.docente.split(' ')[0]) + '!' : 'Bienvenido(a) a Tiza'}</h1>
     <p class="sub">${esc(fechaLarga(hoy))}${periodo ? ' · ' + esc(periodo.nombre) : ''}${c.institucion ? ' · ' + esc(c.institucion) : ''}</p>
   </div><div class="acciones">
     <button class="btn primario" onclick="abrirMiClase()" title="La clase que toca según tu horario, con todo lo necesario">🎯 Mi clase ahora</button>
@@ -518,6 +522,7 @@ async function iniciar() {
   S = migrar(datos || estadoInicial());
   ultimasClaves = JSON.stringify(S.config.ia.claves || {});
   reiniciarRegistroNotas();
+  await cargarRegistroNotas();
   sembrarBanco();
   sembrarInstrumentos();
   migrarPlantillas();

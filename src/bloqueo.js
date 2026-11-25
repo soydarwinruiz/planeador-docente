@@ -20,7 +20,7 @@ function mostrarBloqueo(alDesbloquear) {
   BLOQUEO.alDesbloquear = alDesbloquear;
   capa.innerHTML = `<div class="bloqueo-caja">
     <img src="icono.svg" alt="" style="width:64px;height:64px">
-    <h1>Planeador Docente</h1>
+    <h1>Tiza</h1>
     <p class="ayuda">El programa está bloqueado. Escribe tu clave para continuar.</p>
     <form onsubmit="event.preventDefault();desbloquear()">
       <input type="password" id="bloqueo-clave" placeholder="Clave" autocomplete="current-password" autofocus>

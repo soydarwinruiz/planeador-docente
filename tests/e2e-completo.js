@@ -101,5 +101,26 @@ async function sembrarAnio(w) {
     assert.deepStrictEqual(errores.filter((e) => !/__atacado/.test(e)), []);
   });
 
+  await prueba('Se llama Tiza, el menú Ayuda abre "Acerca de" y la carpeta de datos conserva su nombre', async () => {
+    const { _electron } = require('playwright-core');
+    const RAIZ = require('path').join(__dirname, '..');
+    const env = { ...process.env }; delete env.PLANEADOR_DATA_DIR;
+    const app = await _electron.launch({ executablePath: require(require('path').join(RAIZ, 'node_modules', 'electron')), args: [RAIZ, '--no-sandbox'], env });
+    const w = await app.firstWindow();
+    await w.waitForFunction(() => typeof S !== 'undefined' && S);
+    const r = await app.evaluate(({ app, Menu, BrowserWindow }) => {
+      const ayuda = Menu.getApplicationMenu().items.find((x) => x.label === 'Ayuda');
+      ayuda.submenu.items[0].click();
+      return { datos: app.getPath('userData'), menu: ayuda.submenu.items.map((x) => x.label), titulo: BrowserWindow.getAllWindows()[0].getTitle() };
+    });
+    await w.waitForSelector('.acerca h1');
+    const acerca = await w.evaluate(() => document.querySelector('.acerca').textContent);
+    await app.close();
+    assert.match(r.datos, /Planeador Docente$/);
+    assert.strictEqual(r.menu[0], 'Acerca de Tiza');
+    assert.match(acerca, /Creado porDocenTech/);
+    assert.match(acerca, /Tiza[\s\S]*Versión \d+\.\d+\.\d+[\s\S]*Software libre/);
+  });
+
   terminar();
 })();

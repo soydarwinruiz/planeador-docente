@@ -238,6 +238,12 @@ El docente pidió el registro de cambios de notas, más personalización y una c
 - **Cámara del celular:** hojas de respuesta calificadas al instante y fotos de trabajos para la retroalimentación con IA; entregas desde el celular.
 - Correcciones encontradas por las pruebas: el banco de preguntas y el banco pedagógico compartían el estado de sus filtros; calificar una hoja por foto fallaba si la cámara del computador no estaba abierta.
 
+### Versión 1.17.0 — Tiza (25 de noviembre)
+- **Nuevo nombre: Tiza.** El docente eligió el nombre entre varias propuestas. La carpeta de datos, la carpeta de respaldos en la nube, los paquetes `.planeador` y las actualizaciones automáticas siguen funcionando igual.
+- **Ayuda → Acerca de Tiza:** versión, créditos (creado por **DocenTech**), contenidos de referencia (MEN, Radar 360°, DUA) y software libre con sus licencias.
+- **Revisión final:** el registro de cambios de notas pasó a un archivo propio (`registro-notas.jsonl`) al que solo se agregan líneas. En un año completo habría sumado unos 5 MB a cada guardado. Viaja en los respaldos y en los años archivados, y los datos de la 1.16 se pasan solos al formato nuevo.
+- Límite de 40 fotos de trabajos pendientes desde el celular.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo

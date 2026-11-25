@@ -105,7 +105,8 @@ Verificado sin cambios necesarios: el uso de la API de Claude (modelo vigente, r
 | 1.15 (hecha) | Años anteriores, clave de acceso, recuperaciones según el SIEE, celular del docente, portafolio docente, nuevo año a elección, corrector de ortografía |
 | 1.15.1 (hecha) | Segunda revisión: protección contra identificadores manipulados en paquetes y respaldos, PDF sin ruta libre, buscadores, avisos de la IA, pruebas en Windows |
 | 1.16 (hecha) | Registro de cambios de notas, personalización, configuración por secciones, Mi clase ahora, entregas y nota por lote, frases rápidas, Tu semana, banco de preguntas, material con IA y cámara del celular |
-| 1.17 | Observador del estudiante y convivencia + comisión de evaluación y promoción |
-| 1.18 | Análisis por pregunta + exportar al formato de la plataforma institucional |
-| 1.19 | IA en vivo con cancelar, perfil institucional y modelo por tarea |
+| 1.17 (hecha) | Nombre Tiza, Acerca de con créditos, registro de notas en archivo propio |
+| 1.18 | Observador del estudiante y convivencia + comisión de evaluación y promoción |
+| 1.19 | Análisis por pregunta + exportar al formato de la plataforma institucional |
+| 1.20 | IA en vivo con cancelar, perfil institucional y modelo por tarea |
 | 2.0 | Módulos JavaScript sin `onclick`, almacenamiento dividido o SQLite, sincronización entre equipos |

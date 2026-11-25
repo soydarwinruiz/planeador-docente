@@ -9,7 +9,7 @@ RENDERS.configuracion = () => {
   const sumaPer = c.periodos.reduce((s, p) => s + (+p.peso || 0), 0);
   return `
   <div class="cabecera"><div><h1>Configuración</h1><p class="sub">Abre solo la sección que necesitas. El programa recuerda cuáles dejaste abiertas.</p></div>
-    <div class="acciones"><button class="btn" onclick="abrirSeccionesConfig(true)">Abrir todo</button><button class="btn" onclick="abrirSeccionesConfig(false)">Cerrar todo</button>
+    <div class="acciones"><button class="btn" onclick="abrirAcercaDe()">ℹ️ Acerca de Tiza</button><button class="btn" onclick="abrirSeccionesConfig(true)">Abrir todo</button><button class="btn" onclick="abrirSeccionesConfig(false)">Cerrar todo</button>
       <button class="btn primario" onclick="abrirAsistente()">🧭 Asistente de configuración inicial</button></div></div>
   <div class="tarjeta" style="padding:10px 14px"><input id="buscar-config" placeholder="🔎 Buscar en la configuración (membrete, clave, recuperación, color, celular…)" oninput="filtrarConfig(this.value)"></div>
 
@@ -232,6 +232,7 @@ function dependenciasNuevoAnio() {
 async function ejecutarNuevoAnio() {
   const op = Object.fromEntries([...document.querySelectorAll('[data-na]')].map((c) => [c.dataset.na, c.checked && !c.disabled]));
   cerrarModal();
+  registrarCambiosNotas(); await enviarRegistroPendiente().catch(() => {});
   const arch = await api.aniosArchivar(textoEstado());
   if (!arch?.ok) { aviso('No se pudo archivar el año: ' + (arch?.error || 'error desconocido') + '. No se borró nada.', 'error'); return; }
   aplicarNuevoAnio(op);

@@ -272,7 +272,8 @@ const ACCIONES_CEL = {
     const al = alumnoDeGrupo(grupoId, alumnoId);
     if (!al) return celFalla(404, 'Estudiante no válido.');
     const url = imagen.startsWith('data:image/jpeg') ? imagen : (() => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0); return c.toDataURL('image/jpeg', 0.85); })();
-    (CEL.fotos ||= []).push({ id: uid(), alumnoId, grupoId, actividadId: actividadPorId(actividadId) ? actividadId : '', url, fecha: new Date().toISOString() });
+    if ((CEL.fotos ||= []).length >= 40) return celFalla(429, 'Hay 40 fotos sin revisar en el computador. Úsalas o descártalas antes de enviar más.');
+    CEL.fotos.push({ id: uid(), alumnoId, grupoId, actividadId: actividadPorId(actividadId) ? actividadId : '', url, fecha: new Date().toISOString() });
     avisoFotoCelular();
     return celOk();
   },

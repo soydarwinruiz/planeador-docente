@@ -10,6 +10,8 @@ const RESPALDOS = () => path.join(DIR(), 'respaldos-automaticos');
 const TABLEROS = () => path.join(DIR(), 'tableros');
 const CLAVES = () => path.join(DIR(), 'claves.dat');
 const ANIOS = () => path.join(DIR(), 'anios-anteriores');
+const REGISTRO = () => path.join(DIR(), 'registro-notas.jsonl');
+const REGISTRO_MAX = 200000;
 const MAX_RECIENTES = 15; // respaldo_AAAA-MM-DD_HHMM.json
 const MAX_DIARIOS = 30; // diario_AAAA-MM-DD.json
 
@@ -153,6 +155,34 @@ function quitarClaves(datos) {
   if (datos?.config?.ia) datos.config.ia = { ...datos.config.ia, claves: {} };
   return datos;
 }
+// ---------- Registro de cambios de notas ----------
+// Un archivo aparte, una línea por cambio: solo se le agregan líneas, así no pesa en cada guardado de datos.json.
+function leerRegistro() {
+  if (!fs.existsSync(REGISTRO())) return [];
+  const r = [];
+  for (const linea of fs.readFileSync(REGISTRO(), 'utf8').split('\n')) {
+    if (!linea.trim()) continue;
+    try { const x = JSON.parse(linea); if (x && typeof x === 'object') r.push(x); } catch { /* línea cortada por un apagón: se omite */ }
+  }
+  return r;
+}
+function agregarRegistro(lista) {
+  if (!Array.isArray(lista) || !lista.length) return true;
+  fs.mkdirSync(DIR(), { recursive: true });
+  fs.appendFileSync(REGISTRO(), lista.map((x) => JSON.stringify(x)).join('\n') + '\n', 'utf8');
+  return true;
+}
+function reemplazarRegistro(lista) {
+  const l = Array.isArray(lista) ? lista.slice(-REGISTRO_MAX) : [];
+  if (!l.length) { fs.rmSync(REGISTRO(), { force: true }); return true; }
+  escribirSeguro(REGISTRO(), l.map((x) => JSON.stringify(x)).join('\n') + '\n');
+  return true;
+}
+// Si el registro crece demasiado se conservan los cambios más recientes
+function podarRegistro() {
+  try { if (fs.existsSync(REGISTRO()) && fs.statSync(REGISTRO()).size > 40e6) reemplazarRegistro(leerRegistro()); } catch (e) { console.error(e); }
+}
+
 // ---------- Años anteriores (archivo de consulta) ----------
 // Cada año archivado es un archivo con todos los datos de ese año y un archivo pequeño con su resumen.
 function metaAnio(id, d) {
@@ -160,11 +190,12 @@ function metaAnio(id, d) {
   return { id, anio: d.config?.anio || '', institucion: d.config?.institucion || '', docente: d.config?.docente || '', archivado: new Date().toISOString(),
     grupos: (d.grupos || []).length, estudiantes: activos.length, planeaciones: (d.planeaciones || []).length };
 }
-function guardarAnio(datos, meta) {
+function guardarAnio(datos, meta, { conRegistroActual = false } = {}) {
   const d = typeof datos === 'string' ? JSON.parse(datos) : datos;
   if (!d || typeof d !== 'object' || !d.config) throw new Error('Datos no válidos para archivar.');
   quitarClaves(d);
   delete d.papelera; delete d.__recuperado; delete d.aniosAnteriores;
+  if (conRegistroActual) d.registroNotas = leerRegistro(); // al archivar el año en curso
   const id = meta?.id && idValido(meta.id) ? meta.id : `anio-${String(d.config.anio || 'sin-anio').replace(/[^\w-]/g, '')}-${Date.now().toString(36)}`;
   const m = { ...metaAnio(id, d), ...(meta || {}), id };
   escribirSeguro(path.join(ANIOS(), `${id}.json`), JSON.stringify(d));
@@ -202,6 +233,7 @@ function restaurarAniosDeRespaldo(datos) {
 function textoRespaldoCompleto(textoDatos, sangria) {
   const d = quitarClaves(incrustarRecursos(JSON.parse(textoDatos)));
   delete d.__recuperado;
+  if (!Array.isArray(d.registroNotas)) d.registroNotas = leerRegistro();
   const anios = listarAnios();
   if (anios.length) d.aniosAnteriores = anios.map((meta) => { try { return { meta, datos: leerAnio(meta.id) }; } catch { return null; } }).filter(Boolean);
   return JSON.stringify(d, null, sangria);
@@ -210,5 +242,5 @@ function textoRespaldoCompleto(textoDatos, sangria) {
 module.exports = {
   DIR, DATOS, RESPALDOS, fechaArchivo, escribirSeguro, leerJSON, respaldoAutomatico, listarRespaldos, cargarDatos,
   leerClaves, guardarClaves, cifradoDisponible, leerRecursosTablero, guardarRecursosTablero, limpiarRecursosTableros,
-  textoRespaldoCompleto, quitarClaves, guardarAnio, listarAnios, leerAnio, eliminarAnio, restaurarAniosDeRespaldo,
+  textoRespaldoCompleto, quitarClaves, leerRegistro, agregarRegistro, reemplazarRegistro, podarRegistro, guardarAnio, listarAnios, leerAnio, eliminarAnio, restaurarAniosDeRespaldo,
 };
