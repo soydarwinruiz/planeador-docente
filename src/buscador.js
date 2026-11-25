@@ -33,7 +33,7 @@ function abrirBuscador(texto = '') {
       oninput="buscarGeneral(this.value)" onkeydown="teclaBuscador(event)">
     <div id="bus-res" style="margin-top:10px;max-height:60vh;overflow-y:auto"></div>
     <p class="ayuda" style="margin-bottom:0">Atajo: <b>Ctrl + K</b>. Usa ↑ ↓ y Enter para abrir.</p>`, { ancho: true });
-  setTimeout(() => { const i = document.getElementById('bus-q'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 40);
+  setTimeout(() => reenfocar('#bus-q'), 40);
   buscarGeneral(texto);
 }
 function resaltar(t, palabras) {

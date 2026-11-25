@@ -359,16 +359,13 @@ async function htmlAPdf(html, { horizontal = false } = {}) {
     return await w.webContents.printToPDF({ pageSize: 'Letter', landscape: horizontal, printBackground: true, margins: { marginType: 'none' } });
   } finally { w.destroy(); fs.rmSync(tmp, { force: true }); }
 }
-ipcMain.handle('pdf:html', async (_e, { nombre, html, horizontal, ruta }) => {
-  let filePath = ruta;
-  if (!filePath) {
-    const r = await dialog.showSaveDialog(ventana, { title: 'Guardar PDF', defaultPath: `${String(nombre || 'documento').replace(/[\\/:*?"<>|]+/g, '-')}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
-    if (r.canceled || !r.filePath) return { ok: false };
-    filePath = r.filePath;
-  }
+ipcMain.handle('pdf:html', async (_e, { nombre, html, horizontal }) => {
+  const r = await dialog.showSaveDialog(ventana, { title: 'Guardar PDF', defaultPath: `${String(nombre || 'documento').replace(/[\\/:*?"<>|]+/g, '-')}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+  if (r.canceled || !r.filePath) return { ok: false };
+  const filePath = r.filePath;
   try {
     fs.writeFileSync(filePath, await htmlAPdf(html, { horizontal }));
-    if (!ruta) shell.openPath(filePath);
+    shell.openPath(filePath);
     return { ok: true, ruta: filePath };
   } catch (e) { return { ok: false, error: e.message }; }
 });
@@ -387,7 +384,7 @@ function valorCelda(v) {
   return String(v);
 }
 function leerCSV(texto) {
-  texto = texto.replace(/^﻿/, '');
+  texto = texto.replace(/^\uFEFF/, '');
   const primera = texto.split(/\r?\n/)[0] || '';
   const sep = [';', ',', '\t'].map((d) => [d, primera.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
   const filas = []; let fila = [], campo = '', comillas = false;

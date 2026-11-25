@@ -55,6 +55,7 @@ const PROVEEDORES = {
 };
 
 class ErrorIA extends Error {}
+const RESPUESTA_LARGA = 'La respuesta de la IA fue demasiado larga y quedó incompleta. Pide menos sesiones, ítems o secciones a la vez.';
 
 async function llamarAnthropic({ clave, modelo }, sistema, prompt, imagenes = []) {
   const client = new Anthropic({ apiKey: clave, maxRetries: 2, timeout: 180000 });
@@ -69,6 +70,7 @@ async function llamarAnthropic({ clave, modelo }, sistema, prompt, imagenes = []
       messages: [{ role: 'user', content: imagenes.length ? [...imagenes.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.tipo, data: i.datos } })), { type: 'text', text: prompt }] : prompt }],
     });
     if (r.stop_reason === 'refusal') throw new ErrorIA('La IA no pudo generar esta sugerencia. Ajusta el tema e inténtalo de nuevo.');
+    if (r.stop_reason === 'max_tokens') throw new ErrorIA(RESPUESTA_LARGA);
     return r.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
   } catch (e) {
     if (e instanceof ErrorIA) throw e;
@@ -110,6 +112,7 @@ async function llamarCompatibleOpenAI({ clave, modelo, url }, sistema, prompt, i
     body: JSON.stringify({ model: modelo, messages: [{ role: 'system', content: sistema }, { role: 'user', content: imagenes.length ? [{ type: 'text', text: prompt }, ...imagenes.map((i) => ({ type: 'image_url', image_url: { url: `data:${i.tipo};base64,${i.datos}` } }))] : prompt }] }),
   });
   const texto = datos?.choices?.[0]?.message?.content;
+  if (datos?.choices?.[0]?.finish_reason === 'length') throw new ErrorIA(RESPUESTA_LARGA);
   if (!texto) throw new ErrorIA('El servicio respondió sin contenido.');
   return texto;
 }
@@ -127,6 +130,7 @@ async function llamarGemini({ clave, modelo }, sistema, prompt, imagenes = []) {
   });
   const cand = datos?.candidates?.[0];
   const texto = (cand?.content?.parts || []).map((p) => p.text || '').join('');
+  if (cand?.finishReason === 'MAX_TOKENS') throw new ErrorIA(RESPUESTA_LARGA);
   if (!texto) throw new ErrorIA(cand?.finishReason === 'SAFETY' ? 'Gemini bloqueó la respuesta por sus filtros de seguridad.' : 'Gemini respondió sin contenido.');
   return texto;
 }

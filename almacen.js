@@ -41,7 +41,7 @@ function escribirSeguro(archivo, contenido) {
 }
 
 function leerJSON(ruta) {
-  const t = fs.readFileSync(ruta, 'utf8').replace(/^﻿/, '');
+  const t = fs.readFileSync(ruta, 'utf8').replace(/^\uFEFF/, '');
   const d = JSON.parse(t);
   if (!d || typeof d !== 'object' || Array.isArray(d)) throw new Error('contenido no válido');
   return d;

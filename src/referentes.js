@@ -69,7 +69,7 @@ function filtrosReferentesHTML(s, prefijo) {
     <div><label>Área</label><select onchange="${prefijo}.area=this.value;${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'}">${areasReferente().map((a) => `<option ${a === s.area ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></div>
     <div><label>Grado</label><select onchange="${prefijo}.banda=this.value;${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'}">${bandas.map((b) => `<option value="${b}" ${b === s.banda ? 'selected' : ''}>${b}°</option>`).join('')}</select></div>
     ${tipos.length > 1 ? `<div><label>Documento</label><select onchange="${prefijo}.tipo=this.value;${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'}"><option value="">Todos</option>${tipos.map((t) => `<option value="${t}" ${t === s.tipo ? 'selected' : ''}>${TIPOS_REFERENTE[t]}</option>`).join('')}</select></div>` : ''}
-    <div style="flex:1;min-width:180px"><label>Buscar</label><input id="${prefijo}-q" value="${esc(s.texto)}" placeholder="Palabra clave…" oninput="${prefijo}.texto=this.value;clearTimeout(window._rq);window._rq=setTimeout(()=>{${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'};const i=document.getElementById('${prefijo}-q');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>
+    <div style="flex:1;min-width:180px"><label>Buscar</label><input id="${prefijo}-q" value="${esc(s.texto)}" placeholder="Palabra clave…" oninput="${prefijo}.texto=this.value;clearTimeout(window._rq);window._rq=setTimeout(()=>{${prefijo === 'selectorRef' ? 'dibujarSelectorReferentes()' : 'render()'};reenfocar('#${prefijo}-q')},250)"></div>
   </div>`;
 }
 function dibujarSelectorReferentes() {

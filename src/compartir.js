@@ -148,6 +148,7 @@ async function importarPaquete() {
 }
 function ejecutarImportacion() {
   const d = window._paquete;
+  sanearIds(d);
   const partes = [...document.querySelectorAll('.m-pi:checked')].map((x) => x.value);
   const mapaArea = {};
   for (const a of d.areas || []) {

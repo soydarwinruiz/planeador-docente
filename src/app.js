@@ -169,6 +169,8 @@ async function externalizarRecursos() {
     if (t.assets === a) delete t.assets; // si cambió mientras se escribía, se guarda en la próxima
   }
 }
+// Devuelve el cursor al final de un campo tras repintar (si el campo sigue en pantalla)
+function reenfocar(selector) { const i = document.querySelector(selector); if (i) { i.focus(); i.setSelectionRange?.(i.value.length, i.value.length); } }
 function marcarGuardado(texto) { const el = document.getElementById('estado-guardado'); if (el) el.textContent = texto; }
 async function pasoGuardado() {
   try {
@@ -215,6 +217,29 @@ function aplicarRespaldo(datos) {
   guardar(); ir('inicio');
 }
 
+// Los identificadores se escriben dentro de los botones (onclick="…('id')"). Si un archivo importado
+// (paquete de otro docente, respaldo, año archivado) trae uno con comillas u otros símbolos, podría ejecutar código:
+// por eso, al cargar cualquier dato, un id con caracteres no permitidos se reemplaza y una referencia así se vacía.
+const ID_SEGURO = /^[A-Za-z0-9_.:-]{1,100}$/;
+const GRADO_SEGURO = /^[\w °ºª.-]{0,20}$/;
+function sanearIds(o, nivel = 0) {
+  if (!o || typeof o !== 'object' || nivel > 40) return 0;
+  let n = 0;
+  if (Array.isArray(o)) { for (const x of o) n += sanearIds(x, nivel + 1); return n; }
+  for (const k of Object.keys(o)) {
+    const v = o[k];
+    if (typeof v === 'string') {
+      if (k === 'id' && !ID_SEGURO.test(v)) { o[k] = uid(); n++; }
+      else if (/[a-z]Id$/.test(k) && v !== '' && !ID_SEGURO.test(v)) { o[k] = ''; n++; }
+      else if ((k === 'grado' || k === 'gradoOrigen') && !GRADO_SEGURO.test(v)) { o[k] = ''; n++; }
+    } else if (Array.isArray(v) && /[a-z]Ids$/.test(k)) {
+      const limpio = v.filter((x) => typeof x !== 'string' || ID_SEGURO.test(x));
+      if (limpio.length !== v.length) { o[k] = limpio; n++; }
+    } else if (v && typeof v === 'object') n += sanearIds(v, nivel + 1);
+  }
+  return n;
+}
+
 function migrar(d) {
   const base = estadoInicial();
   const r = { ...base, ...d, config: { ...base.config, ...(d.config || {}) } };
@@ -224,6 +249,7 @@ function migrar(d) {
   delete r.__recuperado; delete r.__error;
   if (!r.config.ia.claves || typeof r.config.ia.claves !== 'object') r.config.ia.claves = {};
   if (!r.config.componentesPorDefecto) r.config.componentesPorDefecto = structuredClone(COMPONENTES_POR_DEFECTO);
+  sanearIds(r);
   r.version = VERSION_DATOS;
   return r;
 }

@@ -216,6 +216,14 @@ El docente eligió cinco de las propuestas del análisis. Sobre el celular pidi�
 - **Nuevo año lectivo a elección:** el docente marca qué conservar (planeaciones, curricular, cronograma, plantillas, pruebas, fichas, tableros, grupos con opción de subir de grado, estudiantes, PIAR, programación evaluativa, planes de aula, horario, eventos, pendientes, portafolio).
 - **Corrector de ortografía** en español latinoamericano con sugerencias en el clic derecho y *Agregar al diccionario* (se puede apagar en Configuración → Apariencia).
 
+### Versión 1.15.1 — Segunda revisión completa (25 de noviembre)
+A pedido del docente (*"revisa nuevamente todo el código… que todo esté funcionando correctamente"*):
+- **Seguridad:** un paquete `.planeador` o un respaldo manipulado podía meter código en los botones del programa a través de los identificadores internos. Ahora todos se validan al cargar, restaurar o importar.
+- El generador de PDF ya no acepta rutas de destino desde la interfaz.
+- Buscadores que fallaban si se cambiaba de pantalla justo después de escribir.
+- Mensaje claro cuando la respuesta de la IA queda incompleta por larga.
+- Prueba nueva que recorre todas las pantallas y pestañas con un año completo de datos, y otra con un paquete malicioso. Las pruebas corren ahora también en Windows en GitHub.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo
