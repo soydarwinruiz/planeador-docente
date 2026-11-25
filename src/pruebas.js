@@ -300,7 +300,7 @@ function vistaResultadosPrueba(p) {
   return `<div class="estadisticas">
     ${tarjetaDato(fmtNota(prom), 'Promedio del grupo', chipDesempeno(prom))}
     ${tarjetaDato(res.length, 'Estudiantes calificados')}
-    ${S.config.desempenos.map((d) => tarjetaDato(dist[d.nombre] || 0, d.nombre)).join('')}
+    ${S.config.desempenos.map((d) => tarjetaDato(dist[d.nombre] || 0, esc(d.nombre))).join('')}
   </div>
   ${cerradas.length ? `<div class="tarjeta"><h3 style="margin-top:0">Porcentaje de acierto por pregunta</h3>
     ${graficaBarras(cerradas.map((q) => ({ nombre: `P${p.preguntas.indexOf(q) + 1}${q.competencia ? ' · ' + q.competencia.slice(0, 40) : ''}`, v: porPregunta[q.id], detalle: `${porPregunta[q.id]}% de acierto${distractor[q.id] ? ` · opción errada más elegida: ${distractor[q.id][0]} (${distractor[q.id][1]})` : ''}` })), { ref: 50, min: 0, max: 100, fmt: (v) => Math.round(v) + '%', etiquetaRef: 'Meta' })}

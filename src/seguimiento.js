@@ -38,7 +38,7 @@ function graficaLinea(puntos, { ref, titulo }) {
       <text x="${W - m.r}" y="${y(ref) - 5}" text-anchor="end" font-size="11" style="fill:var(--suave)">Aprobación ${fmtNota(ref)}</text>` : ''}
     ${puntos.map((p, i) => `<text x="${x(i)}" y="${H - 10}" text-anchor="middle" font-size="11" style="fill:var(--suave)">${esc(p.etiqueta)}</text>`).join('')}
     ${ruta ? `<path d="${ruta}" fill="none" stroke="${COLOR_SERIE}" stroke-width="2" stroke-linejoin="round"/>` : ''}
-    ${validos.map((p) => `<g><circle cx="${x(p.i)}" cy="${y(p.v)}" r="14" fill="transparent"><title>${esc(p.nombre)}: ${fmtNota(p.v)} (${desempeno(p.v)})</title></circle>
+    ${validos.map((p) => `<g><circle cx="${x(p.i)}" cy="${y(p.v)}" r="14" fill="transparent"><title>${esc(p.nombre)}: ${fmtNota(p.v)} (${esc(desempeno(p.v))})</title></circle>
       <circle cx="${x(p.i)}" cy="${y(p.v)}" r="4.5" fill="${COLOR_SERIE}" style="stroke:var(--superficie)" stroke-width="2" pointer-events="none"/>
       <text x="${x(p.i)}" y="${y(p.v) - 10}" text-anchor="middle" font-size="12" font-weight="600" style="fill:var(--texto)" pointer-events="none">${fmtNota(p.v)}</text></g>`).join('')}
     ${!validos.length ? `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="13" style="fill:var(--suave)">Aún no hay notas registradas</text>` : ''}
@@ -112,7 +112,7 @@ function vistaGrupoSeg(c) {
     ${tarjetaDato(fmtNota(promGrupo), 'Promedio del grupo', chipDesempeno(promGrupo))}
     ${tarjetaDato(filas.length, 'Estudiantes')}
     ${tarjetaDato(enRiesgo.length, 'Requieren atención', '<div class="ayuda">Alguna área en Bajo o asistencia &lt; 80%</div>')}
-    ${tarjetaDato(conProm.filter((f) => desempeno(f.prom) === S.config.desempenos[S.config.desempenos.length - 1].nombre).length, `En desempeño ${S.config.desempenos[S.config.desempenos.length - 1].nombre}`)}
+    ${tarjetaDato(conProm.filter((f) => desempeno(f.prom) === S.config.desempenos[S.config.desempenos.length - 1].nombre).length, `En desempeño ${esc(S.config.desempenos[S.config.desempenos.length - 1].nombre)}`)}
   </div>
   ${filas.length ? `<div class="envoltura-tabla"><table class="tabla planilla"><thead><tr><th style="width:26px" title="Semáforo de riesgo"></th><th class="alumno">Estudiante</th>
     ${areas.map((ar) => `<th class="num">${esc(ar.abreviatura || ar.nombre)}</th>`).join('')}<th class="num">Promedio</th><th>Desempeño</th><th class="num">Asistencia</th><th></th></tr></thead><tbody>

@@ -41,7 +41,8 @@ async function sembrarAnio(w) {
   });
 }
 
-(async () => {
+module.exports = { sembrarAnio };
+if (require.main === module) (async () => {
   await prueba('Todas las pantallas y pestañas funcionan con datos de un año completo', async () => {
     const { app, w, errores } = await abrir(nuevaCarpeta());
     await sembrar(w);
@@ -120,6 +121,83 @@ async function sembrarAnio(w) {
     assert.strictEqual(r.menu[0], 'Acerca de Tiza');
     assert.match(acerca, /Creado porDocenTech/);
     assert.match(acerca, /Tiza[\s\S]*Versión \d+\.\d+\.\d+[\s\S]*Software libre/);
+  });
+
+  await prueba('Código malicioso en todos los textos de un año completo: no se ejecuta en ninguna pantalla', async () => {
+    const { app, w, errores } = await abrir(nuevaCarpeta());
+    await sembrar(w);
+    await sembrarAnio(w);
+  const r = await w.evaluate(async () => {
+    window.__xss = [];
+    const carga = (k) => `"'><img src=x onerror="window.__xss.push('${k}')">`;
+    const NO = /^(id|tipo|estado|fecha|fechaFin|inicio|fin|grado|gradoOrigen|color|modo|tema|zoom|proveedor|url|formato|pestana|clima|correcta|alcance|tipoPlan|o|f|act|al|g|ar|p|hash|expira|creado|ultimo|creada|modificada|version|dia|hora|letra|valor|nota|peso|desde|hasta|duracion|origen|destino|fuente|colorMenu|colorAcento|atajo)$/;
+    let n = 0;
+    const recorrer = (o, ruta, nivel = 0) => {
+      if (!o || typeof o !== 'object' || nivel > 12) return;
+      for (const k of Object.keys(o)) {
+        const v = o[k];
+        if (typeof v === 'string' && !NO.test(k) && !/Id$|Ids$/.test(k) && !/^(data:|#|\d{4}-\d\d)/.test(v) && v.length < 2000) { o[k] = v + carga(ruta + '.' + k); n++; }
+        else if (v && typeof v === 'object' && !['notas', 'asistencia', 'recuperaciones', 'entregas', 'notasRubrica', 'cronograma'].includes(k)) recorrer(v, ruta + '.' + k, nivel + 1);
+      }
+    };
+    for (const k of Object.keys(S)) if (!['config', 'notas', 'asistencia'].includes(k)) recorrer(S[k], k);
+    recorrer(S.config, 'config');
+    // también como claves de mapas
+    S.observaciones[`g1|a1|${(periodoDeFecha(hoyISO()) || S.config.periodos[0]).id}`] = { al1: 'obs' + carga('obs') };
+    const per = (periodoDeFecha(hoyISO()) || S.config.periodos[0]).id;
+    const vistas = [];
+    for (const v of Object.keys(RENDERS).filter((k) => !k.endsWith('_despues'))) vistas.push([v, '']);
+    for (const p of ['programacion', 'planilla', 'entregas', 'anual', 'apoyo', 'riesgo', 'observaciones', 'rubricas', 'registro']) vistas.push(['calificaciones', () => { ui.cal = {grupoId:'g1',areaId:'a1',periodoId:per,pestana:p}; }]);
+    for (const p of ['area', 'malla', 'periodo', 'aula', 'cobertura', 'referentes']) vistas.push(['curricular', () => { ui.cur = {pestana:p,areaId:'a1',grado:7,periodoId:per,grupoId:'g1'}; }]);
+    for (const p of ['estudiantes', 'equipos', 'tablero', 'historial']) vistas.push(['gamificacion', () => { ui.gam = {grupoId:'g1',pestana:p,sel:{}}; }]);
+    vistas.push(['seguimiento', () => { ui.seg = { grupoId: 'g1', alumnoId: S.alumnos[0].id, areaId: 'a1', periodoId: per }; }], ['seguimiento', () => { ui.seg = { grupoId: 'g1', alumnoId: '', areaId: 'a1', periodoId: per }; }]);
+    const fallas = [];
+    for (const [v, setup] of vistas) {
+      try { cerrarModal(); if (setup) setup(); ir(v, v === 'editor' ? { id: 'pl-1' } : v === 'piarEditor' ? { alumnoId: 'al0' } : v === 'pruebaEditor' ? { id: 'pr-1' } : v === 'alumnos' || v === 'perfil' ? { grupoId: 'g1' } : {}); } catch (e) { fallas.push(v + ': ' + e.message); }
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    // ventanas emergentes frecuentes
+    for (const f of [() => abrirDiario('g1', 'a1'), () => abrirBuscador(), () => abrirAula('g1', 'a1', 'azar'), () => abrirAula('g1', 'a1', 'tablero'), () => abrirAula('g1', 'a1', 'equipos'), () => verHistorialNota(Object.keys(S.notas)[0], 'al0'), () => dialogoRetro(), () => abrirAcercaDe(), () => dialogoVincularCelular()]) {
+      try { cerrarModal(); f(); } catch (e) { fallas.push(String(f) + ': ' + e.message); }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    await new Promise((r) => setTimeout(r, 300));
+    return { n, xss: [...new Set(window.__xss)], fallas };
+  });
+    await app.close();
+    assert.ok(r.n > 1000, 'se esperaban muchos textos con código: ' + r.n);
+    assert.deepStrictEqual(r.xss, [], 'se ejecutó código en: ' + r.xss.join(', '));
+    assert.deepStrictEqual(r.fallas, []);
+  });
+
+  await prueba('Correcciones del rastreo: desempeño con dos decimales, notas inválidas, año lectivo, WhatsApp', async () => {
+    const { app, w, errores } = await abrir(nuevaCarpeta());
+    await sembrar(w);
+    const r = await w.evaluate(() => {
+      S.config.decimales = 2;
+      const des = [2.95, 3.95, 4.55, 4.6].map((n) => desempeno(n));
+      const per = (periodoDeFecha(hoyISO()) || S.config.periodos[0]).id;
+      S.planillas.push({ id: 'plx', grupoId: 'g1', areaId: 'a1', periodoId: per, criterios: [{ id: 'cx', nombre: 'Saber', peso: 100, actividades: [{ id: 'ax', nombre: 'T' }] }] });
+      S.notas.ax = { al0: 4 };
+      const texto = document.createElement('input'); texto.value = 'abc'; ponerNota('ax', 'al0', texto); const tras1 = S.notas.ax.al0;
+      // Casilla numérica con "3,5" en un Windows en inglés: el navegador la deja vacía y marca la entrada como inválida
+      const num = document.createElement('input'); num.type = 'number'; Object.defineProperty(num, 'validity', { value: { badInput: true } });
+      ponerNota('ax', 'al0', num); const tras2 = S.notas.ax.al0;
+      const anio = S.config.anio; const ia = document.createElement('input'); ia.value = '3.5'; cambiarNumeroConfig('anio', ia); const anioTras = S.config.anio;
+      const em = document.createElement('input'); em.value = '6'; cambiarNumeroConfig('escalaMin', em); const minTras = S.config.escalaMin;
+      S.config.periodos[1].inicio = S.config.periodos[0].inicio; ir('configuracion');
+      const avisoPeriodos = document.getElementById('contenido').textContent.includes('se cruzan');
+      return { des, tras1, tras2, anio, anioTras, minTras, avisoPeriodos, tel: [telefonoWhatsApp('300 123 4567 / 310 987 6543'), telefonoWhatsApp('3001234567'), telefonoWhatsApp('')] };
+    });
+    await app.close();
+    assert.deepStrictEqual(r.des, ['Bajo', 'Básico', 'Alto', 'Superior']);
+    assert.strictEqual(r.tras1, 4, 'una nota inválida no debe borrar la anterior');
+    assert.strictEqual(r.tras2, 4, 'una coma en Windows en inglés no debe borrar la nota');
+    assert.strictEqual(r.anioTras, r.anio);
+    assert.strictEqual(r.minTras, 1);
+    assert.ok(r.avisoPeriodos);
+    assert.deepStrictEqual(r.tel, ['573001234567', '573001234567', '']);
+    assert.deepStrictEqual(errores, []);
   });
 
   terminar();

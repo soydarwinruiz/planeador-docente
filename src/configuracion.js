@@ -1,7 +1,31 @@
 // ================= Configuración y respaldos =================
 
 function campoConfig(k, t, tipo = 'text', extra = '') {
-  return `<div class="campo"><label>${esc(t)}</label><input type="${tipo}" value="${esc(S.config[k] ?? '')}" ${extra} onchange="S.config['${k}']=${tipo === 'number' ? '+this.value' : 'this.value'};guardar();renderNav()"></div>`;
+  return `<div class="campo"><label>${esc(t)}</label><input type="${tipo}" value="${esc(S.config[k] ?? '')}" ${extra} onchange="${tipo === 'number' ? `cambiarNumeroConfig('${k}',this)` : `S.config['${k}']=this.value;guardar();renderNav()`}"></div>`;
+}
+
+// Números de la configuración con validación (año lectivo y escala de valoración)
+function cambiarNumeroConfig(k, input) {
+  const v = +String(input.value).replace(',', '.');
+  const c = S.config;
+  const prueba = { escalaMin: +c.escalaMin, escalaMax: +c.escalaMax, notaAprobacion: +c.notaAprobacion, [k]: v };
+  let error = '';
+  if (input.value === '' || isNaN(v)) error = 'Escribe un número.';
+  else if (k === 'anio' && (!Number.isInteger(v) || v < 2000 || v > 2100)) error = 'El año lectivo debe ser un año completo, por ejemplo 2027.';
+  else if (['escalaMin', 'escalaMax', 'notaAprobacion'].includes(k) && !(prueba.escalaMin < prueba.escalaMax && prueba.notaAprobacion >= prueba.escalaMin && prueba.notaAprobacion <= prueba.escalaMax))
+    error = 'La nota mínima debe ser menor que la máxima, y la aprobatoria debe estar entre las dos.';
+  if (error) { aviso(error, 'error'); input.value = c[k]; return; }
+  c[k] = v;
+  guardar(); renderNav();
+}
+// Avisos sobre los periodos: fechas al revés o periodos que se cruzan
+function problemasPeriodos() {
+  const r = [];
+  const ps = S.config.periodos;
+  ps.forEach((p) => { if (p.inicio && p.fin && p.inicio > p.fin) r.push(`"${p.nombre}" termina antes de empezar.`); });
+  const orden = ps.filter((p) => p.inicio && p.fin).sort((a, b) => a.inicio.localeCompare(b.inicio));
+  for (let i = 1; i < orden.length; i++) if (orden[i].inicio <= orden[i - 1].fin) r.push(`"${orden[i - 1].nombre}" y "${orden[i].nombre}" se cruzan en las fechas.`);
+  return r;
 }
 
 RENDERS.configuracion = () => {
@@ -47,6 +71,7 @@ RENDERS.configuracion = () => {
 
   <div class="tarjeta"><div class="cabecera"><h2 style="margin:0">Periodos académicos</h2><button class="btn pequeno primario" onclick="agregarPeriodo()">＋ Periodo</button></div>
     ${sumaPer !== 100 ? `<div class="alerta">Los porcentajes de los periodos suman <b>${sumaPer}%</b>. Deberían sumar 100%.</div>` : ''}
+    ${problemasPeriodos().map((t) => `<div class="alerta">⚠️ ${esc(t)}</div>`).join('')}
     <table class="tabla"><thead><tr><th>Nombre</th><th>Inicio</th><th>Fin</th><th style="width:120px">Porcentaje</th><th></th></tr></thead><tbody>
     ${c.periodos.map((p, i) => `<tr>
       <td><input value="${esc(p.nombre)}" onchange="S.config.periodos[${i}].nombre=this.value;guardar()"></td>
