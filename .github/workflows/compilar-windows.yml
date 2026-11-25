@@ -33,14 +33,14 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.v }}
           target_commitish: ${{ github.sha }}
-          name: Planeador Docente ${{ steps.version.outputs.v }}
+          name: Tiza ${{ steps.version.outputs.v }}
           files: |
             dist/*.exe
             dist/*.blockmap
             dist/latest.yml
           body: |
             **Cómo instalar**
-            - `PlaneadorDocente-Setup-...exe`: instalador (crea acceso directo y se actualiza solo).
-            - `PlaneadorDocente-portable-...exe`: versión portable, se abre con doble clic sin instalar.
+            - `Tiza-Setup-...exe`: instalador (crea acceso directo y se actualiza solo).
+            - `Tiza-portable-...exe`: versión portable, se abre con doble clic sin instalar.
 
             Si Windows muestra "Windows protegió su PC", haz clic en **Más información → Ejecutar de todas formas**.

@@ -196,7 +196,7 @@ async function generarDocxPlaneacion({ config, plan, grupoNombre, areaNombre, pe
   }));
 
   const doc = new Document({
-    creator: c.docente || 'Planeador Docente',
+    creator: c.docente || 'Tiza',
     title: plan.titulo || 'Planeación',
     styles: { default: { document: { run: { font: FUENTE, size: 20 } } } },
     sections: [{
@@ -253,7 +253,7 @@ const VERTICAL = { page: { size: { orientation: PageOrientation.PORTRAIT }, marg
 
 function documento(c, titulo, secciones) {
   return Packer.toBuffer(new Document({
-    creator: c.docente || 'Planeador Docente', title: titulo,
+    creator: c.docente || 'Tiza', title: titulo,
     styles: { default: { document: { run: { font: FUENTE, size: 20 } } } },
     sections: secciones.map((s) => ({ ...s, headers: membreteHeader(c), footers: piePagina(c) })),
   }));

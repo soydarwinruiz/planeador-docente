@@ -462,3 +462,8 @@ details.semana[open] > summary::after { content: ' ⌄'; }
 .mat-op { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; cursor: pointer; color: var(--texto); font: inherit; }
 .mat-op:hover { border-color: var(--azul-2); }
 .mat-op .grande { font-size: 34px; }
+.acerca { text-align: center; }
+.acerca h1 { margin: 6px 0 2px; font-size: 30px; color: var(--azul-2); }
+.acerca details { text-align: left; margin: 8px 0; } .acerca summary { cursor: pointer; font-weight: 600; }
+.acerca-autor { display: flex; flex-direction: column; gap: 2px; margin: 12px auto; padding: 10px; border: 1px solid var(--borde); border-radius: 10px; max-width: 360px; }
+.acerca-autor b { font-size: 18px; }

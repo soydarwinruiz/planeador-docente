@@ -7,7 +7,9 @@ const { sugerirConIA, transcribirAudio } = require('./ia');
 const { iniciarActualizaciones } = require('./actualizaciones');
 const { iniciarAplicacionMovil, detenerAplicacionMovil } = require('./servidor-aula');
 
+// La carpeta de datos conserva su nombre de siempre ("Planeador Docente") aunque el programa ahora se llame Tiza
 if (process.env.PLANEADOR_DATA_DIR) app.setPath('userData', process.env.PLANEADOR_DATA_DIR);
+else app.setPath('userData', path.join(app.getPath('appData'), 'Planeador Docente'));
 const almacen = require('./almacen');
 const { DIR: DATA_DIR, DATOS: DATA_FILE, RESPALDOS: BACKUP_DIR, fechaArchivo, escribirSeguro, respaldoAutomatico } = almacen;
 const { iniciarAcceso, estaBloqueado } = require('./acceso');
@@ -38,7 +40,7 @@ function crearVentana() {
     height: 860,
     minWidth: 1024,
     minHeight: 640,
-    title: 'Planeador Docente',
+    title: 'Tiza',
     icon: path.join(__dirname, 'build', 'icon.png'),
     backgroundColor: '#f4f6fb',
     webPreferences: {
@@ -92,6 +94,10 @@ Menu.setApplicationMenu(
       { type: 'separator' }, { role: 'togglefullscreen', label: 'Pantalla completa' },
       ...(app.isPackaged ? [] : [{ role: 'toggleDevTools', label: 'Herramientas de desarrollo' }]),
     ] },
+    { label: 'Ayuda', submenu: [
+      { label: 'Acerca de Tiza', click: () => ventana?.webContents.send('menu:acerca') },
+      { label: 'Página de descargas y novedades', click: () => shell.openExternal('https://github.com/soydarwinruiz/planeador-docente/releases') },
+    ] },
   ])
 );
 
@@ -101,6 +107,7 @@ else app.on('second-instance', () => { if (ventana) { if (ventana.isMinimized())
 
 app.whenReady().then(() => {
   respaldoAutomatico();
+  almacen.podarRegistro();
   setInterval(() => respaldoAutomatico(), 60 * 60 * 1000); // cada hora, solo si hubo cambios
   crearVentana();
   iniciarActualizaciones(ventana);
@@ -143,7 +150,7 @@ ipcMain.handle('tablero:leerRecursos', (_e, id) => { exigirDesbloqueo(); return 
 ipcMain.handle('anios:listar', () => { exigirDesbloqueo(); return almacen.listarAnios(); });
 ipcMain.handle('anios:leer', (_e, id) => { exigirDesbloqueo(); return almacen.leerAnio(id); });
 ipcMain.handle('anios:archivar', (_e, texto) => {
-  try { exigirDesbloqueo(); respaldoAutomatico({ forzar: true }); return { ok: true, meta: almacen.guardarAnio(texto) }; } catch (e) { return { ok: false, error: e.message }; }
+  try { exigirDesbloqueo(); respaldoAutomatico({ forzar: true }); return { ok: true, meta: almacen.guardarAnio(texto, undefined, { conRegistroActual: true }) }; } catch (e) { return { ok: false, error: e.message }; }
 });
 ipcMain.handle('anios:eliminar', (_e, id) => { exigirDesbloqueo(); return almacen.eliminarAnio(id); });
 // Importar un año desde un respaldo (por ejemplo, el que se guardó al iniciar el año con una versión anterior)
@@ -157,6 +164,10 @@ ipcMain.handle('anios:importar', async () => {
   } catch (e) { return { ok: false, error: e instanceof SyntaxError ? 'El archivo está dañado o no es un respaldo del Planeador.' : e.message }; }
 });
 ipcMain.handle('tablero:guardarRecursos', (_e, { id, assets }) => almacen.guardarRecursosTablero(id, assets));
+ipcMain.handle('registro:leer', () => { exigirDesbloqueo(); return almacen.leerRegistro(); });
+ipcMain.handle('registro:agregar', (_e, lista) => almacen.agregarRegistro(lista));
+ipcMain.on('registro:agregarSync', (e, lista) => { try { almacen.agregarRegistro(lista); e.returnValue = true; } catch (err) { console.error(err); e.returnValue = false; } });
+ipcMain.handle('registro:reemplazar', (_e, lista) => { exigirDesbloqueo(); return almacen.reemplazarRegistro(lista); });
 ipcMain.handle('tablero:limpiar', (_e, ids) => almacen.limpiarRecursosTableros(ids));
 
 ipcMain.handle('datos:ubicacion', () => DATA_DIR());
@@ -261,11 +272,11 @@ ipcMain.handle('excel:guardar', async (_e, { nombre, filas, institucion, docente
   try {
     const ExcelJS = require('exceljs');
     const libro = new ExcelJS.Workbook();
-    libro.creator = docente || 'Planeador Docente';
+    libro.creator = docente || 'Tiza';
     const hoja = libro.addWorksheet(nombre.slice(0, 31).replace(/[\\/?*[\]:]/g, '-'), { views: [{ state: 'frozen', ySplit: 4 }] });
     const nCol = Math.max(1, ...filas.map((f) => f.length));
     const hex = 'FF' + String(color || '#1f4e79').replace('#', '').toUpperCase();
-    hoja.addRow([institucion || 'Planeador Docente']).font = { bold: true, size: 13, color: { argb: hex } };
+    hoja.addRow([institucion || 'Tiza']).font = { bold: true, size: 13, color: { argb: hex } };
     hoja.addRow([nombre]).font = { bold: true, size: 11 };
     hoja.addRow([`${docente ? 'Docente: ' + docente + ' · ' : ''}Generado el ${new Date().toLocaleDateString('es-CO')}`]).font = { italic: true, size: 9, color: { argb: 'FF666666' } };
     [1, 2, 3].forEach((r) => hoja.mergeCells(r, 1, r, nCol));

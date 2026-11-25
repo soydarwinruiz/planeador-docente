@@ -1,10 +1,10 @@
 {
   "name": "planeador-docente",
-  "productName": "Planeador Docente",
-  "version": "1.16.0",
-  "description": "Sistema de planeación docente para educación básica y media (Colombia, grados 1.° a 11.°)",
+  "productName": "Tiza",
+  "version": "1.17.0",
+  "description": "Tiza: planeador y asistente del docente para educación básica y media (Colombia, grados 1.° a 11.°)",
   "main": "main.js",
-  "author": "Planeador Docente",
+  "author": "DocenTech",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
@@ -15,7 +15,7 @@
   },
   "build": {
     "appId": "co.planeador.docente",
-    "productName": "Planeador Docente",
+    "productName": "Tiza",
     "files": [
       "main.js",
       "preload.js",
@@ -39,13 +39,13 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Planeador Docente",
+      "shortcutName": "Tiza",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
-      "artifactName": "PlaneadorDocente-Setup-${version}.${ext}"
+      "artifactName": "Tiza-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "PlaneadorDocente-portable-${version}.exe"
+      "artifactName": "Tiza-portable-${version}.exe"
     },
     "directories": {
       "output": "dist"

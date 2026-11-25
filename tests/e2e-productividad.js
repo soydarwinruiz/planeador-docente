@@ -2,6 +2,7 @@
 // frases rápidas, "Mi clase ahora", entregas, resumen semanal, banco de preguntas, material con IA y cámara del celular.
 const { fs, path, assert, abrir, esperarGuardado, datos, nuevaCarpeta, prueba, sembrar, terminar } = require('./util');
 
+const registroDe = (dir) => { const f = path.join(dir, 'registro-notas.jsonl'); return fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []; };
 async function sembrarPlanilla(w) {
   return w.evaluate(() => {
     const per = periodoDeFecha(hoyISO()) || S.config.periodos[0];
@@ -26,7 +27,7 @@ if (require.main === module) (async () => {
       S.recuperaciones[claveRecuperacion('g1', 'a1', S.planillas[0].periodoId)] = { al1: { nota: 3 } }; guardar();
     });
     await esperarGuardado(w);
-    const reg = datos(dir).registroNotas;
+    const reg = registroDe(dir);
     const al0 = reg.filter((r) => r.act === 'act1' && r.al === 'al0').map((r) => [r.antes, r.despues, r.o]);
     assert.deepStrictEqual(al0, [[null, 3, 'computador'], [3, 3.8, 'computador'], [3.8, null, 'importacion']]);
     assert.ok(reg.some((r) => r.al === 'al1' && r.antes === 4 && r.despues === 2.5 && r.n === 'Taller' && r.g === 'g1'));
@@ -42,9 +43,49 @@ if (require.main === module) (async () => {
     }, per);
     assert.deepStrictEqual(r, { filas: 3, nota: 3.8, enPestana: 6 });
     await esperarGuardado(w);
-    assert.ok(datos(dir).registroNotas.some((x) => x.o === 'restaurada' && x.despues === 3.8));
+    assert.ok(registroDe(dir).some((x) => x.o === 'restaurada' && x.despues === 3.8));
     await app.close();
     assert.deepStrictEqual(errores, []);
+  });
+
+  await prueba('El registro de notas va en su propio archivo: no hace crecer datos.json y viaja en respaldos y años archivados', async () => {
+    const dir = nuevaCarpeta();
+    const nube = nuevaCarpeta();
+    let { app, w } = await abrir(dir);
+    await sembrar(w);
+    await sembrarPlanilla(w);
+    await w.evaluate(async () => {
+      // un año de notas: 25 estudiantes x 400 actividades
+      for (let i = 0; i < 400; i++) S.notas['x' + i] = Object.fromEntries(alumnosDe('g1').map((a) => [a.id, 3.5]));
+      guardar(); await new Promise((r) => setTimeout(r, 450)); await cadenaGuardado;
+    });
+    await esperarGuardado(w);
+    const tamDatos = fs.statSync(path.join(dir, 'datos.json')).size, tamReg = fs.statSync(path.join(dir, 'registro-notas.jsonl')).size;
+    assert.ok(!('registroNotas' in datos(dir)), 'el registro no debe ir en datos.json');
+    assert.ok(registroDe(dir).length >= 10000);
+    const r = await w.evaluate(async (nube) => { await api.configurarNube(nube); const n = await api.respaldarNube(); const a = await api.aniosArchivar(textoEstado()); return { n: n.ok, a: (await api.aniosLeer(a.meta.id)).registroNotas.length }; }, nube);
+    await app.close();
+    const enNube = JSON.parse(fs.readFileSync(path.join(nube, 'Respaldos Planeador Docente', 'planeador-ultimo.json'), 'utf8')).registroNotas.length;
+    assert.ok(r.n && r.a >= 10000 && enNube >= 10000, JSON.stringify({ r, enNube }));
+    assert.ok(tamReg > 500000 && tamDatos < tamReg, `datos.json ${tamDatos} B, registro ${tamReg} B`);
+    // al reabrir, el historial sigue disponible
+    ({ app, w } = await abrir(dir));
+    const h = await w.evaluate(async () => { await new Promise((r) => setTimeout(r, 300)); return historialNota('x5', 'al3').length; });
+    await app.close();
+    assert.strictEqual(h, 1);
+  });
+
+  await prueba('Datos de la 1.16 con el registro dentro de datos.json se pasan solos a su archivo', async () => {
+    const dir = nuevaCarpeta();
+    fs.writeFileSync(path.join(dir, 'datos.json'), JSON.stringify({ version: 1, config: { institucion: 'IE', docente: 'Ana', configurado: true }, areas: [], grupos: [], alumnos: [],
+      registroNotas: [{ f: '2026-11-20T10:00:00Z', act: 'a1', al: 'b1', antes: null, despues: 4, o: 'computador' }, { f: '2026-11-21T10:00:00Z', act: 'a1', al: 'b1', antes: 4, despues: 4.5, o: 'celular' }] }));
+    const { app, w } = await abrir(dir);
+    await esperarGuardado(w);
+    const h = await w.evaluate(() => historialNota('a1', 'b1').length);
+    await app.close();
+    assert.strictEqual(h, 2);
+    assert.ok(!('registroNotas' in datos(dir)));
+    assert.deepStrictEqual(registroDe(dir).map((x) => x.despues), [4, 4.5]);
   });
 
   await prueba('Personalización (barra, acento, letra) y configuración por secciones desplegables con buscador', async () => {
@@ -122,7 +163,7 @@ if (require.main === module) (async () => {
     assert.deepStrictEqual(r.tras, [3, 4, 4.5, null], 'el lote no debe pisar notas ni tocar a quien no entregó');
     assert.strictEqual(r.al2, 1);
     assert.strictEqual(r.pendientes, 2, 'act1 (no entregó) y act2 (fecha cumplida sin nota)');
-    assert.ok(datos(dir).registroNotas.some((x) => x.o === 'lote' && x.despues === 4.5));
+    assert.ok(registroDe(dir).some((x) => x.o === 'lote' && x.despues === 4.5));
     await app.close();
     assert.deepStrictEqual(errores, []);
   });

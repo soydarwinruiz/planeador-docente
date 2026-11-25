@@ -2,7 +2,7 @@
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f4e79">
-<title>Planeador Docente · Celular</title>
+<title>Tiza · Celular</title>
 <style>
 *{box-sizing:border-box} html,body{margin:0}
 body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#f2f5fa;color:#16202c;font-size:16px;-webkit-tap-highlight-color:transparent;padding-bottom:70px}
@@ -43,7 +43,7 @@ nav.pestanas button span{font-size:21px} nav.pestanas button.on{color:#1f4e79;fo
 .clase.actual{background:#1d3350}input,select,textarea{background:#11161d;border-color:#2a3442}.sec,.chip,.chips button,.asis button,.cuenta span,.motivo{background:#253246;color:#cfe0f5}
 .est{border-color:#2a3442} nav.pestanas button.on{background:#1d3350;color:#cfe0f5} h2,.azar,.momento b{color:#8fbcf0}}
 </style></head><body>
-<header><button id="atras" hidden onclick="volver()">←</button><div class="t"><b id="titulo">Planeador Docente</b><small id="sub"></small></div><span id="cola"></span></header>
+<header><button id="atras" hidden onclick="volver()">←</button><div class="t"><b id="titulo">Tiza</b><small id="sub"></small></div><span id="cola"></span></header>
 <main id="app"><div class="tarjeta">Cargando…</div></main>
 <nav class="pestanas" id="pestanas" hidden></nav>
 <div class="aviso" id="aviso"></div>
@@ -117,7 +117,7 @@ async function cargarInicio() {
   ctx = null; $('#pestanas').hidden = true; $('#atras').hidden = true;
   if (!token) return pantallaVincular();
   try { info = await api('inicio'); } catch (e) { if (token) pantallaError(e.message, cargarInicio); return; }
-  $('#titulo').textContent = info.docente ? 'Hola, ' + info.docente.split(' ')[0] : 'Planeador Docente';
+  $('#titulo').textContent = info.docente ? 'Hola, ' + info.docente.split(' ')[0] : 'Tiza';
   $('#sub').textContent = info.fechaTexto + (info.periodo ? ' · ' + info.periodo : '');
   const grupos = info.grupos;
   $('#app').innerHTML = `

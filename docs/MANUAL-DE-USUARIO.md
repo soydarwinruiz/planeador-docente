@@ -1,4 +1,4 @@
-# Manual de usuario – Planeador Docente 1.13.0
+# Manual de usuario – Tiza (antes Planeador Docente)
 
 Aplicación de escritorio para Windows para planear, evaluar y hacer seguimiento en **educación básica y media en Colombia (1.° a 11.°)**. Funciona **sin internet**; los datos quedan en tu computador.
 
@@ -187,6 +187,8 @@ Escribe **;atajo** seguido de un espacio en cualquier campo y se reemplaza por l
 Tipos: bajo desempeño, inasistencias, actividades pendientes, plan de apoyo, citación, felicitación (y los que crees en *Editar textos*). **✨ Sugerir** marca a quién enviar. Cada mensaje es editable: **🟢 WhatsApp** (abre el chat con el texto listo), **✉️ Correo**, **📋 Copiar** o **⬇️ Word** con desprendible para firma. Queda el historial.
 
 ## 5. Configuración
+En el menú **Ayuda → Acerca de Tiza** (o en Configuración, botón *ℹ️ Acerca de Tiza*) están la versión, los créditos, los contenidos de referencia y el software libre que usa el programa.
+
 Las opciones están agrupadas en **secciones desplegables** (Institución y docente, Evaluación, Apariencia y menú, Frases rápidas, Inteligencia artificial, Seguridad y celular, Respaldos, Año lectivo); el programa recuerda cuáles dejaste abiertas, y el **buscador** de arriba abre la sección donde está lo que buscas.
 - Datos institucionales, docente, coordinador, año lectivo.
 - **Hoja membrete:** logos, color, líneas (NIT, DANE…), lema y pie de página.

@@ -1,4 +1,4 @@
-# Documentación técnica – Planeador Docente 1.16.0
+# Documentación técnica – Tiza 1.17.0 (antes Planeador Docente)
 
 Para quien quiera mantener, modificar o compilar la aplicación.
 
@@ -49,6 +49,7 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `acceso.js` | Clave de acceso: `acceso.json` con resumen scrypt + sal de la clave y del código de recuperación, minutos de bloqueo; `estaBloqueado()` impide `datos:cargar` y otras lecturas; freno a intentos (5 fallos → 30 s, doblando hasta 5 min) |
 | `pagina-celular.html` / `pagina-celular.js` | Página del celular del docente (`/cel`): vincular con PIN, inicio, pestañas de clase, cola de envíos en `localStorage` |
 | `preload.js` | Puente `window.api` |
+| Nombre | `productName` es **Tiza**; `main.js` fija `userData` en `%APPDATA%/Planeador Docente` para conservar los datos de versiones anteriores; `appId` (`co.planeador.docente`) y la carpeta de respaldos en la nube no cambian |
 | `exportar-word.js` | Membrete (logos, color, líneas, lema, pie), páginas horizontales y verticales, todos los documentos |
 | `ia.js` | Prompt de sistema (contexto colombiano, JSON estricto), tareas: `clase, malla, planArea, apoyo, boletin, retro, ficha, saber, prueba`; imágenes para Claude, OpenAI/compatibles y Gemini; transcripción de audio WAV (OpenAI `audio/transcriptions`, Gemini con audio en línea, o compatible como Groq) |
 | `actualizaciones.js` | Instalada: `autoUpdater` (sin descarga automática). Portable o desarrollo: consulta la última versión en la API de GitHub y solo avisa |
@@ -96,13 +97,14 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 | `anios.js` | Años anteriores: lista, consulta (`ui.archivo = { actual, meta }`: `S` pasa a ser el año consultado, `estadoActual()` y `conAnioActual()` mantienen el guardado sobre el año en curso), archivar copia, importar desde respaldo |
 | `celular.js` | Celular del docente: vinculación (PIN de 6 dígitos, 10 min, un uso; límites por IP y totales), dispositivos en `config.celular.dispositivos` con el SHA-256 del permiso y su vencimiento, `ACCIONES_CEL` (inicio, clase, asistencia, todosPresentes, notas, nota, entrega, foto, anotacion, puntos, pendiente, pendienteHecho, desvincular). `foto` acepta hasta 6 MB: hoja de respuestas (se lee con `leerHojaOMR` y se registra) o trabajo de un estudiante (queda en `CEL.fotos`, en memoria, para la retroalimentación), repintado de la vista del PC y anotaciones de estudiantes |
 | `portafolio.js` | Portafolio docente: competencias del Decreto 1278, `evidenciasAutomaticas(desde, hasta)`, evidencias y reflexiones propias, Word con `generarDocxInforme` |
-| `registro-notas.js` | Registro de cambios de notas: en cada guardado `registrarCambiosNotas()` compara `S.notas` y `S.recuperaciones` con la foto anterior (`REG`) y anota `{ f, act, al, antes, despues, o, g, ar, p, n, c }` en `S.registroNotas` (máx. 40 000). `origenNotas()` marca el origen (celular, importación, rúbrica, retro, lote, restaurada, papelera). `reiniciarRegistroNotas()` al abrir, restaurar un respaldo e iniciar un año |
+| `registro-notas.js` | Registro de cambios de notas: en cada guardado `registrarCambiosNotas()` compara `S.notas` y `S.recuperaciones` con la foto anterior (`REG`) y anota `{ f, act, al, antes, despues, o, g, ar, p, n, c }`. Se agregan como líneas a `registro-notas.jsonl` (`registro:agregar`, fuera de `datos.json`); `REG.cache` es la copia en memoria. Un `S.registroNotas` que venga en los datos (1.16 o un respaldo) se pasa al archivo con `registro:reemplazar`. Los respaldos completos y los años archivados lo incluyen como `registroNotas`. `origenNotas()` marca el origen (celular, importación, rúbrica, retro, lote, restaurada, papelera). `reiniciarRegistroNotas()` al abrir, restaurar un respaldo e iniciar un año |
 | `entregas.js` | `S.entregas[actId][alId] = 'E'\|'T'\|'N'`, `actividadPendiente()` (usada en seguimiento y comunicados), pestaña de entregas y nota por lote |
 | `miclase.js` | Vista `miClase` (clase actual por horario), asistencia rápida, avance de momentos (`sesion.hechos`), proyección en pantalla completa |
 | `semana.js` | Tarjeta "Tu semana" en Inicio |
 | `banco-preguntas.js` | Vista `bancoPreguntas`: preguntas de todas las pruebas sin repetir (estado en `ui.bq`) |
 | `material.js` | Material con IA desde una sesión: guía (ficha tipo guía), quiz de salida (prueba con `dialogoIAPrueba`) y rúbrica (tarea `rubrica` de `ia.js`) |
 | `frases.js` | Frases rápidas (`config.frases`): reemplazo de `;atajo` al escribir y selector con Ctrl + Espacio |
+| `acerca.js` | Ventana *Acerca de Tiza* (menú Ayuda): `CREDITOS`, contenidos de referencia y software libre |
 | `papelera.js` | Papelera: al confirmar un borrado (`confirmar()` o `iniciarPapelera()`) toma una foto de `S`; en el siguiente `guardar()` guarda solo las diferencias (`ops`: elementos que desaparecieron por `id` o clave, y valores cambiados) y las puede volver a aplicar sobre el estado actual |
 
 ## 4. Modelo de datos (`datos.json`)

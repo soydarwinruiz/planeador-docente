@@ -3,8 +3,29 @@
 // fecha y hora, estudiante, actividad, nota anterior, nota nueva y desde dónde se hizo. Así queda constancia
 // aunque el cambio venga del celular, de una importación, de una rúbrica o de borrar una actividad.
 
-const REG = { notas: null, recup: null, info: {}, origen: '' };
-const REGISTRO_MAX = 40000;
+// El registro vive en un archivo aparte (registro-notas.jsonl, ver almacen.js): aquí se guarda una copia en memoria
+// para mostrarlo y los cambios nuevos se envían al guardar.
+const REG = { notas: null, recup: null, info: {}, origen: '', cache: [], pend: [] };
+const REGISTRO_MEMORIA = 200000;
+async function cargarRegistroNotas() {
+  REG.cache = Array.isArray(S.registroNotas) ? S.registroNotas.slice() : await api.registroLeer().catch(() => []);
+}
+// Registro que se muestra: el del año consultado (si se está viendo un año anterior) o el del año en curso
+function registro() { return ui.archivo ? (S.registroNotas || []) : REG.cache; }
+// Datos de versiones anteriores o de un respaldo que traen el registro dentro: se pasa a su archivo
+async function externalizarRegistro() {
+  const E = estadoActual();
+  if (!Array.isArray(E.registroNotas)) return;
+  const lista = E.registroNotas;
+  await api.registroReemplazar(lista);
+  REG.cache = lista.slice(); REG.pend = [];
+  if (E.registroNotas === lista) delete E.registroNotas;
+}
+async function enviarRegistroPendiente() {
+  if (!REG.pend.length) return;
+  const lote = REG.pend.splice(0);
+  try { await api.registroAgregar(lote); } catch (e) { REG.pend.unshift(...lote); throw e; }
+}
 const ORIGENES_REG = { computador: '💻 Computador', celular: '📱 Celular', importacion: '📥 Importación', rubrica: '📋 Rúbrica', retro: '✍️ Retroalimentación', lote: '👥 Nota por lote', restaurada: '↩️ Restaurada', papelera: '🗑️ Papelera' };
 
 // Lo llaman las funciones que cambian notas desde un lugar especial (celular, importación…)
@@ -51,14 +72,14 @@ function registrarCambiosNotas() {
   }
   REG.notas = copiaNotas(ahora); REG.recup = recup; REG.info = info;
   if (nuevos.length) {
-    const lista = (E.registroNotas ||= []);
-    lista.push(...nuevos);
-    if (lista.length > REGISTRO_MAX) lista.splice(0, lista.length - REGISTRO_MAX);
+    REG.pend.push(...nuevos);
+    REG.cache.push(...nuevos);
+    if (REG.cache.length > REGISTRO_MEMORIA) REG.cache.splice(0, REG.cache.length - REGISTRO_MEMORIA);
   }
   return nuevos.length;
 }
 
-function historialNota(actId, alumnoId) { return (S.registroNotas || []).filter((r) => r.act === actId && r.al === alumnoId); }
+function historialNota(actId, alumnoId) { return registro().filter((r) => r.act === actId && r.al === alumnoId); }
 function fechaHoraReg(iso) { return new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 function textoNotaReg(v) { return v == null ? '—' : fmtNota(+v); }
 
@@ -91,7 +112,7 @@ function restaurarNotaRegistro(actId, alumnoId, valor) {
 // Pestaña "Registro de cambios" en Evaluación y notas
 function vistaRegistroNotas(c) {
   const f = (ui.regF ||= { alumnoId: '', desde: '', hasta: '', origen: '' });
-  const lista = (S.registroNotas || []).filter((r) => (!c.grupoId || r.g === c.grupoId) && (!c.areaId || r.ar === c.areaId) && (!c.periodoId || r.p === c.periodoId)
+  const lista = registro().filter((r) => (!c.grupoId || r.g === c.grupoId) && (!c.areaId || r.ar === c.areaId) && (!c.periodoId || r.p === c.periodoId)
     && (!f.alumnoId || r.al === f.alumnoId) && (!f.origen || r.o === f.origen) && (!f.desde || r.f.slice(0, 10) >= f.desde) && (!f.hasta || r.f.slice(0, 10) <= f.hasta)).reverse();
   const visibles = lista.slice(0, 500);
   return `<div class="filtros tarjeta">
@@ -112,7 +133,7 @@ function vistaRegistroNotas(c) {
 function exportarRegistroNotas() {
   const c = ui.cal;
   const filas = [['Fecha', 'Hora', 'Estudiante', 'Grupo', 'Área', 'Periodo', 'Componente', 'Actividad', 'Nota anterior', 'Nota nueva', 'Desde']];
-  for (const r of (S.registroNotas || []).filter((x) => (!c.grupoId || x.g === c.grupoId) && (!c.areaId || x.ar === c.areaId))) {
+  for (const r of registro().filter((x) => (!c.grupoId || x.g === c.grupoId) && (!c.areaId || x.ar === c.areaId))) {
     const a = porId(S.alumnos, r.al), d = new Date(r.f);
     filas.push([d.toLocaleDateString('es-CO'), d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }), a ? nombreAlumno(a) : '', nombreGrupoId(r.g), nombreArea(r.ar), r.p === 'anual' ? 'Año' : nombrePeriodo(r.p), r.c || '', r.n || '', textoNotaReg(r.antes), textoNotaReg(r.despues), (ORIGENES_REG[r.o] || r.o).replace(/^\S+\s/, '')]);
   }
