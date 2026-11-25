@@ -1,4 +1,4 @@
-# Análisis del Planeador Docente y propuestas (versión 1.14.0)
+# Análisis del Planeador Docente y propuestas (versión 1.15.1)
 
 Revisión completa del código (unas 12 000 líneas propias en 45 archivos, más 650 KB de datos de referentes y banco pedagógico), con pruebas automáticas sobre la aplicación real y una prueba de carga con datos de un año completo: 8 grupos, 280 estudiantes, 2 áreas, 4 periodos con 20 actividades cada uno, asistencia diaria, 120 planeaciones y 15 tableros con fotos.
 
@@ -27,60 +27,85 @@ Revisión completa del código (unas 12 000 líneas propias en 45 archivos, más
 | Bajo | La ventana podía navegar a otra página si se arrastraba un archivo o enlace. | Bloqueado; la interfaz además corre en `sandbox`. |
 | Proceso | No había pruebas en el repositorio: cada versión dependía de pruebas hechas fuera. | `npm test` (revisión estática + 9 pruebas de punta a punta) y ejecución automática en GitHub en cada cambio. |
 
-### Riesgos de fondo que conviene atender después
-1. **Todo es global.** Los 37 scripts de la interfaz comparten nombres; ya produjo dos errores (`alternarBarraLateral` en la 1.12 y `rellenar` en la 1.13). La revisión automática lo vigila, pero lo ideal es migrar poco a poco a módulos (`import`/`export`) por carpeta.
-2. **Un solo archivo para todo un año.** Hoy funciona bien (0,4 MB), pero con varios años y muchos estudiantes crecerá. Cuando pase de unos 5 MB conviene dividirlo por colección o pasar a SQLite.
-3. **"Nuevo año lectivo" borra las notas.** Para reclamos (Decreto 1290), certificados o comparar cohortes, el docente necesita consultar años anteriores. Ver propuesta 3.1.
-4. **Datos de menores sin clave de acceso.** Cualquiera que use el computador (de la sala de profesores, por ejemplo) ve notas, PIAR y datos de acudientes. La Ley 1581 de 2012 exige cuidado especial con datos de menores. Ver propuesta 3.2.
-5. **Carga inicial:** `referentes-datos.js` (494 KB) y `banco-inicial.js` (150 KB) se cargan siempre al abrir, aunque no se usen. Se pueden cargar solo al abrir el selector de referentes o el banco.
+### Segunda revisión completa (versión 1.15.1)
+Se revisó de nuevo todo el código con las funciones de la 1.15: análisis estático estricto de los 51 archivos, una prueba nueva que crea un año completo (dos áreas, cuatro periodos con notas, recuperaciones, asistencia, diario, anotaciones, horario, malla, plan de área, planeación, plan de apoyo, PIAR, prueba, puntos, portafolio) y recorre **todas las pantallas y pestañas** (calificaciones, curricular, gamificación, seguimiento, aula, editores, buscador…), y una medición del arranque.
+
+| Gravedad | Hallazgo | Corrección |
+|---|---|---|
+| **Alto (seguridad)** | Los identificadores internos (de grupos, áreas, planeaciones…) se escriben dentro de los botones. Un **paquete `.planeador`** recibido de otro docente, o un respaldo manipulado, podía traer un identificador con código que se ejecutaba al hacer clic, con acceso a las funciones del programa (se comprobó con una prueba). | Al cargar datos, restaurar respaldos, consultar años e importar paquetes, todo identificador con caracteres no permitidos se reemplaza. Prueba automática con un paquete malicioso. |
+| Medio (seguridad) | El generador de PDF aceptaba una ruta de destino cualquiera desde la interfaz (ninguna pantalla la usaba). | Siempre pregunta dónde guardar. |
+| Bajo | En 5 buscadores (planeaciones, tableros, referentes, banco pedagógico, búsqueda general), si se cambiaba de pantalla justo después de escribir, aparecía un error al intentar devolver el cursor a la casilla. | Función segura `reenfocar()`. |
+| Bajo | Si la IA cortaba la respuesta por ser demasiado larga, el docente veía "formato no esperado". | Mensaje claro en Claude, OpenAI y Gemini: pedir menos sesiones o secciones. |
+| Bajo | Dos caracteres invisibles (marca BOM) escritos literalmente en el código. | Escritos como `\uFEFF`. |
+| Proceso | Las pruebas solo corrían en Linux, pero el programa se usa en Windows. | El flujo de pruebas de GitHub corre ahora en Linux **y en Windows**. |
+
+Verificado sin cambios necesarios: el uso de la API de Claude (modelo vigente, respaldo automático ante rechazos, nivel de esfuerzo), el aislamiento de la interfaz, el servidor del celular y de las pruebas por QR, y el arranque (menos de 0,2 s, así que no hace falta cargar los referentes después).
+
+### Riesgos de fondo que siguen abiertos
+1. **Todo es global.** Los 41 scripts de la interfaz comparten nombres y escriben código dentro de los botones (`onclick`). La revisión automática vigila los choques de nombres y la limpieza de identificadores cierra el riesgo de seguridad, pero lo ideal sigue siendo migrar poco a poco a módulos y a eventos en lugar de `onclick`.
+2. **Un solo archivo por año.** Hoy pesa unos 0,4 MB con un año completo. Cuando pase de unos 5 MB conviene dividirlo por colección o pasar a SQLite.
+3. **Los datos del disco no están cifrados.** La clave de acceso impide abrir el programa, pero alguien con acceso a la carpeta de Windows del docente podría leer `datos.json`. Un cifrado real con la clave es posible, pero entonces olvidar la clave y el código de recuperación significa perder los datos.
+4. **Instalador sin firma digital.** Windows muestra "Windows protegió su PC". Se resuelve con un certificado de firma de código (el flujo ya está preparado).
 
 ## 2. Mejoras a lo que ya existe
 
-### Planeación
-- **Historial de versiones de cada planeación** (ver y volver a una versión anterior), no solo papelera para lo borrado.
-- **Vista semanal tipo agenda** donde se arrastran las sesiones a los días, con el horario y los festivos ya cruzados.
-- **Detección de huecos:** sesiones del horario sin planeación en las próximas 2 semanas, ejes de la malla sin cubrir al acercarse el fin del periodo (ya existe el mapa de cobertura; falta la alerta).
-- **Adaptaciones PIAR automáticas en la planeación:** al elegir el grupo, mostrar los ajustes razonables de cada estudiante con PIAR junto a cada momento de la clase.
+### Lo que se hizo en la 1.15
+Celular del docente, clave de acceso, años anteriores, recuperaciones según el SIEE, portafolio docente, nuevo año a elección y corrector de ortografía.
+
+### Celular del docente
+- **Fotos con la cámara del celular**: leer las hojas de respuesta de las pruebas (hoy se hace con la cámara o fotos del PC) y fotografiar trabajos para la retroalimentación con IA. Funciona sin instalar nada.
+- **Calificar con rúbrica** desde el celular (hoy solo notas numéricas).
+- Ver el **semáforo de riesgo** y el resumen del estudiante antes de hablar con un acudiente.
 
 ### Evaluación
-- **Recuperaciones y nivelaciones** según el SIEE de cada institución (la nota de recuperación reemplaza, promedia o tiene tope, p. ej. 3,0).
-- **Bitácora de cambios de notas** (quién, cuándo, valor anterior): respaldo ante reclamos de acudientes.
+- **Bitácora de cambios de notas** (cuándo y qué valor tenía antes): respaldo ante reclamos de acudientes.
+- **Recuperaciones conectadas con los planes de apoyo**: al calificar el plan, que su nota pase a la columna de recuperación, y un informe de recuperaciones para la comisión de evaluación.
 - **Exportar con el formato de la plataforma institucional** (columnas configurables y plantillas guardadas) para pegar las notas sin reescribirlas.
-- **Análisis por pregunta** en las pruebas tipo Saber: dificultad y discriminación de cada ítem, y qué opción incorrecta eligió la mayoría (diagnóstico de errores frecuentes).
-- **Asistencia desde el celular del docente** usando el servidor local que ya existe para las pruebas por QR.
+- **Análisis por pregunta** en las pruebas tipo Saber: dificultad de cada ítem y qué opción incorrecta eligió la mayoría.
+
+### Años anteriores y nuevo año
+- **Comparar cohortes**: promedio de un área por periodo entre años, en una gráfica.
+- **Certificado o constancia de notas** de un estudiante de un año anterior.
+- Al iniciar el año, **cargar la lista del SIMAT del año nuevo** y emparejar con los estudiantes promovidos (retiros, nuevos, cambios de grupo).
+
+### Planeación
+- **Historial de versiones de cada planeación** (volver a una versión anterior).
+- **Vista semanal tipo agenda** para arrastrar las sesiones a los días, con horario y festivos.
+- **Alerta de huecos**: clases del horario sin planeación en las próximas dos semanas, ejes de la malla sin cubrir cerca del cierre del periodo.
+- **Ajustes PIAR dentro de la planeación**: mostrar los ajustes razonables de los estudiantes con PIAR del grupo junto a cada momento de la clase.
 
 ### IA
-- **Respuesta en vivo** y botón **cancelar**; hoy se espera hasta 3 minutos sin ver nada.
-- **Reintento automático** cuando el modelo devuelve un JSON mal formado.
-- **Perfil institucional para la IA:** modelo pedagógico del PEI, énfasis, contexto del municipio, para que las sugerencias no salgan genéricas.
-- **Modelo por tarea:** uno económico para observaciones del boletín y uno más capaz para la malla o el plan de área.
+- **Respuesta en vivo y botón cancelar** (hoy se espera sin ver nada hasta que termina).
+- **Perfil institucional para la IA**: modelo pedagógico del PEI, énfasis y contexto del municipio, para que las sugerencias no salgan genéricas.
+- **Modelo por tarea**: uno económico para observaciones del boletín y uno más capaz para la malla o el plan de área.
+
+### Portafolio y clave
+- Portafolio: **adjuntar los archivos de soporte** (que el programa los copie a una carpeta del portafolio) y exportar esa carpeta junto con el Word.
+- Clave: opción de **cifrar los datos del disco** con la clave (con advertencia clara sobre el código de recuperación).
 
 ### Experiencia de uso
-- Atajos de teclado visibles (Ctrl + / con la lista), y navegar con el teclado por las planillas grandes.
-- Pantalla de **"Hoy"** más fuerte: la clase que sigue, con un botón que abre en secuencia los momentos de la sesión, el tablero y el temporizador para proyectar.
+- Atajos de teclado visibles (Ctrl + / con la lista).
+- Pantalla **"Hoy"** más completa: la clase que sigue, con un botón que abre en secuencia los momentos de la sesión, el tablero y el temporizador para proyectar.
 
-## 3. Funcionalidades nuevas que más aportarían
+## 3. Funciones que faltan (por impacto)
 
-Ordenadas por impacto para el docente colombiano:
-
-1. **Archivo de años anteriores** (consulta de solo lectura): en vez de borrar al iniciar el año, archivar grupos, notas, asistencia y observaciones. Permite certificados, reclamos y comparar el rendimiento entre cohortes.
-2. **Clave de acceso y cifrado de los datos** (opcional): PIN o contraseña al abrir y bloqueo tras unos minutos sin uso. Protege datos de menores (Ley 1581) en equipos compartidos.
-3. **Observador del estudiante y convivencia** (Ley 1620 de 2013 y ruta de atención): anotaciones positivas y por situaciones tipo I, II y III, descargos, compromisos, citaciones a acudientes y actas con firmas, exportables a Word. Es de lo que más tiempo consume a un director de grupo.
-4. **Portafolio para la evaluación docente** (Decreto 1278, evaluación anual de desempeño y ECDF): reunir solo las evidencias (planeaciones, diario de campo, tableros, resultados, planes de apoyo) por competencia y exportarlas ordenadas.
-5. **Sincronización entre dos computadores** (casa y colegio) por la carpeta de OneDrive/Drive, con detección de conflictos. Hoy solo hay respaldo en un sentido.
-6. **Dirección de grupo:** consolidado de todas las áreas del grupo uniendo los paquetes que exportan los demás docentes (sin servidor): ranking, estudiantes en riesgo en varias áreas, insumo para la comisión de evaluación y promoción.
-7. **Reuniones y atención a acudientes:** agenda de citas, registro de lo tratado y compromisos, con recordatorio en *Alertas*.
-8. **Mapa del aula** (puestos con foto y nombre): rotación de puestos, grupos de trabajo que se guardan y llamado a lista visual.
-9. **Biblioteca de recursos sin internet:** archivos, enlaces y videos descargados, vinculados a la sesión y abiertos con un clic desde *Mis clases de hoy*.
-10. **Exportar el calendario y el horario** a `.ics` (Google Calendar u Outlook en el celular).
+1. **Observador del estudiante y convivencia** (Ley 1620 de 2013): situaciones tipo I, II y III, descargos, compromisos, citaciones y actas con firmas, exportables a Word. Ya existe la base: las anotaciones de la 1.15.
+2. **Comisión de evaluación y promoción** (Decreto 1290): al cierre del año, por grupo, quién pierde áreas, quién recuperó, y el acta para la comisión.
+3. **Dirección de grupo**: consolidado de todas las áreas uniendo los paquetes que exportan los demás docentes del grupo (sin servidor).
+4. **Sincronización entre dos computadores** (casa y colegio) por la carpeta de OneDrive o Drive, con detección de conflictos.
+5. **Reuniones y atención a acudientes**: agenda de citas, lo tratado, compromisos y recordatorios.
+6. **Mapa del aula**: puestos con nombre, rotación y grupos de trabajo guardados.
+7. **Biblioteca de recursos sin internet** vinculada a cada sesión.
+8. **Exportar calendario y horario** a `.ics` (Google Calendar u Outlook del celular).
 
 ## 4. Hoja de ruta sugerida
 
 | Versión | Contenido |
 |---|---|
 | 1.14 (hecha) | Consolidación: corrección del boletín y los comunicados, recuperación automática, respaldos, rendimiento de tableros, claves cifradas, pruebas automáticas |
-| 1.15 (hecha) | Años anteriores, clave de acceso, recuperaciones según el SIEE, celular del docente como extensión del PC y portafolio docente |
-| 1.16 | Observador del estudiante y convivencia (Ley 1620), a partir de las anotaciones de la 1.15 + reuniones con acudientes + bitácora de cambios de notas |
-| 1.17 | Análisis por pregunta + exportar al formato de la plataforma institucional |
+| 1.15 (hecha) | Años anteriores, clave de acceso, recuperaciones según el SIEE, celular del docente, portafolio docente, nuevo año a elección, corrector de ortografía |
+| 1.15.1 (hecha) | Segunda revisión: protección contra identificadores manipulados en paquetes y respaldos, PDF sin ruta libre, buscadores, avisos de la IA, pruebas en Windows |
+| 1.16 | Observador del estudiante y convivencia + bitácora de cambios de notas + comisión de evaluación y promoción |
+| 1.17 | Cámara del celular (hojas de respuesta y trabajos) + análisis por pregunta + exportar al formato de la plataforma institucional |
 | 1.18 | IA en vivo con cancelar, perfil institucional y modelo por tarea |
-| 2.0 | Módulos JavaScript en lugar de scripts globales, carga diferida de referentes y almacenamiento dividido o SQLite; sincronización entre equipos |
+| 2.0 | Módulos JavaScript sin `onclick`, almacenamiento dividido o SQLite, sincronización entre equipos |

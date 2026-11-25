@@ -225,7 +225,7 @@ function dibujarSelectorBanco() {
   const lista = filtrarBanco(s);
   abrirModal(`<h2>📚 Insertar desde el banco pedagógico</h2>
     <div class="filtros" style="margin-bottom:8px">
-      <div style="flex:1"><label>Buscar</label><input id="sb-texto" value="${esc(s.texto)}" oninput="selectorBanco.texto=this.value;clearTimeout(window._sb);window._sb=setTimeout(()=>{dibujarSelectorBanco();const i=document.getElementById('sb-texto');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>
+      <div style="flex:1"><label>Buscar</label><input id="sb-texto" value="${esc(s.texto)}" oninput="selectorBanco.texto=this.value;clearTimeout(window._sb);window._sb=setTimeout(()=>{dibujarSelectorBanco();reenfocar('#sb-texto')},250)"></div>
       <div><label>Tipo</label><select onchange="selectorBanco.tipo=this.value;dibujarSelectorBanco()"><option value="">Todos</option>${Object.entries(TIPOS_BANCO).map(([k, v]) => `<option value="${k}" ${s.tipo === k ? 'selected' : ''}>${v.varios}</option>`).join('')}</select></div>
       <div><label>Momento</label><select onchange="selectorBanco.momento=this.value;dibujarSelectorBanco()"><option value="">Cualquiera</option>${MOMENTOS_BANCO.map(([k, v]) => `<option value="${k}" ${s.momento === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
       <div><label><input type="checkbox" ${s.conPasos ? 'checked' : ''} onchange="selectorBanco.conPasos=this.checked"> Incluir los pasos</label></div>

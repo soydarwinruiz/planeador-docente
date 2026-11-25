@@ -1,4 +1,4 @@
-# Documentación técnica – Planeador Docente 1.15.0
+# Documentación técnica – Planeador Docente 1.15.1
 
 Para quien quiera mantener, modificar o compilar la aplicación.
 
@@ -36,6 +36,7 @@ Para quien quiera mantener, modificar o compilar la aplicación.
 - **Seguridad:** `contextIsolation: true`, `nodeIntegration: false`; la interfaz solo accede a lo que expone `preload.js`. Los enlaces externos solo se abren si son `http(s)`, `mailto` o `whatsapp`. La página tiene una política de contenido que bloquea imágenes `blob:` (por eso las fotos se leen como `data:`).
 - **Estado:** todo el estado vive en el objeto `S` del renderer y se guarda como JSON con `guardar()` (espera 400 ms; los guardados van en cola y nunca se cruzan). Se envía como texto (`textoEstado()`), sin `config.ia.claves` (van a `claves:guardar`) y sin las imágenes de los tableros (`externalizarRecursos()` las pasa a `tablero:guardarRecursos`). Al cerrar la ventana se guarda de forma síncrona lo pendiente (`datos:guardarSync`).
 - **Vistas:** cada módulo registra `RENDERS.nombre = () => html`. `ir(vista, params)` cambia de vista y `render()` repinta. `RENDERS.nombre_despues` corre tras pintar.
+- **Identificadores seguros:** los id se insertan en atributos `onclick`; `sanearIds()` (en `migrar()` y al importar paquetes) reemplaza todo `id` con caracteres fuera de `[A-Za-z0-9_.:-]` y vacía las referencias `*Id` / `*Ids` y `grado` inválidos.
 - **Migración:** `migrar()` completa con valores por defecto las claves que falten, para que los datos de versiones anteriores sigan funcionando.
 
 ## 3. Archivos
@@ -144,6 +145,6 @@ npm start
 - **Firma digital (opcional):** con un certificado de firma de código (OV/EV o Azure Trusted Signing), crear los secretos `CSC_LINK` (pfx en base64) y `CSC_KEY_PASSWORD` en GitHub.
 
 ## 7. Pruebas
-`npm test` ejecuta `tests/estatico.js`, `tests/e2e-funciones.js` (recuperaciones, clave de acceso, años anteriores, celular con una página real y portafolio) y (sintaxis y nombres globales repetidos entre los scripts de `src/`, que comparten ámbito, y funciones inexistentes en `onclick`) y `tests/e2e.js` (vistas, plantillas, claves cifradas, migración de datos anteriores, imágenes de tableros, respaldo en nube, recuperación de un `datos.json` dañado, papelera y rendimiento del guardado). En Linux: `xvfb-run -a npm test`. El flujo `.github/workflows/pruebas.yml` las corre en cada cambio y la compilación de Windows corre la revisión estática antes de compilar.
+`npm test` ejecuta `tests/estatico.js`, `tests/e2e-completo.js` (todas las pantallas y pestañas con un año completo; paquete con identificadores manipulados), `tests/e2e-funciones.js` (recuperaciones, clave de acceso, años anteriores, celular con una página real y portafolio) y (sintaxis y nombres globales repetidos entre los scripts de `src/`, que comparten ámbito, y funciones inexistentes en `onclick`) y `tests/e2e.js` (vistas, plantillas, claves cifradas, migración de datos anteriores, imágenes de tableros, respaldo en nube, recuperación de un `datos.json` dañado, papelera y rendimiento del guardado). En Linux: `xvfb-run -a npm test`. El flujo `.github/workflows/pruebas.yml` las corre en cada cambio, en Linux y en Windows, y la compilación de Windows corre la revisión estática antes de compilar.
 
 Las pruebas de punta a punta usan Playwright con Electron (`_electron.launch`) y una carpeta de datos aparte (`PLANEADOR_DATA_DIR`); en Linux se ejecutan con `xvfb-run`. Simulan diálogos de guardar/abrir, proveedores de IA (reemplazando el manejador IPC), celulares (Chromium con perfil de teléfono contra el servidor local), micrófono (`--use-fake-device-for-media-stream`) y fotos de hojas de respuestas (generadas, rellenadas y deformadas con Python/PIL).

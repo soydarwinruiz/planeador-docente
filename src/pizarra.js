@@ -302,7 +302,7 @@ RENDERS.pizarras = () => {
   return `<div class="cabecera"><div><h1>🖍️ Tableros</h1><p class="sub">Pizarras infinitas para la clase: notas, textos con formato, formas, conectores, dibujo, imágenes y PDF, marcos para presentar, comentarios y temporizador. Cada tablero se asigna a una sesión y a sus grupos.</p></div>
     <div class="acciones"><button class="btn primario" onclick="pzNuevoDialogo()">＋ Nuevo tablero</button></div></div>
   <div class="filtros tarjeta">
-    <div style="flex:1;min-width:200px"><label>Buscar</label><input value="${esc(f.texto)}" placeholder="Título o texto del tablero…" oninput="ui.filtroPz.texto=this.value;clearTimeout(window._tpz);window._tpz=setTimeout(()=>{render();const i=document.querySelector('.filtros input');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)"></div>
+    <div style="flex:1;min-width:200px"><label>Buscar</label><input value="${esc(f.texto)}" placeholder="Título o texto del tablero…" oninput="ui.filtroPz.texto=this.value;clearTimeout(window._tpz);window._tpz=setTimeout(()=>{render();reenfocar('.filtros input')},300)"></div>
     <div><label>Grupo</label><select onchange="ui.filtroPz.grupoId=this.value;render()">${opcionesGrupos(f.grupoId, 'Todos')}</select></div>
     <div><label>Área</label><select onchange="ui.filtroPz.areaId=this.value;render()">${opcionesAreas(f.areaId, 'Todas')}</select></div>
   </div>

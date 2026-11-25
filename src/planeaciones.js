@@ -61,7 +61,7 @@ RENDERS.planeaciones = () => {
   <div class="cabecera"><div><h1>Planeaciones</h1><p class="sub">Planeaciones por sesión, semanales o por secuencia didáctica.</p></div>
     <div class="acciones"><button class="btn" onclick="ir('plantillas')">📋 Plantillas (${S.plantillas.length})</button><button class="btn primario" onclick="nuevaPlaneacion()">＋ Nueva planeación</button></div></div>
   <div class="filtros tarjeta">
-    <div style="flex:1;min-width:200px"><label>Buscar</label><input value="${esc(f.texto)}" placeholder="Tema, competencia, DBA…" oninput="ui.filtroPlan.texto=this.value;clearTimeout(window._tb);window._tb=setTimeout(()=>{render();const i=document.querySelector('.filtros input');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)"></div>
+    <div style="flex:1;min-width:200px"><label>Buscar</label><input value="${esc(f.texto)}" placeholder="Tema, competencia, DBA…" oninput="ui.filtroPlan.texto=this.value;clearTimeout(window._tb);window._tb=setTimeout(()=>{render();reenfocar('.filtros input')},300)"></div>
     <div><label>Grupo</label><select onchange="ui.filtroPlan.grupoId=this.value;render()">${opcionesGrupos(f.grupoId, 'Todos')}</select></div>
     <div><label>Área</label><select onchange="ui.filtroPlan.areaId=this.value;render()">${opcionesAreas(f.areaId, 'Todas')}</select></div>
     <div><label>Periodo</label><select onchange="ui.filtroPlan.periodoId=this.value;render()">${opcionesPeriodos(f.periodoId, 'Todos')}</select></div>
