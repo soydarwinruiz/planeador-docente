@@ -195,6 +195,11 @@ Devuelve un JSON con:
 - "fortalezas": 2 o 3 viñetas "• " con lo que hizo bien,
 - "mejoras": 2 o 3 viñetas "• " con lo que debe mejorar y cómo,
 - "retroalimentacion": mensaje para el estudiante en segunda persona (tú), cálido, concreto y motivador, de 60 a 120 palabras, sin mencionar la nota numérica.`
+    : tarea === 'rubrica' ? `Diseña una rúbrica analítica para valorar la actividad o el producto principal de esta sesión de clase.
+${contexto}
+
+Usa de 4 a 6 criterios observables y coherentes con el objetivo y los desempeños. Para cada criterio escribe un descriptor por cada nivel de desempeño indicado, en el mismo orden (de mayor a menor), concreto y que se pueda observar, en lenguaje claro para el grado.
+Devuelve un JSON: {"nombre": "Rúbrica – (producto)", "producto": "qué se valora (exposición, taller, maqueta…)", "criterios": [{"nombre": "criterio", "descriptores": ["nivel más alto", "…", "nivel más bajo"]}]}`
     : tarea === 'ficha' ? `Prepara el contenido de una ficha de trabajo imprimible para estudiantes.
 ${contexto}
 

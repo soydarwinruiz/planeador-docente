@@ -143,6 +143,7 @@ function pintarImportacion() {
     <div class="botones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" ${activas.length ? '' : 'disabled'} onclick="ejecutarImportacionNotas()">Importar notas</button></div>`;
 }
 function ejecutarImportacionNotas() {
+  origenNotas('importacion');
   const imp = window._imp; const c = ui.cal;
   const alumnos = alumnosDe(c.grupoId);
   const activas = imp.columnas.filter((x) => x.activa && x.destino);

@@ -17,7 +17,7 @@ function mostrarAvisoActualizacion() {
   d.className = 'aviso ok';
   d.style.cursor = 'pointer';
   d.innerHTML = `🎉 Hay una nueva versión (${esc(estadoAct.version)}). <u>Ver</u>`;
-  d.onclick = () => { d.remove(); ir('configuracion'); setTimeout(() => document.getElementById('tarjeta-act')?.scrollIntoView({ behavior: 'smooth' }), 100); };
+  d.onclick = () => { d.remove(); irAConfig('respaldos', 'tarjeta-act'); };
   document.getElementById('avisos').appendChild(d);
 }
 api.alEstadoActualizacion((e) => { estadoAct = e; pintarAct(); if (e.fase === 'lista') aviso(`Versión ${e.version} descargada. Reinicia para instalarla.`, 'ok'); });

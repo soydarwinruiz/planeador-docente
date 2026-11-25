@@ -115,6 +115,7 @@ function guardarRetro(siguiente) {
   const n = notaDesdeRubrica(r, x.sel);
   if (n == null) return aviso('Completa la valoración de todos los criterios', 'error');
   const act = buscarActividad(R.actId);
+  origenNotas('retro');
   (S.notas[R.actId] ||= {})[R.alumnoId] = redondear(n);
   if (act?.rubricaId === r.id) (S.notasRubrica[R.actId] ||= {})[R.alumnoId] = { ...x.sel };
   ((S.retro ||= {})[R.actId] ||= {})[R.alumnoId] = { texto: document.getElementById('rt-ret').value.trim(), fortalezas: document.getElementById('rt-fort').value.trim(), mejoras: document.getElementById('rt-mej').value.trim(), rubricaId: r.id, fecha: hoyISO() };

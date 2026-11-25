@@ -113,7 +113,7 @@ function ayudaDictado() {
   abrirModal(`<h2>🎤 Dictado por voz</h2>
     <p>Para dictar desde la app se necesita una clave de <b>OpenAI</b> o de <b>Gemini</b> (o un servicio compatible como Groq) en <b>Configuración → Inteligencia artificial</b>. El costo por minuto de dictado es muy bajo.</p>
     <div class="alerta info"><b>Opción gratuita de Windows:</b> pon el cursor en cualquier campo y pulsa <b>tecla Windows + H</b>. Se abre el dictado de Windows (en Windows 11 funciona en español; la primera vez puede pedir activarlo en Configuración → Privacidad → Voz).</div>
-    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="cerrarModal();ir('configuracion');setTimeout(()=>document.getElementById('tarjeta-voz')?.scrollIntoView({behavior:'smooth'}),80)">Configurar</button></div>`);
+    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="cerrarModal();irAConfig('ia','tarjeta-voz')">Configurar</button></div>`);
 }
 function tarjetaVoz() {
   const v = S.config.voz || {};

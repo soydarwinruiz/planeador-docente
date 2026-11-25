@@ -13,7 +13,7 @@ RENDERS.pruebas = () => {
   const lista = [...S.pruebas].sort((a, b) => (b.modificada || '').localeCompare(a.modificada || ''));
   return `
   <div class="cabecera"><div><h1>Pruebas y talleres</h1><p class="sub">Crea pruebas tipo Saber (selección múltiple con única respuesta) y talleres con preguntas abiertas, a mano o con IA. Imprime el cuadernillo con hoja de respuestas, califica digitando las respuestas y envía las notas a la planilla.</p></div>
-    <div class="acciones"><button class="btn primario" onclick="nuevaPrueba()">＋ Nueva prueba o taller</button></div></div>
+    <div class="acciones"><button class="btn" onclick="abrirBancoPreguntas()">📚 Banco de preguntas</button><button class="btn primario" onclick="nuevaPrueba()">＋ Nueva prueba o taller</button></div></div>
   ${lista.length ? `<div class="rejilla r3">${lista.map((p) => { const nr = Object.keys(p.respuestas || {}).length; return `<div class="tarjeta">
     <div class="cabecera" style="margin-bottom:4px"><span class="chip ${p.tipo === 'taller' ? 'semanal' : 'sesion'}">${p.tipo === 'taller' ? '📄 Taller' : '🧪 Prueba'}</span>
       <span><button class="icono" title="Duplicar" onclick="duplicarPrueba('${p.id}')">📑</button><button class="icono" title="Eliminar" onclick="eliminarPrueba('${p.id}')">🗑️</button></span></div>
@@ -88,7 +88,7 @@ function vistaPreguntasPrueba(p) {
     <div class="campo" style="grid-column:span 4"><label>Instrucciones para el estudiante</label><textarea rows="2" ${cp('instrucciones')}>${esc(p.instrucciones)}</textarea></div>
   </div></div>
   <div class="fila" style="margin-bottom:12px"><button class="btn ia" onclick="dialogoIAPrueba('${p.id}')">✨ Generar preguntas con IA</button>
-    <button class="btn" onclick="agregarPregunta('${p.id}','multiple')">＋ Selección múltiple</button><button class="btn" onclick="agregarPregunta('${p.id}','abierta')">＋ Pregunta abierta</button>
+    <button class="btn" onclick="agregarPregunta('${p.id}','multiple')">＋ Selección múltiple</button><button class="btn" onclick="agregarPregunta('${p.id}','abierta')">＋ Pregunta abierta</button><button class="btn" onclick="abrirBancoPreguntas('${p.id}')">📚 Traer del banco</button>
     ${p.preguntas.length > 1 ? `<button class="btn" onclick="mezclarOpciones('${p.id}')" title="Cambia de lugar las opciones para que las respuestas correctas queden repartidas">🔀 Repartir respuestas correctas</button>` : ''}</div>
   ${p.preguntas.length ? p.preguntas.map((q, i) => tarjetaPregunta(p, q, i)).join('') : '<div class="tarjeta vacio">Agrega preguntas o genéralas con IA.</div>'}`;
 }

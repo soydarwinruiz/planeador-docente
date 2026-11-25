@@ -8,9 +8,12 @@ RENDERS.configuracion = () => {
   const c = S.config;
   const sumaPer = c.periodos.reduce((s, p) => s + (+p.peso || 0), 0);
   return `
-  <div class="cabecera"><div><h1>Configuración</h1><p class="sub">Datos institucionales, sistema de evaluación (SIEE), periodos, IA y respaldos.</p></div>
-    <div class="acciones"><button class="btn primario" onclick="abrirAsistente()">🧭 Asistente de configuración inicial</button></div></div>
+  <div class="cabecera"><div><h1>Configuración</h1><p class="sub">Abre solo la sección que necesitas. El programa recuerda cuáles dejaste abiertas.</p></div>
+    <div class="acciones"><button class="btn" onclick="abrirSeccionesConfig(true)">Abrir todo</button><button class="btn" onclick="abrirSeccionesConfig(false)">Cerrar todo</button>
+      <button class="btn primario" onclick="abrirAsistente()">🧭 Asistente de configuración inicial</button></div></div>
+  <div class="tarjeta" style="padding:10px 14px"><input id="buscar-config" placeholder="🔎 Buscar en la configuración (membrete, clave, recuperación, color, celular…)" oninput="filtrarConfig(this.value)"></div>
 
+  ${seccionConfig('institucion', '🏫', 'Institución y docente', 'Datos institucionales y hoja membrete de los documentos', `
   <div class="tarjeta"><h2>Datos institucionales</h2>
     <div class="rejilla r3">
       ${campoConfig('institucion', 'Institución educativa')}
@@ -22,18 +25,9 @@ RENDERS.configuracion = () => {
     </div>
   </div>
 
-  ${tarjetaMembrete()}
+  ${tarjetaMembrete()}`)}
 
-  ${tarjetaApariencia()}
-
-  ${tarjetaMenu()}
-
-  ${tarjetaActualizaciones()}
-
-  ${tarjetaNube()}
-
-  ${tarjetaCompartir()}
-
+  ${seccionConfig('evaluacion', '📊', 'Evaluación (SIEE)', 'Escala, desempeños, recuperaciones, periodos y componentes de evaluación', `
   <div class="tarjeta"><h2>Escala de valoración (SIEE)</h2>
     <div class="rejilla r4">
       ${campoConfig('escalaMin', 'Nota mínima', 'number', 'step="0.1"')}
@@ -63,16 +57,17 @@ RENDERS.configuracion = () => {
     </tbody></table>
   </div>
 
-  ${tarjetaComponentes()}
+  ${tarjetaComponentes()}`)}
 
-  ${tarjetaIA()}
+  ${seccionConfig('apariencia', '🎨', 'Apariencia y menú', 'Tema, colores, tipo y tamaño de letra, corrector y menú lateral', `${tarjetaApariencia()}${tarjetaMenu()}`)}
 
-  ${tarjetaVoz()}
+  ${seccionConfig('frases', '⚡', 'Frases rápidas', 'Atajos de texto para escribir más rápido en cualquier campo', tarjetaFrases())}
 
-  ${tarjetaAcceso()}
+  ${seccionConfig('ia', '✨', 'Inteligencia artificial y dictado', 'Proveedor, clave y modelo de IA; dictado por voz', `${tarjetaIA()}${tarjetaVoz()}`)}
 
-  ${tarjetaCelular()}
+  ${seccionConfig('seguridad', '🔒', 'Seguridad y celular', 'Clave de acceso y celular del docente', `${tarjetaAcceso()}${tarjetaCelular()}`)}
 
+  ${seccionConfig('respaldos', '💾', 'Respaldos, actualizaciones y compartir', 'Respaldos, carpeta en la nube, actualizaciones y paquetes para otros docentes', `
   <div class="tarjeta"><h2>💾 Respaldo de datos</h2>
     <p class="ayuda">Todos tus datos se guardan en este equipo. Haz respaldos frecuentes en una memoria USB o en una carpeta sincronizada (OneDrive, Google Drive).
     Además, la aplicación crea un respaldo automático al abrirse y cada hora si hubo cambios (15 recientes y uno por día durante 30 días).</p>
@@ -85,12 +80,50 @@ RENDERS.configuracion = () => {
     <p class="ayuda" id="ubicacion-datos"></p>
   </div>
 
+  ${tarjetaNube()}${tarjetaActualizaciones()}${tarjetaCompartir()}`)}
+
+  ${seccionConfig('anio', '🗓️', 'Año lectivo', 'Iniciar un nuevo año y elegir qué conservar', `
   <div class="tarjeta"><h2>Nuevo año lectivo</h2>
     <p class="ayuda">Prepara la aplicación para un nuevo año. <b>Tú eliges qué conservar</b>: planeaciones, planeación curricular, cronograma, plantillas, pruebas, fichas, tableros, grupos (y si suben de grado), estudiantes, PIAR, programación evaluativa, horario, eventos, pendientes y portafolio. Asistencia, notas, observaciones y demás datos del año se vacían.
     <b>Antes, el año que termina se archiva completo</b> y queda para consultar en <a href="#" onclick="ir('anios');return false">Años anteriores</a>.</p>
     <button class="btn peligro" onclick="nuevoAnio()">Iniciar nuevo año lectivo…</button>
-  </div>`;
+  </div>`)}`;
 };
+// Secciones desplegables de la configuración
+function seccionConfig(k, ico, titulo, resumen, html) {
+  const abierta = !!(S.config.apariencia?.secciones || {})[k];
+  return `<details class="seccion-config" data-sec="${k}" ${abierta ? 'open' : ''}>
+    <summary onclick="recordarSeccion('${k}', !this.parentNode.open)"><span class="sec-ico">${ico}</span><span><b>${esc(titulo)}</b><br><span class="ayuda">${esc(resumen)}</span></span><span class="sec-flecha">›</span></summary>
+    <div class="sec-cuerpo">${html}</div></details>`;
+}
+function recordarSeccion(k, abierta) {
+  const ap = (S.config.apariencia ||= {});
+  ap.secciones = { ...(ap.secciones || {}), [k]: abierta };
+  guardar();
+}
+function abrirSeccionesConfig(abrir) {
+  document.querySelectorAll('.seccion-config').forEach((d) => { d.open = abrir; d.hidden = false; });
+  const ap = (S.config.apariencia ||= {});
+  ap.secciones = Object.fromEntries([...document.querySelectorAll('.seccion-config')].map((d) => [d.dataset.sec, abrir]));
+  guardar();
+}
+// Busca en el texto de cada sección (incluidas las cerradas) y deja abiertas solo las que coinciden
+function filtrarConfig(q) {
+  const t = normalizar(q.trim());
+  const abiertas = S.config.apariencia?.secciones || {};
+  document.querySelectorAll('.seccion-config').forEach((d) => {
+    if (!t) { d.hidden = false; d.open = !!abiertas[d.dataset.sec]; return; }
+    const si = normalizar(d.textContent + ' ' + [...d.querySelectorAll('input,textarea')].map((x) => x.placeholder).join(' ')).includes(t);
+    d.hidden = !si; d.open = si;
+  });
+}
+// Abre la configuración en una sección (y opcionalmente lleva hasta un elemento)
+function irAConfig(seccion, idElemento) {
+  const ap = (S.config.apariencia ||= {});
+  ap.secciones = { ...(ap.secciones || {}), [seccion]: true };
+  ir('configuracion');
+  setTimeout(() => (document.getElementById(idElemento) || document.querySelector(`[data-sec="${seccion}"]`))?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+}
 RENDERS.configuracion_despues = async () => {
   const el = document.getElementById('ubicacion-datos');
   if (el) el.textContent = 'Ubicación de los datos: ' + (await api.ubicacionDatos());
@@ -202,6 +235,7 @@ async function ejecutarNuevoAnio() {
   const arch = await api.aniosArchivar(textoEstado());
   if (!arch?.ok) { aviso('No se pudo archivar el año: ' + (arch?.error || 'error desconocido') + '. No se borró nada.', 'error'); return; }
   aplicarNuevoAnio(op);
+  reiniciarRegistroNotas();
   guardar(); ir('inicio');
   aviso(`Año lectivo ${S.config.anio} listo. El año anterior quedó en "Años anteriores". Revisa las fechas de los periodos en Configuración.`, 'ok');
 }
@@ -249,7 +283,7 @@ function aplicarNuevoAnio(op) {
   if (!op.portafolio) S.portafolio = { evidencias: [], reflexiones: {} };
 
   // Datos propios del año: siempre se vacían (quedan en el año archivado)
-  Object.assign(S, { asistencia: {}, notas: {}, notasRubrica: {}, recuperaciones: {}, anotaciones: [], observaciones: {}, diario: [], comunicadosEnviados: [],
+  Object.assign(S, { asistencia: {}, notas: {}, notasRubrica: {}, recuperaciones: {}, registroNotas: [], entregas: {}, anotaciones: [], observaciones: {}, diario: [], comunicadosEnviados: [],
     alertasOcultas: [], planesApoyo: [], gamificacion: {}, retro: {}, informes: {} });
   S.config.anio = anio;
   S.config.periodos.forEach((p) => { p.inicio = correrAnio(p.inicio); p.fin = correrAnio(p.fin); });

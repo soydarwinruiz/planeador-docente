@@ -73,14 +73,40 @@ document.addEventListener('keydown', (e) => {
 
 // ---------- Apariencia ----------
 const TAMANOS = [0.9, 1, 1.1, 1.2, 1.35];
+// Colores de la barra lateral y de acento, y tipos de letra que traen los computadores con Windows
+const COLORES_MENU = ['#1f4e79', '#0f2a44', '#2e7d32', '#00695c', '#6a1b9a', '#ad1457', '#c62828', '#e65100', '#5d4037', '#37474f', '#212121', '#e8eef7'];
+const COLORES_ACENTO = ['#2e75b6', '#1e88e5', '#43a047', '#00897b', '#8e24aa', '#d81b60', '#e53935', '#fb8c00', '#6d4c41', '#546e7a'];
+const FUENTES = ['Segoe UI', 'Calibri', 'Arial', 'Verdana', 'Tahoma', 'Trebuchet MS', 'Century Gothic', 'Candara', 'Georgia', 'Cambria', 'Comic Sans MS'];
+function esColorClaro(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return false;
+  const n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62;
+}
+function colorValido(c) { return /^#[0-9a-f]{6}$/i.test(c || '') ? c : ''; }
 function aplicarApariencia() {
   const ap = S?.config?.apariencia || {};
   const oscuro = ap.tema === 'oscuro' || (ap.tema === 'sistema' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.body.classList.toggle('oscuro', oscuro);
   document.body.style.zoom = ap.zoom || 1;
+  const raiz = document.documentElement.style;
+  const menu = colorValido(ap.colorMenu), acento = colorValido(ap.colorAcento);
+  if (menu) raiz.setProperty('--color-menu', menu); else raiz.removeProperty('--color-menu');
+  if (acento) document.body.style.setProperty('--azul-2', acento); else document.body.style.removeProperty('--azul-2');
+  document.body.classList.toggle('menu-claro', !!menu && esColorClaro(menu));
+  document.body.style.fontFamily = ap.fuente && FUENTES.includes(ap.fuente) ? `"${ap.fuente}", "Segoe UI", system-ui, Arial, sans-serif` : '';
   if (typeof aplicarMenu === 'function') aplicarMenu();
 }
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => aplicarApariencia());
+function cambiarApariencia(k, v) {
+  if (k !== 'fuente' && !colorValido(v)) return;
+  S.config.apariencia = { ...(S.config.apariencia || {}), [k]: v };
+  guardar(); aplicarApariencia(); render();
+}
+function restablecerApariencia() {
+  const { colorMenu, colorAcento, fuente, ...resto } = S.config.apariencia || {};
+  S.config.apariencia = resto;
+  guardar(); aplicarApariencia(); render();
+}
 function cambiarTema(t) { (S.config.apariencia ||= {}).tema = t; guardar(); aplicarApariencia(); render(); }
 function cambiarZoom(d) {
   const ap = (S.config.apariencia ||= {});
@@ -95,6 +121,13 @@ function tarjetaApariencia() {
     <div class="campo"><label>Tema</label><div class="fila">${[['claro', '☀️ Claro'], ['oscuro', '🌙 Oscuro'], ['sistema', '💻 Como el sistema']].map(([k, t]) => `<button class="btn ${(ap.tema || 'claro') === k ? 'primario' : ''}" onclick="cambiarTema('${k}')">${t}</button>`).join('')}</div></div>
     <div class="campo"><label>Tamaño de la letra</label><div class="fila">${TAMANOS.map((z) => `<button class="btn ${(ap.zoom || 1) === z ? 'primario' : ''}" onclick="S.config.apariencia={...(S.config.apariencia||{}),zoom:${z}};guardar();aplicarApariencia();render()">${Math.round(z * 100)}%</button>`).join('')}</div>
       <div class="ayuda">También con los botones A− / A+ del menú lateral.</div></div>
+    <div class="campo"><label>Color de la barra lateral</label><div class="fila">${COLORES_MENU.map((col) => `<button class="muestra-color ${ap.colorMenu === col ? 'on' : ''}" style="background:${col}" title="${col}" onclick="cambiarApariencia('colorMenu','${col}')"></button>`).join('')}
+      <input type="color" value="${esc(colorValido(ap.colorMenu) || '#1f4e79')}" title="Otro color" onchange="cambiarApariencia('colorMenu',this.value)" style="width:42px;height:32px;padding:2px"></div></div>
+    <div class="campo"><label>Color de botones y resaltados</label><div class="fila">${COLORES_ACENTO.map((col) => `<button class="muestra-color ${ap.colorAcento === col ? 'on' : ''}" style="background:${col}" title="${col}" onclick="cambiarApariencia('colorAcento','${col}')"></button>`).join('')}
+      <input type="color" value="${esc(colorValido(ap.colorAcento) || '#2e75b6')}" title="Otro color" onchange="cambiarApariencia('colorAcento',this.value)" style="width:42px;height:32px;padding:2px"></div></div>
+    <div class="campo"><label>Tipo de letra</label><select onchange="cambiarApariencia('fuente',this.value)">${['', ...FUENTES].map((f) => `<option value="${f}" ${(ap.fuente || '') === f ? 'selected' : ''} style="font-family:'${f || 'Segoe UI'}'">${f || 'Predeterminada (Segoe UI)'}</option>`).join('')}</select>
+      <div class="ayuda" style="font-family:'${esc(ap.fuente || 'Segoe UI')}'">Así se ve: Planeación de la clase de 7.° A — ¿Qué aprendimos hoy?</div></div>
+    <div class="campo" style="align-self:end"><button class="btn" onclick="restablecerApariencia()">↺ Volver a los colores y la letra originales</button></div>
     <div class="campo"><label><input type="checkbox" ${ap.ortografia !== false ? 'checked' : ''} onchange="S.config.apariencia={...(S.config.apariencia||{}),ortografia:this.checked};guardar();api.ortografia(this.checked)"> Corrector de ortografía</label>
       <div class="ayuda">Subraya en rojo las palabras mal escritas; clic derecho sobre la palabra para ver sugerencias o agregarla al diccionario.</div></div>
   </div></div>`;

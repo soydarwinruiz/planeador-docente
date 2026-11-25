@@ -68,6 +68,8 @@ function estadoInicial() {
     pizarras: [],
     papelera: [],
     recuperaciones: {},
+    registroNotas: [],
+    entregas: {},
     anotaciones: [],
     portafolio: { evidencias: [], reflexiones: {} },
   };
@@ -175,6 +177,7 @@ function marcarGuardado(texto) { const el = document.getElementById('estado-guar
 async function pasoGuardado() {
   try {
     await externalizarRecursos();
+    if (typeof registrarCambiosNotas === 'function') registrarCambiosNotas();
     const texto = textoEstado();
     if (texto !== ultimoTextoGuardado) { await api.guardar(texto); ultimoTextoGuardado = texto; }
     const E = estadoActual();
@@ -191,6 +194,7 @@ window.addEventListener('beforeunload', () => {
   if (typeof S === 'undefined' || !S) return;
   clearTimeout(temporizadorGuardado); temporizadorGuardado = null;
   if (typeof cerrarPapelera === 'function') cerrarPapelera();
+  if (typeof registrarCambiosNotas === 'function') registrarCambiosNotas();
   const texto = textoEstado();
   if (texto !== ultimoTextoGuardado) { api.guardarAlCerrar(texto); ultimoTextoGuardado = texto; }
 });
@@ -209,6 +213,7 @@ function aplicarRespaldo(datos) {
   if (ui.archivo) salirDeArchivo(false);
   const claves = S?.config?.ia?.claves || {};
   S = migrar(datos);
+  reiniciarRegistroNotas();
   if (!Object.values(S.config.ia.claves || {}).some(Boolean)) S.config.ia.claves = { ...claves };
   aplicarApariencia();
   sembrarBanco();
@@ -250,6 +255,7 @@ function migrar(d) {
   if (!r.config.ia.claves || typeof r.config.ia.claves !== 'object') r.config.ia.claves = {};
   if (!r.config.componentesPorDefecto) r.config.componentesPorDefecto = structuredClone(COMPONENTES_POR_DEFECTO);
   sanearIds(r);
+  if (Array.isArray(r.registroNotas)) r.registroNotas = r.registroNotas.filter((x) => x && /^[\w.:|-]{1,200}$/.test(String(x.act)) && ID_SEGURO.test(String(x.al)));
   r.version = VERSION_DATOS;
   return r;
 }
@@ -309,7 +315,7 @@ function sinIA() {
     <p>Para usar las sugerencias con inteligencia artificial elige un proveedor (Claude, ChatGPT, Gemini u otro compatible) y pega tu clave de API en
     <b>Configuración → Inteligencia artificial</b>. Normalmente requiere internet y tiene un costo según el uso del proveedor.</p>
     <p class="ayuda">El resto de la aplicación funciona sin internet.</p>
-    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="cerrarModal();ir('configuracion')">Ir a Configuración</button></div>`);
+    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="cerrarModal();irAConfig('ia')">Ir a Configuración</button></div>`);
   return true;
 }
 
@@ -330,6 +336,7 @@ function ordenGrupos(a, b) { return (a.grado - b.grado) || String(a.nombre).loca
 // ---------- Navegación ----------
 const VISTAS = [
   { id: 'inicio', ico: '🏠', nombre: 'Inicio' },
+  { id: 'miClase', ico: '🎯', nombre: 'Mi clase ahora' },
   { id: 'curricular', ico: '🧩', nombre: 'Planeación curricular' },
   { id: 'planeaciones', ico: '📝', nombre: 'Planeaciones de clase' },
   { id: 'plantillas', ico: '📋', nombre: 'Plantillas de planeación' },
@@ -420,7 +427,7 @@ function vistaVisible(id) { return !(S.config.menu?.ocultos || []).includes(id);
 function renderNav() {
   const insignia = typeof numeroAlertas === 'function' ? numeroAlertas() : 0;
   document.getElementById('nav').innerHTML = vistasMenu().map((v) =>
-    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') || (ui.vista === 'pruebaEditor' && v.id === 'pruebas') || (ui.vista === 'pizarra' && v.id === 'pizarras') ? 'activo' : ''}" onclick="ir('${v.id}')" title="${esc(v.nombre)}"><span class="ico">${v.ico}</span><span class="nom">${v.nombre}</span>${v.id === 'inicio' && insignia ? `<span class="insignia" title="Alertas y pendientes">${insignia}</span>` : ''}</button>`
+    `<button class="${ui.vista === v.id || (ui.vista === 'editor' && v.id === 'planeaciones') || ((ui.vista === 'alumnos' || ui.vista === 'perfil') && v.id === 'grupos') || (ui.vista === 'piarEditor' && v.id === 'piar') || ((ui.vista === 'pruebaEditor' || ui.vista === 'bancoPreguntas') && v.id === 'pruebas') || (ui.vista === 'pizarra' && v.id === 'pizarras') ? 'activo' : ''}" onclick="ir('${v.id}')" title="${esc(v.nombre)}"><span class="ico">${v.ico}</span><span class="nom">${v.nombre}</span>${v.id === 'inicio' && insignia ? `<span class="insignia" title="Alertas y pendientes">${insignia}</span>` : ''}</button>`
   ).join('');
   document.getElementById('marca-sub').textContent = S.config.institucion || 'Educación básica y media';
 }
@@ -456,13 +463,14 @@ RENDERS.inicio = () => {
     <h1>${c.docente ? '¡Hola, ' + esc(c.docente.split(' ')[0]) + '!' : 'Bienvenido(a) al Planeador Docente'}</h1>
     <p class="sub">${esc(fechaLarga(hoy))}${periodo ? ' · ' + esc(periodo.nombre) : ''}${c.institucion ? ' · ' + esc(c.institucion) : ''}</p>
   </div><div class="acciones">
-    <button class="btn primario" onclick="nuevaPlaneacion()">＋ Nueva planeación</button>
+    <button class="btn primario" onclick="abrirMiClase()" title="La clase que toca según tu horario, con todo lo necesario">🎯 Mi clase ahora</button>
+    <button class="btn" onclick="nuevaPlaneacion()">＋ Nueva planeación</button>
     <button class="btn" onclick="ir('asistencia')">✅ Tomar asistencia</button>
     <button class="btn" onclick="abrirAula()">🎲 Herramientas de aula</button>
     <button class="btn" onclick="ir('pizarras')">🖍️ Tableros</button>
   </div></div>
 
-  ${!configurado ? `<div class="alerta info"><b>Primeros pasos:</b> 1) Completa los datos en <a href="#" onclick="ir('configuracion')">Configuración</a> (institución, docente, periodos).
+  ${!configurado ? `<div class="alerta info"><b>Primeros pasos:</b> 1) Completa los datos en <a href="#" onclick="irAConfig('institucion')">Configuración</a> (institución, docente, periodos).
     2) Crea tus <a href="#" onclick="ir('grupos')">áreas, grupos y alumnos</a>. 3) Arma tu <a href="#" onclick="ir('curricular')">planeación curricular</a> (plan de área y malla). 4) ¡Planea tus clases!</div>` : ''}
 
   <div class="estadisticas">
@@ -472,6 +480,8 @@ RENDERS.inicio = () => {
     <div class="estadistica"><div class="num">${borradores}</div><div class="eti">En borrador</div></div>
     <div class="estadistica"><div class="num">${S.planeaciones.filter((p) => p.enBanco).length}</div><div class="eti">En el banco</div></div>
   </div>
+
+  ${tarjetaSemana()}
 
   ${tarjetaAlertas()}
 
@@ -501,12 +511,13 @@ async function iniciar() {
     S = estadoInicial();
     render();
     aviso(datos.__error + ' Puedes restaurar un respaldo desde Configuración.', 'error');
-    ir('configuracion');
+    irAConfig('respaldos');
     return;
   }
   const recuperado = datos?.__recuperado;
   S = migrar(datos || estadoInicial());
   ultimasClaves = JSON.stringify(S.config.ia.claves || {});
+  reiniciarRegistroNotas();
   sembrarBanco();
   sembrarInstrumentos();
   migrarPlantillas();

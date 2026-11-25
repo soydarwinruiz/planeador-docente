@@ -17,7 +17,7 @@ const PAPELERA_NOMBRES = {
   planesApoyo: 'planes de apoyo', piar: 'PIAR', observaciones: 'observaciones', diario: 'diario de campo', pendientes: 'pendientes',
   pruebas: 'pruebas y talleres', gamificacion: 'gamificación', fichas: 'fichas', retro: 'retroalimentación', pizarras: 'tableros',
   config: 'configuración', horario: 'horario', comunicadosEnviados: 'comunicados',
-  recuperaciones: 'recuperaciones', anotaciones: 'anotaciones', portafolio: 'portafolio',
+  recuperaciones: 'recuperaciones', entregas: 'entregas', registroNotas: 'registro de notas', anotaciones: 'anotaciones', portafolio: 'portafolio',
 };
 
 function textoSinPapelera(estado) { return JSON.stringify(estado, (k, v) => (k === 'papelera' ? undefined : v)); }
@@ -150,6 +150,7 @@ function resumenPapelera(e) {
 async function recuperarPapelera(id) {
   const e = (S.papelera || []).find((x) => x.id === id);
   if (!e) return;
+  origenNotas('papelera');
   const fallidas = aplicarPapelera(e);
   S.papelera = S.papelera.filter((x) => x.id !== id);
   guardar(); render();
@@ -179,5 +180,5 @@ RENDERS.papelera = () => {
       <div class="fila"><button class="btn pequeno primario" onclick="recuperarPapelera('${e.id}')">↩️ Recuperar</button>
       <button class="btn pequeno" onclick="borrarDePapelera('${e.id}')" title="Eliminar definitivamente">✕</button></div></li>`).join('')}</ul></div>`
       : '<div class="tarjeta vacio"><div class="grande">🗑️</div>La papelera está vacía.</div>'}
-    <p class="ayuda">La papelera guarda lo que eliminas con los botones de borrar (planeaciones, grupos, estudiantes, notas, actividades, tableros, eventos, etc.). No guarda lo que cambias escribiendo encima de un dato, como una nota que reemplazas por otra; para eso están los <a href="#" onclick="ir('configuracion');return false">respaldos</a>.</p>`;
+    <p class="ayuda">La papelera guarda lo que eliminas con los botones de borrar (planeaciones, grupos, estudiantes, notas, actividades, tableros, eventos, etc.). No guarda lo que cambias escribiendo encima de un dato, como una nota que reemplazas por otra; para eso están los <a href="#" onclick="irAConfig('respaldos');return false">respaldos</a>.</p>`;
 };

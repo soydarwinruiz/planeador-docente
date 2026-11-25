@@ -95,6 +95,7 @@ async function atenderCelular(accion, b, ip) {
   if (!disp.ultimo || Date.now() - Date.parse(disp.ultimo) > 10 * 60000) { disp.ultimo = new Date().toISOString(); conAnioActual(() => guardar()); }
   const fn = ACCIONES_CEL[accion];
   if (!fn) return celFalla(404, 'Acción desconocida');
+  if (accion === 'foto') return ui.archivo ? celFalla(409, 'En el computador se está consultando un año anterior: vuelve al año en curso.') : fn(b, disp);
   return conAnioActual(() => fn(b, disp));
 }
 
@@ -153,6 +154,7 @@ const ACCIONES_CEL = {
       tipos: TIPOS_ANOTACION,
       escala: { min: +S.config.escalaMin, max: +S.config.escalaMax, aprobacion: +S.config.notaAprobacion },
       pendientes: (S.pendientes || []).filter((p) => !p.hecho).map((p) => ({ id: p.id, texto: p.texto, fecha: p.fecha || '' })),
+      frases: (typeof frases === 'function' ? frases() : []).map((f) => ({ atajo: f.atajo, texto: f.texto })),
     });
   },
   clase({ grupoId, areaId, fecha }) {
@@ -169,6 +171,8 @@ const ACCIONES_CEL = {
       alumnos: alumnosDe(grupoId).map((a) => ({ id: a.id, nombre: nombreAlumno(a), corto: `${primerNombre(a)} ${String(a.apellidos || '').split(/\s+/)[0] || ''}`.trim(), piar: !!a.piar, puntos: jg ? puntosAlumno(jg, a.id) : 0 })),
       asistencia: areaId ? S.asistencia[`${grupoId}|${areaId}`]?.[fecha] || {} : {},
       actividades: pl ? pl.criterios.flatMap((cr) => cr.actividades.map((a) => ({ id: a.id, nombre: a.nombre, componente: cr.nombre, fecha: a.fecha || '', rubrica: !!a.rubricaId }))) : [],
+      entregas: pl ? Object.fromEntries(pl.criterios.flatMap((cr) => cr.actividades.map((a) => [a.id, S.entregas?.[a.id] || {}]))) : {},
+      pruebas: (S.pruebas || []).filter((p) => p.grupoId === grupoId && preguntasCerradas(p).length).map((p) => ({ id: p.id, titulo: p.titulo || 'Prueba', n: preguntasCerradas(p).length })),
       sesion: plan ? { titulo: plan.titulo || '', sesion: ses?.titulo || '', objetivo: plan.objetivo || '', pregunta: plan.pregunta || '',
         momentos: ses ? MOMENTOS.map((m) => ({ t: m.t, texto: ses[m.k] || '', med: ses[m.k + 'Med'] || '' })).filter((m) => m.texto || m.med) : [] } : null,
     });
@@ -198,6 +202,7 @@ const ACCIONES_CEL = {
     const x = actividadPorId(actividadId);
     if (!x) return celFalla(404, 'La actividad ya no existe.');
     if (x.a.rubricaId) return celFalla(400, 'Esta actividad se califica con rúbrica en el computador.');
+    origenNotas('celular');
     if (!alumnoDeGrupo(x.pl.grupoId, alumnoId)) return celFalla(404, 'Estudiante no válido.');
     const txt = String(valor ?? '').replace(',', '.').trim();
     S.notas[actividadId] ||= {};
@@ -234,6 +239,42 @@ const ACCIONES_CEL = {
     darPuntos(grupoId, ['a:' + alumnoId], m.p, m.t);
     refrescarPorCelular(['gamificacion']);
     return celOk({ puntos: puntosAlumno(juego(grupoId), alumnoId) });
+  },
+  entrega({ actividadId, alumnoId, estado }) {
+    const x = actividadPorId(actividadId);
+    if (!x) return celFalla(404, 'La actividad ya no existe.');
+    if (!alumnoDeGrupo(x.pl.grupoId, alumnoId)) return celFalla(404, 'Estudiante no válido.');
+    if (estado && !ESTADOS_ENTREGA[estado]) return celFalla(400, 'Estado no válido.');
+    const m = ((S.entregas ||= {})[actividadId] ||= {});
+    if (estado) m[alumnoId] = estado; else delete m[alumnoId];
+    guardar(); refrescarPorCelular(['calificaciones', 'seguimiento', 'miClase', 'inicio']);
+    return celOk();
+  },
+  // Foto tomada con el celular: hoja de respuestas (se califica al instante) o trabajo de un estudiante (va a la retroalimentación)
+  async foto({ tipo, imagen, pruebaId, alumnoId, actividadId, grupoId }) {
+    if (typeof imagen !== 'string' || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(imagen)) return celFalla(400, 'La imagen no es válida.');
+    const img = new Image();
+    img.src = imagen;
+    try { await img.decode(); } catch { return celFalla(400, 'No se pudo abrir la foto.'); }
+    if (tipo === 'omr') {
+      const p = porId(S.pruebas, pruebaId);
+      if (!p) return celFalla(404, 'La prueba ya no existe.');
+      const { n, ops } = datosOMR(p);
+      const r = leerHojaOMR(img, n, ops);
+      if (!r.ok) return celFalla(422, 'No se encontraron las 4 marcas de la hoja. Toma la foto de frente, con buena luz, y que se vea la hoja completa.');
+      const a = r.numero ? alumnosDe(p.grupoId)[r.numero - 1] : null;
+      if (!a) return celFalla(422, 'Se leyó la hoja, pero no el número de lista. Revisa que esté marcado.');
+      registrarOMR(p, a, r, 'celular');
+      refrescarPorCelular(['pruebaEditor', 'pruebas']);
+      const res = resultadoAlumno(p, a.id);
+      return celOk({ nombre: nombreAlumno(a), nota: fmtNota(res?.nota), correctas: res?.correctas ?? 0, total: preguntasCerradas(p).length, multiples: r.multiples || 0 });
+    }
+    const al = alumnoDeGrupo(grupoId, alumnoId);
+    if (!al) return celFalla(404, 'Estudiante no válido.');
+    const url = imagen.startsWith('data:image/jpeg') ? imagen : (() => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0); return c.toDataURL('image/jpeg', 0.85); })();
+    (CEL.fotos ||= []).push({ id: uid(), alumnoId, grupoId, actividadId: actividadPorId(actividadId) ? actividadId : '', url, fecha: new Date().toISOString() });
+    avisoFotoCelular();
+    return celOk();
   },
   pendiente({ texto, fecha }) {
     texto = String(texto || '').trim().slice(0, 500);
@@ -315,4 +356,41 @@ async function desautorizarCelular(id) {
   guardar();
   if (!dispositivosVigentes().length && CEL.activo) await activarCelular(false);
   render();
+}
+
+// ---------- Fotos de trabajos tomadas con el celular ----------
+// Quedan en memoria (no se guardan en los datos) hasta que el docente las usa en la retroalimentación con IA.
+function avisoFotoCelular() {
+  document.querySelectorAll('.aviso-fotos').forEach((x) => x.remove());
+  const n = (CEL.fotos || []).length;
+  if (!n) return;
+  const el = document.createElement('div');
+  el.className = 'aviso aviso-fotos';
+  el.innerHTML = `📷 ${n} foto(s) de trabajos desde el celular. <button class="aviso-accion" onclick="this.parentNode.remove();verFotosCelular()">Ver</button>`;
+  document.getElementById('avisos').appendChild(el);
+  setTimeout(() => el.remove(), 15000);
+}
+function verFotosCelular() {
+  const fotos = CEL.fotos || [];
+  abrirModal(`<h2>📷 Fotos de trabajos desde el celular</h2>
+    ${fotos.length ? `<div class="rejilla r3">${fotos.map((f) => { const a = porId(S.alumnos, f.alumnoId), x = f.actividadId && actividadPorId(f.actividadId); return `<div class="tarjeta" style="padding:8px">
+      <img src="${f.url}" style="width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#000">
+      <p style="margin:6px 0"><b>${esc(a ? nombreAlumno(a) : 'Estudiante')}</b><br><span class="ayuda">${x ? esc(x.a.nombre) + ' · ' : ''}${esc(new Date(f.fecha).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }))}</span></p>
+      <div class="fila"><button class="btn pequeno primario" onclick="retroDesdeFoto('${f.id}')">✍️ Retroalimentación IA</button><button class="icono" title="Descartar" onclick="CEL.fotos=CEL.fotos.filter((y)=>y.id!=='${f.id}');verFotosCelular()">🗑️</button></div></div>`; }).join('')}</div>`
+      : '<p class="ayuda">No hay fotos pendientes.</p>'}
+    <p class="ayuda">Las fotos no se guardan en tus datos: úsalas antes de cerrar el programa.</p>
+    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button></div>`, { ancho: true });
+}
+function retroDesdeFoto(id) {
+  const f = (CEL.fotos || []).find((x) => x.id === id);
+  if (!f) return;
+  const x = f.actividadId && actividadPorId(f.actividadId);
+  const per = x ? x.pl.periodoId : (periodoDeFecha(hoyISO()) || S.config.periodos[0])?.id;
+  const areaId = x ? x.pl.areaId : (ui.cal?.grupoId === f.grupoId && ui.cal.areaId) || areasDeGrupo(f.grupoId)[0]?.id || '';
+  ui.cal = { grupoId: f.grupoId, areaId, periodoId: per, pestana: 'planilla' };
+  cerrarModal(); ir('calificaciones');
+  dialogoRetro(f.actividadId, f.alumnoId);
+  window._retro.imagenes.push({ tipo: 'image/jpeg', datos: f.url.split(',')[1], url: f.url });
+  pintarFotosRetro();
+  CEL.fotos = CEL.fotos.filter((y) => y.id !== id);
 }

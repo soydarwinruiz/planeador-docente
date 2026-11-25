@@ -290,6 +290,7 @@ RENDERS.editor = ({ id }) => {
       <div class="cab"><b>${etiquetaSesion} ${i + 1}${s.fecha ? ' · ' + esc(fechaLarga(s.fecha)) : ''}</b>
         <div>${i > 0 ? `<button class="icono" title="Subir" onclick="moverSesion('${p.id}',${i},-1)">⬆️</button>` : ''}${i < p.sesiones.length - 1 ? `<button class="icono" title="Bajar" onclick="moverSesion('${p.id}',${i},1)">⬇️</button>` : ''}
         ${pzBotonSesion(p.id, s.id)}
+        <button class="btn pequeno" title="Guía, quiz de salida o rúbrica para esta sesión, con IA" onclick="dialogoMaterialSesion('${p.id}','${s.id}')">✨ Material</button>
         <button class="icono" title="Duplicar sesión" onclick="duplicarSesion('${p.id}',${i})">📑</button>
         ${p.sesiones.length > 1 ? `<button class="icono" title="Eliminar sesión" onclick="eliminarSesion('${p.id}',${i})">🗑️</button>` : ''}</div></div>
       <div class="rejilla" style="grid-template-columns: 2fr 1fr 120px">

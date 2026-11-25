@@ -287,13 +287,13 @@ function registrarOMR(p, a, r, origen = 'cámara') {
   (p.respuestas ||= {})[a.id] = r.letras.replace(/\*/g, '-');
   tocarPrueba(p);
   const res = resultadoAlumno(p, a.id);
-  camOMR.registrados.unshift({ firma: r.numero + '|' + r.letras, a, res, multiples: r.multiples });
+  camOMR?.registrados?.unshift({ firma: r.numero + '|' + r.letras, a, res, multiples: r.multiples }); // la cámara del PC puede no estar abierta (foto desde el celular)
   sonidoOK();
   const est = document.getElementById('cam-estado');
   if (est) est.innerHTML = `<div style="font-size:18px">✔ <b>${esc(nombreAlumno(a))}</b></div><div style="font-size:28px;font-weight:800" class="${claseNota(res?.nota)}">${fmtNota(res?.nota)}</div>
     <div class="ayuda">${res?.correctas ?? 0} de ${preguntasCerradas(p).length} correctas${r.multiples ? ` · ⚠ ${r.multiples} con más de una marca (cuentan como mal)` : ''} · desde ${origen}</div>`;
   const lista = document.getElementById('cam-lista');
-  if (lista) lista.innerHTML = `<ul class="lista-simple">${camOMR.registrados.slice(0, 40).map((x) => `<li><span>${esc(nombreAlumno(x.a))}</span><b class="${claseNota(x.res?.nota)}">${fmtNota(x.res?.nota)}</b></li>`).join('')}</ul>`;
+  if (lista && camOMR) lista.innerHTML = `<ul class="lista-simple">${camOMR.registrados.slice(0, 40).map((x) => `<li><span>${esc(nombreAlumno(x.a))}</span><b class="${claseNota(x.res?.nota)}">${fmtNota(x.res?.nota)}</b></li>`).join('')}</ul>`;
 }
 function sonidoOK() { try { const c = new AudioContext(); const o = c.createOscillator(), g = c.createGain(); o.frequency.value = 1320; g.gain.value = 0.12; o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.12); } catch (e) { /* */ } }
 async function fotosOMR(pid, archivos) {
