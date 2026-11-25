@@ -19,7 +19,7 @@
     <div class="buscador"><input placeholder="🔎 Buscar…  (Ctrl+K)" onfocus="this.blur();abrirBuscador()" readonly><button class="buscador-ico" title="Buscar (Ctrl + K)" aria-label="Buscar" onclick="abrirBuscador()">🔎</button></div>
     <nav id="nav"></nav>
     <div class="menu-pie"><div class="fila" style="justify-content:space-between;margin-bottom:6px">
-      <span><button title="Tema claro / oscuro" onclick="cambiarTema(document.body.classList.contains('oscuro') ? 'claro' : 'oscuro')">🌓</button> <button title="Personalizar el menú (ocultar y ordenar módulos)" onclick="ir('configuracion');setTimeout(()=>document.getElementById('tarjeta-menu')?.scrollIntoView({behavior:'smooth'}),80)">🧭</button> <button id="boton-compacto" title="Menú compacto (solo íconos)" onclick="alternarCompacto()">⇤</button> <button id="boton-bloquear" title="Bloquear el programa (Ctrl + L)" onclick="bloquearAhora()" hidden>🔒</button></span>
+      <span><button title="Tema claro / oscuro" onclick="cambiarTema(document.body.classList.contains('oscuro') ? 'claro' : 'oscuro')">🌓</button> <button title="Personalizar el menú (ocultar y ordenar módulos)" onclick="irAConfig('apariencia','tarjeta-menu')">🧭</button> <button id="boton-compacto" title="Menú compacto (solo íconos)" onclick="alternarCompacto()">⇤</button> <button id="boton-bloquear" title="Bloquear el programa (Ctrl + L)" onclick="bloquearAhora()" hidden>🔒</button></span>
       <span><button title="Letra más pequeña" onclick="cambiarZoom(-1)">A−</button> <button title="Letra más grande" onclick="cambiarZoom(1)">A+</button></span></div>
       <div id="estado-guardado">Datos guardados en este equipo</div></div>
   </aside>
@@ -41,6 +41,7 @@
   <script src="banco-pedagogico.js"></script>
   <script src="evaluacion.js"></script>
   <script src="programacion.js"></script>
+  <script src="registro-notas.js"></script>
   <script src="importar-notas.js"></script>
   <script src="retro.js"></script>
   <script src="apoyo.js"></script>
@@ -62,6 +63,7 @@
   <script src="pizarra.js"></script>
   <script src="papelera.js"></script>
   <script src="bloqueo.js"></script>
+  <script src="frases.js"></script>
   <script src="anios.js"></script>
   <script src="celular.js"></script>
   <script src="portafolio.js"></script>

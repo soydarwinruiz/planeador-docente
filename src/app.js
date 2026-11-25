@@ -68,6 +68,7 @@ function estadoInicial() {
     pizarras: [],
     papelera: [],
     recuperaciones: {},
+    registroNotas: [],
     anotaciones: [],
     portafolio: { evidencias: [], reflexiones: {} },
   };
@@ -175,6 +176,7 @@ function marcarGuardado(texto) { const el = document.getElementById('estado-guar
 async function pasoGuardado() {
   try {
     await externalizarRecursos();
+    if (typeof registrarCambiosNotas === 'function') registrarCambiosNotas();
     const texto = textoEstado();
     if (texto !== ultimoTextoGuardado) { await api.guardar(texto); ultimoTextoGuardado = texto; }
     const E = estadoActual();
@@ -191,6 +193,7 @@ window.addEventListener('beforeunload', () => {
   if (typeof S === 'undefined' || !S) return;
   clearTimeout(temporizadorGuardado); temporizadorGuardado = null;
   if (typeof cerrarPapelera === 'function') cerrarPapelera();
+  if (typeof registrarCambiosNotas === 'function') registrarCambiosNotas();
   const texto = textoEstado();
   if (texto !== ultimoTextoGuardado) { api.guardarAlCerrar(texto); ultimoTextoGuardado = texto; }
 });
@@ -209,6 +212,7 @@ function aplicarRespaldo(datos) {
   if (ui.archivo) salirDeArchivo(false);
   const claves = S?.config?.ia?.claves || {};
   S = migrar(datos);
+  reiniciarRegistroNotas();
   if (!Object.values(S.config.ia.claves || {}).some(Boolean)) S.config.ia.claves = { ...claves };
   aplicarApariencia();
   sembrarBanco();
@@ -250,6 +254,7 @@ function migrar(d) {
   if (!r.config.ia.claves || typeof r.config.ia.claves !== 'object') r.config.ia.claves = {};
   if (!r.config.componentesPorDefecto) r.config.componentesPorDefecto = structuredClone(COMPONENTES_POR_DEFECTO);
   sanearIds(r);
+  if (Array.isArray(r.registroNotas)) r.registroNotas = r.registroNotas.filter((x) => x && /^[\w.:|-]{1,200}$/.test(String(x.act)) && ID_SEGURO.test(String(x.al)));
   r.version = VERSION_DATOS;
   return r;
 }
@@ -309,7 +314,7 @@ function sinIA() {
     <p>Para usar las sugerencias con inteligencia artificial elige un proveedor (Claude, ChatGPT, Gemini u otro compatible) y pega tu clave de API en
     <b>Configuración → Inteligencia artificial</b>. Normalmente requiere internet y tiene un costo según el uso del proveedor.</p>
     <p class="ayuda">El resto de la aplicación funciona sin internet.</p>
-    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="cerrarModal();ir('configuracion')">Ir a Configuración</button></div>`);
+    <div class="botones"><button class="btn" onclick="cerrarModal()">Cerrar</button><button class="btn primario" onclick="cerrarModal();irAConfig('ia')">Ir a Configuración</button></div>`);
   return true;
 }
 
@@ -462,7 +467,7 @@ RENDERS.inicio = () => {
     <button class="btn" onclick="ir('pizarras')">🖍️ Tableros</button>
   </div></div>
 
-  ${!configurado ? `<div class="alerta info"><b>Primeros pasos:</b> 1) Completa los datos en <a href="#" onclick="ir('configuracion')">Configuración</a> (institución, docente, periodos).
+  ${!configurado ? `<div class="alerta info"><b>Primeros pasos:</b> 1) Completa los datos en <a href="#" onclick="irAConfig('institucion')">Configuración</a> (institución, docente, periodos).
     2) Crea tus <a href="#" onclick="ir('grupos')">áreas, grupos y alumnos</a>. 3) Arma tu <a href="#" onclick="ir('curricular')">planeación curricular</a> (plan de área y malla). 4) ¡Planea tus clases!</div>` : ''}
 
   <div class="estadisticas">
@@ -501,12 +506,13 @@ async function iniciar() {
     S = estadoInicial();
     render();
     aviso(datos.__error + ' Puedes restaurar un respaldo desde Configuración.', 'error');
-    ir('configuracion');
+    irAConfig('respaldos');
     return;
   }
   const recuperado = datos?.__recuperado;
   S = migrar(datos || estadoInicial());
   ultimasClaves = JSON.stringify(S.config.ia.claves || {});
+  reiniciarRegistroNotas();
   sembrarBanco();
   sembrarInstrumentos();
   migrarPlantillas();

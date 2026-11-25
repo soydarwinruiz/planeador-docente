@@ -99,6 +99,7 @@ function notaDesdeRubrica(r, sel) {
   return vals.length === r.criterios.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
 }
 function recalcularNotasRubrica(rubId) {
+  origenNotas('rubrica');
   const r = porId(S.rubricas, rubId);
   for (const pl of S.planillas) for (const c of pl.criterios) for (const a of c.actividades) {
     if (a.rubricaId !== rubId || !S.notasRubrica[a.id]) continue;
@@ -368,6 +369,7 @@ function guardarNotaRubrica(actId, alumnoId, borrar = false) {
   const r = porId(S.rubricas, buscarActividad(actId).rubricaId);
   S.notasRubrica[actId] ||= {};
   S.notas[actId] ||= {};
+  origenNotas('rubrica');
   if (borrar) { delete S.notasRubrica[actId][alumnoId]; delete S.notas[actId][alumnoId]; }
   else {
     const n = notaDesdeRubrica(r, seleccionRubrica);

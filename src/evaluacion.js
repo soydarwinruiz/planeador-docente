@@ -226,7 +226,7 @@ function claseNota(n) { return n != null && redondear(n) < +S.config.notaAprobac
 RENDERS.calificaciones = () => {
   const c = ui.cal || (ui.cal = { grupoId: '', areaId: '', periodoId: '', pestana: 'programacion' });
   contextoPorDefecto(c);
-  const pestanas = `<div class="pestanas">${[['programacion', '📅 Programación evaluativa'], ['planilla', '📊 Planilla de notas'], ['anual', '📈 Consolidado anual'], ['apoyo', '🆘 Planes de apoyo'], ['riesgo', '🚦 Semáforo de riesgo'], ['observaciones', '📝 Observaciones del boletín'], ['rubricas', '📋 Instrumentos de evaluación']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
+  const pestanas = `<div class="pestanas">${[['programacion', '📅 Programación evaluativa'], ['planilla', '📊 Planilla de notas'], ['anual', '📈 Consolidado anual'], ['apoyo', '🆘 Planes de apoyo'], ['riesgo', '🚦 Semáforo de riesgo'], ['observaciones', '📝 Observaciones del boletín'], ['rubricas', '📋 Instrumentos de evaluación'], ['registro', '🕘 Registro de cambios']].map(([k, t]) => `<button class="${c.pestana === k ? 'activo' : ''}" onclick="ui.cal.pestana='${k}';render()">${t}</button>`).join('')}</div>`;
   const cab = `<div class="cabecera"><div><h1>Evaluación y notas</h1><p class="sub">Escala ${S.config.escalaMin} a ${S.config.escalaMax} · Aprobación desde ${S.config.notaAprobacion} · Decreto 1290 de 2009</p></div>
     <div class="acciones">${c.pestana === 'planilla' || c.pestana === 'anual' ? `<button class="btn" onclick="exportarCalificaciones()">⬇️ Exportar a Excel</button>` : ''}
       <button class="btn" onclick="dialogoInformeCierre()" title="Informe del periodo para coordinación">📑 Informe de cierre</button></div></div>`;
@@ -236,6 +236,7 @@ RENDERS.calificaciones = () => {
   if (c.pestana === 'riesgo') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaRiesgo(c);
   if (c.pestana === 'observaciones') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaObservaciones(c);
   if (c.pestana === 'apoyo') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaApoyo(c);
+  if (c.pestana === 'registro') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaRegistroNotas(c);
   if (c.pestana === 'programacion') return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaProgramacion(c);
   return cab + pestanas + selectorGrupoArea(c, 'ui.cal', { periodo: true }) + vistaPlanilla(c);
 };
@@ -266,8 +267,8 @@ function vistaPlanilla(c) {
       const n = nota(a.id, al.id);
       const ci = col++;
       return a.rubricaId
-        ? `<td class="nota num"><button class="btn pequeno ${claseNota(n)}" data-fila="${fila}" data-col="${ci}" onclick="calificarConRubrica('${a.id}','${al.id}')">${n == null ? 'Calificar' : fmtNota(n)}</button></td>`
-        : `<td class="nota"><input type="number" step="0.1" min="${S.config.escalaMin}" max="${S.config.escalaMax}" class="${claseNota(n)}" value="${n == null ? '' : n}" data-fila="${fila}" data-col="${ci}" onchange="ponerNota('${a.id}','${al.id}',this)" onkeydown="navegarNotas(event,this)"></td>`;
+        ? `<td class="nota num"><button class="btn pequeno ${claseNota(n)}" data-fila="${fila}" data-col="${ci}" oncontextmenu="event.preventDefault();verHistorialNota('${a.id}','${al.id}')" onclick="calificarConRubrica('${a.id}','${al.id}')">${n == null ? 'Calificar' : fmtNota(n)}</button></td>`
+        : `<td class="nota"><input type="number" step="0.1" min="${S.config.escalaMin}" max="${S.config.escalaMax}" class="${claseNota(n)}" value="${n == null ? '' : n}" data-fila="${fila}" data-col="${ci}" title="Clic derecho: historial de esta nota" oncontextmenu="event.preventDefault();verHistorialNota('${a.id}','${al.id}')" onchange="ponerNota('${a.id}','${al.id}',this)" onkeydown="navegarNotas(event,this)"></td>`;
     }).join('') + (() => { const pr = promedioCriterio(cr, al.id); return `<td class="prom ${claseNota(pr)}" data-prom="${cr.id}">${fmtNota(pr)}</td>`; })()).join('')}
     ${celdaRecuperacion(pl.grupoId, pl.areaId, pl.periodoId, al.id, def)}
     <td class="final ${claseNota(f)}" data-final>${textoFinal(def, f)}</td><td data-des>${chipDesempeno(f)}</td></tr>`;

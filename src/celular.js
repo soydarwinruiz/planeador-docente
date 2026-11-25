@@ -198,6 +198,7 @@ const ACCIONES_CEL = {
     const x = actividadPorId(actividadId);
     if (!x) return celFalla(404, 'La actividad ya no existe.');
     if (x.a.rubricaId) return celFalla(400, 'Esta actividad se califica con rúbrica en el computador.');
+    origenNotas('celular');
     if (!alumnoDeGrupo(x.pl.grupoId, alumnoId)) return celFalla(404, 'Estudiante no válido.');
     const txt = String(valor ?? '').replace(',', '.').trim();
     S.notas[actividadId] ||= {};
