@@ -261,7 +261,8 @@ if (require.main === module) (async () => {
     });
     // La hoja se "imprime" en una ventana oculta, se rellenan las respuestas A, B, C, D, B y se toma la foto
     const foto = await app.evaluate(async ({ BrowserWindow }, html) => {
-      const b = new BrowserWindow({ show: false, width: 735, height: 951, useContentSize: true, autoHideMenuBar: true, webPreferences: { zoomFactor: 0.9 } });
+      // Tamaño pensado para caber en pantallas de 768 px de alto (Windows en GitHub)
+      const b = new BrowserWindow({ show: false, width: 560, height: 725, useContentSize: true, autoHideMenuBar: true, webPreferences: { zoomFactor: 0.686 } });
       b.setMenu(null);
       await b.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
       await b.webContents.executeJavaScript(`document.querySelectorAll('.num').forEach((n, i) => { let x = n.nextElementSibling; for (let j = 0; j < 'ABCDB'.charCodeAt(i) - 65; j++) x = x.nextElementSibling; x.classList.add('llena'); x.textContent = ''; }); true`);
