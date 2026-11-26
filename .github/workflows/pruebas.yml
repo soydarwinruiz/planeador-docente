@@ -21,3 +21,8 @@ jobs:
         run: xvfb-run -a npm test
       - if: runner.os == 'Windows'
         run: npm test
+      # El programa empaquetado (como lo instala el docente) también se prueba
+      - if: runner.os == 'Linux'
+        run: npx electron-builder --linux dir --x64 --publish never && xvfb-run -a node tests/empaquetado.js dist/linux-unpacked/planeador-docente
+      - if: runner.os == 'Windows'
+        run: npx electron-builder --win dir --x64 --publish never; node tests/empaquetado.js dist/win-unpacked/Tiza.exe

@@ -1,6 +1,6 @@
 # Tiza (antes Planeador Docente)
 
-> **Versión 2.0 beta:** los datos se guardan en una base de datos SQLite con cada registro cifrado (AES-256). La migración desde la 1.x es automática.
+> **Versión 2.0:** los datos se guardan en una base de datos SQLite con cada registro cifrado (AES-256). La migración desde la 1.x es automática.
 
 Aplicación de escritorio para Windows para planear clases de **educación básica y media en Colombia (grados 1.° a 11.°)**.
 Funciona **sin internet**: todos los datos quedan guardados en tu computador.

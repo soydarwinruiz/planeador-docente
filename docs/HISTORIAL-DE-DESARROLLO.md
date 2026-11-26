@@ -269,6 +269,14 @@ El docente preguntó cómo se guardan los datos y decidió: *"vamos con SQLite p
 - **Versión beta:** se publica como prelanzamiento; solo la reciben quienes la instalen.
 - Errores encontrados durante el desarrollo, antes de publicar: el separador de la asistencia (un carácter nulo) hacía que SQLite juntara varios días en una fila; una base dañada impedía abrir el programa antes de entrar a la recuperación; la tabla inicial ocupaba demasiado espacio con filas grandes. Pruebas nuevas: un año completo se guarda y vuelve idéntico al reabrir; nada se lee en el archivo sin la llave; recuperación de una base dañada; asistencia de varios días al reabrir.
 
+### Versión 2.0.0 — Definitiva (26 de noviembre)
+Rastreo de errores y funcionamiento de la beta, y lanzamiento como versión definitiva:
+- **Error grave de la beta 1:** el instalador no incluía `basedatos.js` y el programa no abría (sin tocar los datos). Las pruebas no lo veían porque corrían sobre el código fuente. Ahora hay dos protecciones: una revisión que compara lo que el programa carga con la lista del instalador, y una prueba que **abre el programa empaquetado** (en las pruebas de GitHub y antes de publicar cada versión).
+- La beta subió por error un archivo interno de la compilación (`builder-debug.yml`); ya no se publica.
+- **Volver de la 1.x a la 2.0:** si hay un `datos.json` más reciente que la base de datos, la 2.0 respalda la base y migra otra vez, sin perder lo hecho en la 1.x.
+- Recorridos probados (`tests/e2e-v2.js`): pasar de la 1.x con clave (pide la clave, migra, entrega código nuevo y cifra con la clave), respaldo hacia otro computador, restaurar respaldos `.db` y `.json`, nuevo año y consulta del año archivado, cerrar justo después de poner una nota, y volver de la 1.x.
+- La 2.0 se publica como versión normal: a quien tiene la 1.x le llega por actualización automática.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo

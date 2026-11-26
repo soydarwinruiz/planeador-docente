@@ -34,5 +34,19 @@ for (const m of todo.matchAll(/\son[a-z]+=\\?"([^"]*)"/g)) {
     if (!declaradoEn.has(c[1]) && !nativas.has(c[1]) && !/\$\{/.test(c[1])) falla(`Manejador en línea llama a "${c[1]}", que no existe`);
   }
 }
+// Todo lo que el programa carga (require('./…'), archivos leídos con __dirname) debe ir en el instalador (build.files)
+const pkg = require(path.join(RAIZ, 'package.json'));
+const patrones = pkg.build.files.filter((f) => !f.startsWith('!'));
+const incluido = (rel) => patrones.some((p) => p === rel || (p.endsWith('/**/*') && rel.startsWith(p.slice(0, -4))));
+const necesarios = new Set(['main.js', 'preload.js', 'package.json', 'src/index.html']);
+const pendientes = ['main.js', 'preload.js'];
+while (pendientes.length) {
+  const f = pendientes.pop();
+  const t = fs.readFileSync(path.join(RAIZ, f), 'utf8');
+  for (const m of t.matchAll(/require\('\.\/([\w-]+)'\)/g)) { const r = m[1] + '.js'; if (!necesarios.has(r)) { necesarios.add(r); pendientes.push(r); } }
+  for (const m of t.matchAll(/path\.join\(__dirname, ((?:'[^']+'(?:, )?)+)\)/g)) necesarios.add(m[1].split(', ').map((x) => x.slice(1, -1)).join('/'));
+}
+for (const r of necesarios) if (!incluido(r)) falla(`"${r}" se usa pero no está en la lista de archivos del instalador (package.json → build.files)`);
+
 if (fallas) { console.error(`\n${fallas} problema(s)`); process.exit(1); }
 console.log(`✓ Revisión estática: ${archivosRaiz.length + scripts.length} archivos, ${declaradoEn.size} nombres globales sin choques`);

@@ -20,6 +20,9 @@ jobs:
           # Firma de código: se usa solo si se configuran estos secretos en GitHub
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+      # Antes de publicar: el programa empaquetado tiene que abrir y guardar (detecta archivos que falten en el instalador)
+      - name: Probar el programa empaquetado
+        run: node tests/empaquetado.js "dist/win-unpacked/Tiza.exe"
       - uses: actions/upload-artifact@v4
         with:
           name: planeador-docente-windows
@@ -38,7 +41,8 @@ jobs:
           files: |
             dist/*.exe
             dist/*.blockmap
-            dist/*.yml
+            dist/latest*.yml
+            dist/beta*.yml
           body: |
             **Cómo instalar**
             - `Tiza-Setup-...exe`: instalador (crea acceso directo y se actualiza solo).
