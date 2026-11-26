@@ -3,10 +3,9 @@
 // de la actividad. Todo queda vinculado a la planeación y se revisa antes de usarlo.
 
 function textoSesion(p, s) {
-  const g = porId(S.grupos, p.grupoId);
   return [p.titulo ? `Planeación: ${p.titulo}` : '', s.titulo ? `Sesión: ${s.titulo}` : '', p.objetivo ? `Objetivo: ${p.objetivo}` : '', p.pregunta ? `Pregunta problematizadora: ${p.pregunta}` : '',
     p.desempenoSaber ? `Desempeño (saber): ${p.desempenoSaber}` : '', p.desempenoHacer ? `Desempeño (hacer): ${p.desempenoHacer}` : '',
-    ...MOMENTOS.filter((m) => (s[m.k] || '').trim()).map((m) => `${m.t}: ${s[m.k]}`), g ? `Grado: ${g.grado}°` : ''].filter(Boolean).join('\n');
+    ...MOMENTOS.filter((m) => (s[m.k] || '').trim()).map((m) => `${m.t}: ${s[m.k]}`), contextoAulaIA(p)].filter(Boolean).join('\n');
 }
 function dialogoMaterialSesion(planId, sesId) {
   if (sinIA()) return;

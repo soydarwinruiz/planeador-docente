@@ -104,7 +104,7 @@ En **Configuración → Inteligencia artificial** eliges el proveedor y pegas tu
 |---|---|---|
 | Claude (Anthropic) | console.anthropic.com | claude-opus-5-5 |
 | ChatGPT (OpenAI) | platform.openai.com | gpt-5-mini |
-| Gemini (Google) | aistudio.google.com | gemini-2.5-flash |
+| Gemini (Google) | aistudio.google.com | gemini-flash-latest (el Flash más reciente) |
 | Otro compatible con OpenAI | DeepSeek, Groq, OpenRouter, Ollama o LM Studio (locales)… | el que indiques |
 
 Puedes escribir cualquier otro modelo de tu proveedor. Usa **Probar conexión** para verificar la configuración.

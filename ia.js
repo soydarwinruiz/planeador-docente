@@ -6,10 +6,12 @@ const SISTEMA = `Eres un asesor pedagógico experto en educación básica primar
 Conoces los Estándares Básicos de Competencias, los Derechos Básicos de Aprendizaje (DBA), los Lineamientos Curriculares del MEN,
 el Decreto 1290 de 2009 (evaluación) y el Decreto 1421 de 2017 (educación inclusiva, PIAR y ajustes razonables).
 Redactas en español de Colombia, con lenguaje claro, concreto y realizable en un aula pública con recursos limitados.
+Si se describen la identificación (recursos, locativos, duración, número de estudiantes) y la diversidad del aula (estilos de aprendizaje, gustos, características, barreras, ajustes y apoyos, necesidades PIAR), tenlos SIEMPRE presentes: propone actividades, mediaciones, agrupamientos y evaluación realizables con esos recursos y espacios, conectadas con los gustos del grupo, y con los ajustes y apoyos incorporados en la clase (no como un anexo aparte).
 No inventes códigos ni números de DBA: si no estás seguro del número exacto, describe el aprendizaje sin numerarlo.
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y sin bloques de código.`;
 
 function extraerJSON(texto) {
+  texto = String(texto || '').replace(/<think>[\s\S]*?<\/think>/g, ''); // modelos locales que "piensan en voz alta" (qwen3, deepseek-r1)
   const inicio = texto.indexOf('{');
   const fin = texto.lastIndexOf('}');
   if (inicio === -1 || fin === -1) throw new Error('La respuesta de la IA no tuvo el formato esperado.');
@@ -50,11 +52,13 @@ Devuelve un JSON con solo esas claves (cada valor es texto de uno a tres párraf
 const PROVEEDORES = {
   anthropic: { nombre: 'Claude (Anthropic)', modelo: 'claude-opus-5-5' },
   openai: { nombre: 'ChatGPT (OpenAI)', modelo: 'gpt-5-mini' },
-  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-2.5-flash' },
+  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-flash-latest' }, // alias que Google mantiene apuntando a su Flash más reciente
   compatible: { nombre: 'Compatible con OpenAI', modelo: '' },
 };
 
-class ErrorIA extends Error {}
+class ErrorIA extends Error { constructor(m, estado) { super(m); this.estado = estado; } }
+const PASAJERO = new Set([500, 502, 503, 504, 529]); // saturación o falla momentánea del servicio: vale la pena reintentar
+const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 const RESPUESTA_LARGA = 'La respuesta de la IA fue demasiado larga y quedó incompleta. Pide menos sesiones, ítems o secciones a la vez.';
 
 async function llamarAnthropic({ clave, modelo }, sistema, prompt, imagenes = []) {
@@ -83,22 +87,32 @@ async function llamarAnthropic({ clave, modelo }, sistema, prompt, imagenes = []
   }
 }
 
-async function pedirJSON(url, opciones) {
+// Si el servicio está saturado (503 y similares) se reintenta dos veces, esperando un poco más cada vez
+// Un modelo local (Ollama, LM Studio) en un computador sin tarjeta gráfica puede tardar varios minutos
+const esLocal = (url) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|192\.168\.|10\.)/i.test(url);
+async function pedirJSON(url, opciones, esperas = [2000, 6000]) {
   let r;
-  try {
-    r = await fetch(url, { ...opciones, signal: AbortSignal.timeout(180000) });
-  } catch (e) {
-    throw new ErrorIA(e.name === 'TimeoutError' ? 'El servicio tardó demasiado en responder.' : 'No hay conexión a internet o no se pudo contactar el servicio (' + (e.cause?.code || e.message) + ').');
+  for (let intento = 0; ; intento++) {
+    try {
+      r = await fetch(url, { ...opciones, signal: AbortSignal.timeout(esLocal(url) ? 900000 : 180000) });
+    } catch (e) {
+      if (esLocal(url) && e.name !== 'TimeoutError') throw new ErrorIA('No se pudo contactar el modelo local (' + (e.cause?.code || e.message) + '). Verifica que Ollama o LM Studio estén abiertos y que la dirección sea correcta.');
+      throw new ErrorIA(e.name === 'TimeoutError' ? 'El servicio tardó demasiado en responder.' : 'No hay conexión a internet o no se pudo contactar el servicio (' + (e.cause?.code || e.message) + ').');
+    }
+    if (!PASAJERO.has(r.status) || intento >= esperas.length) break;
+    await r.text().catch(() => '');
+    await pausa(esperas[intento]);
   }
   const texto = await r.text();
   let datos = null;
   try { datos = JSON.parse(texto); } catch { /* respuesta no JSON */ }
   if (!r.ok) {
     const msg = datos?.error?.message || datos?.message || texto.slice(0, 300);
-    if (r.status === 401 || r.status === 403) throw new ErrorIA('La clave de API no es válida o no tiene permisos. ' + msg);
-    if (r.status === 404) throw new ErrorIA('No se encontró el modelo o la dirección del servicio. ' + msg);
-    if (r.status === 429) throw new ErrorIA('Se alcanzó el límite de uso o no hay saldo en la cuenta. ' + msg);
-    throw new ErrorIA(`Error del servicio de IA (${r.status}): ${msg}`);
+    if (r.status === 401 || r.status === 403) throw new ErrorIA('La clave de API no es válida o no tiene permisos. ' + msg, r.status);
+    if (r.status === 404) throw new ErrorIA('No se encontró el modelo o la dirección del servicio. ' + msg, r.status);
+    if (r.status === 429) throw new ErrorIA('Se alcanzó el límite de uso o no hay saldo en la cuenta. ' + msg, r.status);
+    if (PASAJERO.has(r.status)) throw new ErrorIA(`El servicio de IA está saturado o con fallas en este momento (${r.status}); se reintentó varias veces. Suele pasar en minutos: vuelve a intentarlo o prueba otro modelo. (${msg})`, r.status);
+    throw new ErrorIA(`Error del servicio de IA (${r.status}): ${msg}`, r.status);
   }
   return datos;
 }
@@ -117,16 +131,35 @@ async function llamarCompatibleOpenAI({ clave, modelo, url }, sistema, prompt, i
   return texto;
 }
 
+// Google retira modelos con frecuencia ("no longer available to new users"). Si el modelo no existe o sigue saturado,
+// se consulta la lista de modelos de la cuenta y se usa el Flash estable más reciente.
+let geminiElegido = null;
+async function modeloGeminiDisponible(clave, evitar) {
+  if (geminiElegido && geminiElegido !== evitar) return geminiElegido;
+  const d = await pedirJSON('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', { headers: { 'x-goog-api-key': clave } }, []);
+  const nombres = (d?.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent')).map((m) => String(m.name || '').replace(/^models\//, '')).filter((n) => n && n !== evitar);
+  const version = (n) => parseFloat(n.match(/^gemini-(\d+(?:\.\d+)?)/)?.[1] || 0);
+  const mejor = (re) => nombres.filter((n) => re.test(n)).sort((a, b) => version(b) - version(a))[0];
+  geminiElegido = mejor(/^gemini-\d+(\.\d+)?-flash$/) || (nombres.includes('gemini-flash-latest') && 'gemini-flash-latest') || mejor(/^gemini-\d+(\.\d+)?-flash(-preview)?(-\d{2}-\d{4})?$/) || mejor(/^gemini-.*flash/) || null;
+  return geminiElegido;
+}
+async function pedirGemini(clave, modelo, cuerpo) {
+  const url = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
+  const opciones = { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave }, body: JSON.stringify(cuerpo) };
+  const inicial = modelo || geminiElegido || PROVEEDORES.gemini.modelo;
+  try { return await pedirJSON(url(inicial), opciones); } catch (e) {
+    if (!(e instanceof ErrorIA) || !(e.estado === 404 || PASAJERO.has(e.estado))) throw e;
+    let otro = null;
+    try { otro = await modeloGeminiDisponible(clave, inicial); } catch { /* sin lista: se informa el error original */ }
+    if (!otro) throw e;
+    try { return await pedirJSON(url(otro), opciones); } catch (e2) { throw e.estado === 404 ? e2 : e; }
+  }
+}
 async function llamarGemini({ clave, modelo }, sistema, prompt, imagenes = []) {
-  const m = encodeURIComponent(modelo || PROVEEDORES.gemini.modelo);
-  const datos = await pedirJSON(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: sistema }] },
-      contents: [{ role: 'user', parts: [{ text: prompt }, ...imagenes.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.datos } }))] }],
-      generationConfig: { responseMimeType: 'application/json' },
-    }),
+  const datos = await pedirGemini(clave, modelo, {
+    systemInstruction: { parts: [{ text: sistema }] },
+    contents: [{ role: 'user', parts: [{ text: prompt }, ...imagenes.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.datos } }))] }],
+    generationConfig: { responseMimeType: 'application/json' },
   });
   const cand = datos?.candidates?.[0];
   const texto = (cand?.content?.parts || []).map((p) => p.text || '').join('');
@@ -141,7 +174,7 @@ async function llamarModelo(ia, sistema, prompt, imagenes = []) {
   if (p !== 'compatible' && !cfg.clave) throw new ErrorIA(`Falta la clave de API de ${PROVEEDORES[p]?.nombre || p}. Configúrala en Configuración > Inteligencia artificial.`);
   if (p === 'compatible' && (!cfg.url || !cfg.modelo)) throw new ErrorIA('Para un servicio compatible con OpenAI indica la dirección (URL) y el nombre del modelo.');
   if (p === 'anthropic') return llamarAnthropic(cfg, sistema, prompt, imagenes);
-  if (p === 'gemini') return llamarGemini(cfg, sistema, prompt, imagenes);
+  if (p === 'gemini') return llamarGemini({ ...cfg, modelo: (ia.modelos?.gemini || '').trim() }, sistema, prompt, imagenes);
   if (p === 'openai') return llamarCompatibleOpenAI({ ...cfg, url: 'https://api.openai.com/v1' }, sistema, prompt, imagenes);
   return llamarCompatibleOpenAI(cfg, sistema, prompt, imagenes);
 }
@@ -237,11 +270,7 @@ async function transcribirAudio({ ia, voz = {}, audio }) {
     if (p === 'gemini') {
       const clave = (ia.claves?.gemini || '').trim();
       if (!clave) return { ok: false, error: 'Falta la clave de Gemini.' };
-      const m = encodeURIComponent(voz.modelo || ia.modelos?.gemini || PROVEEDORES.gemini.modelo);
-      const d = await pedirJSON(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
-        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Transcribe literalmente este audio en español de Colombia, con puntuación correcta. Responde solo con el texto transcrito, sin comillas ni comentarios.' }, { inlineData: { mimeType: 'audio/wav', data: audio } }] }] }),
-      });
+      const d = await pedirGemini(clave, (voz.modelo || ia.modelos?.gemini || '').trim(), { contents: [{ role: 'user', parts: [{ text: 'Transcribe literalmente este audio en español de Colombia, con puntuación correcta. Responde solo con el texto transcrito, sin comillas ni comentarios.' }, { inlineData: { mimeType: 'audio/wav', data: audio } }] }] });
       return { ok: true, texto: (d?.candidates?.[0]?.content?.parts || []).map((x) => x.text || '').join('').trim() };
     }
     const base = p === 'openai' ? 'https://api.openai.com/v1' : (ia.url || '').replace(/\/+$/, '');

@@ -11,6 +11,90 @@ const CAMPOS_ITEM = [
   { k: 'evidencias', t: 'Evidencias de aprendizaje', ph: 'Productos o actuaciones observables…' },
 ];
 
+// Campos de cada eje de la malla según la institución: los de siempre se pueden ocultar o renombrar, y el docente
+// puede agregar campos propios (se guardan en S.config.malla y valen para todas las mallas)
+const esCampoPropio = (k) => typeof k === 'string' && /^propio_[A-Za-z0-9_-]{1,40}$/.test(k);
+function camposMalla({ todos = false } = {}) {
+  const c = S.config.malla || {};
+  const ocultos = new Set(Array.isArray(c.ocultos) ? c.ocultos : []), nombres = c.nombres && typeof c.nombres === 'object' ? c.nombres : {};
+  return [
+    ...CAMPOS_ITEM.filter((f) => todos || !ocultos.has(f.k)).map((f) => ({ ...f, original: f.t, t: String(nombres[f.k] || '').trim() || f.t, oculto: ocultos.has(f.k) })),
+    ...(Array.isArray(c.propios) ? c.propios : []).filter((f) => f && esCampoPropio(f.k)).map((f) => ({ k: f.k, t: String(f.t || '').trim() || 'Campo propio', ph: String(f.ph || ''), propio: true })),
+  ];
+}
+function configMalla() {
+  const c = (S.config.malla && typeof S.config.malla === 'object') ? S.config.malla : (S.config.malla = {});
+  if (!Array.isArray(c.ocultos)) c.ocultos = [];
+  if (!c.nombres || typeof c.nombres !== 'object') c.nombres = {};
+  if (!Array.isArray(c.propios)) c.propios = [];
+  return c;
+}
+function dialogoCamposMalla() {
+  const campos = camposMalla({ todos: true });
+  abrirModal(`<h2>⚙️ Campos de la malla</h2>
+    <p class="ayuda">Ajusta los campos de cada eje temático a lo que pide tu institución. Los cambios valen para todas las mallas y para el Word.
+    Ocultar un campo no borra lo que ya está escrito: si lo vuelves a mostrar, aparece de nuevo.</p>
+    <table class="tabla"><thead><tr><th style="width:70px">Mostrar</th><th>Nombre del campo</th><th style="width:60px"></th></tr></thead><tbody>
+      ${campos.map((f) => `<tr><td style="text-align:center">${f.propio ? '' : `<input type="checkbox" ${f.oculto ? '' : 'checked'} onchange="mostrarCampoMalla('${f.k}',this.checked)">`}</td>
+        <td><input value="${esc(f.t)}" placeholder="${esc(f.original || '')}" onchange="renombrarCampoMalla('${f.k}',this.value)">${f.propio ? ' <span class="chip">propio</span>' : ''}</td>
+        <td>${f.propio ? `<button class="icono" title="Eliminar este campo" onclick="quitarCampoMalla('${f.k}')">🗑️</button>` : ''}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="fila" style="margin-top:10px"><input id="m-campo-nuevo" placeholder="Nuevo campo (ej.: Proyecto transversal, Metodología, Recursos…)" style="flex:1" onkeydown="if(event.key==='Enter')agregarCampoMalla()">
+      <button class="btn primario" onclick="agregarCampoMalla()">＋ Agregar campo</button></div>
+    <div class="botones"><button class="btn" onclick="restablecerCamposMalla()">Restablecer los de siempre</button><button class="btn primario" onclick="cerrarModal()">Listo</button></div>`, { ancho: true });
+}
+function refrescarCamposMalla() { guardar(); render(); dialogoCamposMalla(); }
+function mostrarCampoMalla(k, visible) {
+  const c = configMalla();
+  c.ocultos = c.ocultos.filter((x) => x !== k);
+  if (!visible) c.ocultos.push(k);
+  refrescarCamposMalla();
+}
+function renombrarCampoMalla(k, nombre) {
+  const c = configMalla(), t = String(nombre || '').trim().slice(0, 80);
+  if (esCampoPropio(k)) { const f = c.propios.find((x) => x.k === k); if (f && t) f.t = t; }
+  else if (t && t !== CAMPOS_ITEM.find((f) => f.k === k)?.t) c.nombres[k] = t; else delete c.nombres[k];
+  refrescarCamposMalla();
+}
+function agregarCampoMalla() {
+  const t = document.getElementById('m-campo-nuevo').value.trim().slice(0, 80);
+  if (!t) return aviso('Escribe el nombre del campo', 'error');
+  configMalla().propios.push({ k: 'propio_' + uid().replace(/[^A-Za-z0-9_-]/g, ''), t });
+  refrescarCamposMalla();
+  document.getElementById('m-campo-nuevo')?.focus();
+}
+async function quitarCampoMalla(k) {
+  const c = configMalla(), f = c.propios.find((x) => x.k === k);
+  if (!f) return;
+  const usados = S.mallas.reduce((n, m) => n + Object.values(m.periodos || {}).reduce((a, p) => a + (p.items || []).filter((it) => String(it[k] || '').trim()).length, 0), 0);
+  if (usados && !(await confirmar(`El campo "${f.t}" tiene texto en ${usados} eje(s). Si lo eliminas, ese texto se borra. ¿Continuar?`, { boton: 'Eliminar' }))) return dialogoCamposMalla();
+  c.propios = c.propios.filter((x) => x.k !== k);
+  for (const m of S.mallas) for (const p of Object.values(m.periodos || {})) for (const it of p.items || []) delete it[k];
+  refrescarCamposMalla();
+}
+async function restablecerCamposMalla() {
+  const c = configMalla();
+  if (c.propios.length && !(await confirmar('Se mostrarán los campos de siempre con su nombre original. Tus campos propios se conservan. ¿Continuar?', { boton: 'Restablecer' }))) return dialogoCamposMalla();
+  c.ocultos = []; c.nombres = {};
+  refrescarCamposMalla();
+}
+// Columnas de la malla para el Word (los tres desempeños visibles van juntos en una columna)
+function columnasMallaExport() {
+  const campos = camposMalla();
+  const des = campos.filter((f) => f.k.startsWith('desempeno'));
+  const cols = [{ k: 'eje', t: 'Eje temático / unidad' }];
+  for (const f of campos) {
+    if (f.k.startsWith('desempeno')) { if (f === des[0]) cols.push({ k: 'desempenos', t: des.length === 3 && des.every((d) => d.t === d.original) ? 'Desempeños (saber · hacer · ser)' : des.map((d) => d.t).join(' · ') }); }
+    else cols.push({ k: f.k, t: f.t });
+  }
+  cols.push({ k: 'horas', t: 'Horas' });
+  return cols;
+}
+function itemMallaExport(it) {
+  const des = camposMalla().filter((f) => f.k.startsWith('desempeno') && String(it[f.k] || '').trim());
+  return { ...it, desempenos: des.map((f) => `${f.original === f.t ? f.t.replace(/^Desempeño – /, '').toUpperCase() : f.t}: ${it[f.k]}`).join('\n') };
+}
+
 const SECCIONES_AREA = [
   { k: 'diagnostico', t: '1. Diagnóstico del área', ph: 'Resultados de pruebas Saber, evaluaciones institucionales, fortalezas y dificultades…' },
   { k: 'justificacion', t: '2. Justificación', ph: '¿Por qué es importante el área para la formación de los estudiantes y el contexto?' },
@@ -138,7 +222,8 @@ function vistaPlanArea(c) {
 function datosMallaExport(m) {
   return {
     areaNombre: nombreArea(m.areaId), grado: m.grado, intensidad: intensidadDe(m.areaId, m.grado),
-    periodos: S.config.periodos.map((per) => ({ nombre: per.nombre, pregunta: m.periodos[per.id]?.pregunta || '', items: m.periodos[per.id]?.items || [] })),
+    columnas: columnasMallaExport(),
+    periodos: S.config.periodos.map((per) => ({ nombre: per.nombre, pregunta: m.periodos[per.id]?.pregunta || '', items: (m.periodos[per.id]?.items || []).map(itemMallaExport) })),
   };
 }
 async function exportarPlanArea(id) {
@@ -161,7 +246,8 @@ function vistaMalla(c) {
   return `${filtrosCur(c, { grado: true })}
   <div class="fila" style="justify-content:space-between;margin-bottom:12px">
     <span class="ayuda">Intensidad: ${esc(intensidadDe(c.areaId, c.grado) || '—')} h/semana. Haz clic en un eje para ver o editar sus detalles.</span>
-    <div class="fila"><button class="btn" onclick="dialogoCopiarMalla('${m.id}')">📑 Copiar de otra malla</button>
+    <div class="fila"><button class="btn" onclick="dialogoCamposMalla()" title="Agregar, quitar o renombrar los campos de cada eje según tu institución">⚙️ Campos</button>
+    <button class="btn" onclick="dialogoCopiarMalla('${m.id}')">📑 Copiar de otra malla</button>
     <button class="btn primario" onclick="exportarMalla('${m.id}')">📄 Exportar a Word</button></div></div>
   ${S.config.periodos.map((per) => {
     const pm = m.periodos[per.id] || { pregunta: '', items: [] };
@@ -185,7 +271,7 @@ function vistaMalla(c) {
           ${abierto ? `<div class="rejilla" style="grid-template-columns: 3fr 1fr">
               <div class="campo"><label>Eje temático / unidad</label><input value="${esc(it.eje)}" oninput="cambiarItem('${it.id}','eje',this.value)"></div>
               <div class="campo"><label>Horas</label><input type="number" min="0" value="${esc(it.horas)}" oninput="cambiarItem('${it.id}','horas',this.value)"></div></div>
-            <div class="rejilla r2">${CAMPOS_ITEM.map((f) => `<div class="campo"><label>${f.t}${f.k === 'estandares' || f.k === 'dba' || f.k === 'evidencias' || f.k === 'competencias' ? botonReferentes(`ta-it-${it.id}-${f.k}`, m.areaId, m.grado, f.k === 'dba' || f.k === 'evidencias' ? 'dba' : f.k === 'competencias' ? 'orientacion' : 'estandar') : ''}</label><textarea id="ta-it-${it.id}-${f.k}" placeholder="${esc(f.ph)}" oninput="cambiarItem('${it.id}','${f.k}',this.value)">${esc(it[f.k])}</textarea></div>`).join('')}</div>` : ''}
+            <div class="rejilla r2">${camposMalla().map((f) => `<div class="campo"><label>${esc(f.t)}${f.k === 'estandares' || f.k === 'dba' || f.k === 'evidencias' || f.k === 'competencias' ? botonReferentes(`ta-it-${it.id}-${f.k}`, m.areaId, m.grado, f.k === 'dba' || f.k === 'evidencias' ? 'dba' : f.k === 'competencias' ? 'orientacion' : 'estandar') : ''}</label><textarea id="ta-it-${it.id}-${f.k}" placeholder="${esc(f.ph)}" oninput="cambiarItem('${it.id}','${f.k}',this.value)">${esc(it[f.k] || '')}</textarea></div>`).join('')}</div>` : ''}
         </div>`;
       }).join('') : '<p class="ayuda">Aún no hay ejes temáticos en este periodo.</p>'}
     </div>`;
@@ -480,6 +566,7 @@ async function ejecutarIAMalla(mId, perId) {
   const contexto = [`Área: ${nombreArea(m.areaId)}`, `Grado: ${m.grado}° (Colombia)`, `Periodo: ${per.nombre} (${idx + 1} de ${S.config.periodos.length})`,
     `Intensidad: ${intensidadDe(m.areaId, m.grado) || 'no indicada'} horas semanales`, `Ejes ya definidos en la malla del año:\n${otros}`,
     extra ? `Indicaciones del docente: ${extra}` : '',
+    camposMalla().some((f) => f.propio) ? `La institución usa además estos campos en cada eje; inclúyelos en cada objeto de "items" con estas claves exactas: ${camposMalla().filter((f) => f.propio).map((f) => `"${f.k}" (${f.t})`).join(', ')}` : '',
     textoReferentes(areaReferenteDe(m.areaId), bandaDeGrado(m.grado)) ? `Referentes oficiales del MEN para este grado (en "estandares", "dba", "competencias" y "evidencias" copia textualmente los pertinentes; no inventes referentes):\n${textoReferentes(areaReferenteDe(m.areaId), bandaDeGrado(m.grado))}` : ''].filter(Boolean).join('\n');
   const btn = document.getElementById('m-ia-btn');
   btn.disabled = true; btn.innerHTML = '<span class="cargando"></span> Generando…';
@@ -495,7 +582,7 @@ async function ejecutarIAMalla(mId, perId) {
   for (const d of r.datos.items) {
     const it = nuevoItem();
     it.eje = String(d.eje || ''); it.horas = d.horas ? String(d.horas) : '';
-    CAMPOS_ITEM.forEach((c) => { if (d[c.k]) it[c.k] = String(d[c.k]).trim(); });
+    camposMalla({ todos: true }).forEach((c) => { if (d[c.k]) it[c.k] = String(d[c.k]).trim(); });
     pm.items.push(it);
   }
   guardar(); cerrarModal(); render();

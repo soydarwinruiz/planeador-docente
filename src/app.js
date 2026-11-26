@@ -326,7 +326,7 @@ function responderConfirmacion(v) { cerrarModal(); if (resolverConfirmacion) res
 const PROVEEDORES_IA = {
   anthropic: { nombre: 'Claude (Anthropic)', modelo: 'claude-opus-5-5', donde: 'console.anthropic.com', ph: 'sk-ant-...' },
   openai: { nombre: 'ChatGPT (OpenAI)', modelo: 'gpt-5-mini', donde: 'platform.openai.com', ph: 'sk-...' },
-  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-2.5-flash', donde: 'aistudio.google.com', ph: 'AIza...' },
+  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-flash-latest', donde: 'aistudio.google.com', ph: 'AIza...' },
   compatible: { nombre: 'Otro compatible con OpenAI', modelo: '', donde: 'DeepSeek, Groq, OpenRouter, Ollama (local), LM Studio…', ph: '(opcional en servicios locales)' },
 };
 function iaLista() {

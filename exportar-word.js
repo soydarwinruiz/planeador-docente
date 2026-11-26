@@ -277,14 +277,22 @@ const COLS_MALLA = [
   { t: 'Desempeños (saber · hacer · ser)', k: 'desempenos', ancho: 20 }, { t: 'Evidencias', k: 'evidencias', ancho: 11 }, { t: 'Horas', k: 'horas', ancho: 5 },
 ];
 
-function filasMalla(malla) {
+// Columnas que eligió la institución (campos ocultos, renombrados o propios); si no vienen, las de siempre
+function columnasMalla(malla) {
+  const cols = Array.isArray(malla.columnas) ? malla.columnas.filter((c) => c && typeof c.k === 'string' && typeof c.t === 'string').slice(0, 20) : [];
+  if (!cols.length) return COLS_MALLA;
+  const peso = (k) => (k === 'eje' ? 1.1 : k === 'horas' ? 0.5 : k === 'desempenos' ? 2 : 1.3);
+  const total = cols.reduce((s, c) => s + peso(c.k), 0);
+  return cols.map((c) => ({ t: c.t, k: c.k, ancho: Math.max(4, Math.round((peso(c.k) / total) * 100)) }));
+}
+function filasMalla(malla, COLS_MALLA = columnasMalla(malla)) {
   const filas = [];
   for (const per of malla.periodos) {
     filas.push(new TableRow({ children: [celdaPeq(`${per.nombre}${per.pregunta ? ' — Pregunta problematizadora: ' + per.pregunta : ''}`, { columnas: COLS_MALLA.length, fondo: GRIS, negrita: true })] }));
     if (!per.items.length) filas.push(new TableRow({ children: [celdaPeq('(sin contenidos registrados)', { columnas: COLS_MALLA.length })] }));
     for (const it of per.items) {
-      const des = [it.desempenoSaber && 'SABER: ' + it.desempenoSaber, it.desempenoHacer && 'HACER: ' + it.desempenoHacer, it.desempenoSer && 'SER: ' + it.desempenoSer].filter(Boolean).join('\n');
-      filas.push(new TableRow({ children: COLS_MALLA.map((col) => celdaPeq(col.k === 'desempenos' ? des : col.k === 'eje' ? it.eje : it[col.k], { negrita: col.k === 'eje' })) }));
+      const des = typeof it.desempenos === 'string' ? it.desempenos : [it.desempenoSaber && 'SABER: ' + it.desempenoSaber, it.desempenoHacer && 'HACER: ' + it.desempenoHacer, it.desempenoSer && 'SER: ' + it.desempenoSer].filter(Boolean).join('\n');
+      filas.push(new TableRow({ children: COLS_MALLA.map((col) => celdaPeq(col.k === 'desempenos' ? des : typeof it[col.k] === 'string' || typeof it[col.k] === 'number' ? it[col.k] : '', { negrita: col.k === 'eje' })) }));
     }
   }
   return filas;
@@ -295,7 +303,7 @@ function seccionMalla(c, malla) {
     properties: HORIZONTAL,
     children: [
       ...encabezado(c, `Malla curricular – ${malla.areaNombre}`, `Grado ${malla.grado}° · Intensidad horaria: ${malla.intensidad || '—'} h semanales · Año lectivo ${c.anio || ''}`),
-      tablaDatos(COLS_MALLA, filasMalla(malla)),
+      tablaDatos(columnasMalla(malla), filasMalla(malla)),
     ],
   };
 }

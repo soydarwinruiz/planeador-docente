@@ -277,12 +277,18 @@ Rastreo de errores y funcionamiento de la beta, y lanzamiento como versión defi
 - Recorridos probados (`tests/e2e-v2.js`): pasar de la 1.x con clave (pide la clave, migra, entrega código nuevo y cifra con la clave), respaldo hacia otro computador, restaurar respaldos `.db` y `.json`, nuevo año y consulta del año archivado, cerrar justo después de poner una nota, y volver de la 1.x.
 - La 2.0 se publica como versión normal: a quien tiene la 1.x le llega por actualización automática.
 
-### Versión 2.0.1 — Solidez de la llave y del guardado (26 de noviembre)
+### Versión 2.1.0 — Solidez, IA con el contexto del aula y malla a la medida (26 de noviembre)
 - **Segunda copia de la llave de datos** (`llave-copia.dat`, protegida igual): si `llave.dat` se daña o se borra, los datos se siguen abriendo y el archivo se repara solo.
 - **Nunca se crea una llave nueva encima de datos cifrados.** Antes, si faltaba `llave.dat`, se creaba otra y los datos quedaban ilegibles. Ahora el programa avisa, no toca la base ni los respaldos, y todo vuelve si la llave regresa. Restaurar un respaldo `.json` aparta la base vieja (no la borra) y empieza una nueva con todo, incluidos los años archivados.
 - Los respaldos automáticos solo se hacen si la base se puede leer: una base dañada no reemplaza a los respaldos buenos.
 - Si un guardado falla (antivirus, sincronización, disco lleno), se **reintenta solo** cada pocos segundos y el aviso aparece una sola vez.
+- **IA saturada (error 503 "high demand"):** Gemini, ChatGPT y los compatibles reintentan solos dos veces (2 s y 6 s); con Gemini, si el modelo escrito sigue saturado se prueba el modelo por defecto. El mensaje explica que es temporal (`tests/ia-reintentos.js`).
+- **Modelo de Gemini al día:** Google retiró `gemini-2.5-flash` para cuentas nuevas (404 "no longer available to new users"). Ahora, sin modelo escrito, se usa `gemini-flash-latest` (alias que Google mantiene en su Flash más reciente). Si el modelo escrito fue retirado o sigue saturado, se consulta la lista de modelos de la cuenta y se usa el Flash estable más reciente (también en el dictado por voz).
 - Nueva batería `tests/e2e-solidez.js`.
+- **La IA tiene presente el aula:** en la planeación de clase y en el material de cada sesión (guía, quiz, rúbrica) se envían la identificación (área, grado, número de estudiantes, período, duración, locativos, recursos) y la diversidad del aula (estilos, gustos, características y barreras, ajustes, necesidades PIAR sin nombres), con la indicación de incorporarlas en actividades, mediaciones y evaluación.
+- **Campos de la malla a la medida de la institución (⚙️ Campos):** ocultar, renombrar y agregar campos propios por eje temático; se guardan en la configuración, la IA llena los propios y el Word usa esas columnas.
+- **Modelo local:** botón *Usar Ollama en este equipo*, espera de hasta 15 minutos para modelos locales, mensaje claro si Ollama no está abierto y limpieza del "pensamiento" (`<think>`) de modelos como qwen3.
+- Nueva batería `tests/e2e-ia-malla.js`.
 
 ---
 

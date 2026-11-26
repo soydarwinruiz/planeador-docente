@@ -53,7 +53,7 @@ Descarga desde https://github.com/soydarwinruiz/planeador-docente/releases (últ
 ### Planeación curricular
 Pestañas:
 - **Plan de área:** diagnóstico, justificación, objetivos por grado, enfoque, metodología, evaluación, inclusión, transversales… (con sugerencias de IA). Word horizontal.
-- **Malla curricular:** por área, grado y periodo: ejes, contenidos, estándares, DBA, competencias, desempeños, evidencias y horas. *Copiar de otra malla*, *Sugerir con IA*, Word.
+- **Malla curricular:** por área, grado y periodo: ejes, contenidos, estándares, DBA, competencias, desempeños, evidencias y horas. *Copiar de otra malla*, *Sugerir con IA*, Word. Con **⚙️ Campos** ajustas los campos de cada eje a tu institución: ocultar los que no usan, cambiarles el nombre o agregar campos propios (por ejemplo *Proyecto transversal* o *Metodología*). Valen para todas las mallas, los llena la IA y salen en el Word; ocultar no borra lo escrito.
 - **Plan de periodo** (unidades o proyectos) y **Plan de aula** por grupo, con el avance de cada eje (sin planear / planeado / desarrollado).
 - **🗺️ Cobertura:** tabla de colores con cada DBA, estándar u orientación del grado y su estado por periodo: *sin trabajar*, *en la malla*, *planeado en clase*, *desarrollado*. Exportable a Excel. Para que se detecte, inserta los referentes con el botón **📘 Referentes**.
 - **📚 Referentes MEN:** consulta de estándares (1.°–11.°), DBA (Matemáticas, Lenguaje, Ciencias Naturales, Ciencias Sociales, Inglés 6.°–11.°) y orientaciones de Tecnología.
@@ -212,6 +212,8 @@ Las opciones están agrupadas en **secciones desplegables** (Institución y doce
 
 ## 7. Inteligencia artificial y privacidad
 - Es **opcional**. En Configuración → *Inteligencia artificial* eliges el proveedor (Claude, ChatGPT, Gemini u otro compatible como DeepSeek, Groq, OpenRouter, Ollama o LM Studio) y pegas tu clave. Las claves se guardan **cifradas** solo en tu computador, por separado para cada proveedor, y no se copian en los respaldos (si cambias de computador, vuelve a pegarlas).
+- **IA en tu computador, gratis y sin internet:** instala Ollama (ollama.com), descarga un modelo (`ollama pull qwen3:8b`; con 8 GB de RAM `qwen3:4b`, con tarjeta gráfica de 12 GB o más `gemma3:12b`) y en el proveedor *Otro compatible* pulsa **🖥️ Usar Ollama en este equipo**. Es más lenta y menos precisa que los servicios en la nube, pero útil para borradores.
+- En la planeación de clase y en el material de cada sesión, la IA tiene presentes la **identificación** (recursos, locativos, duración, número de estudiantes) y la **diversidad del aula** (estilos, gustos, características y barreras, ajustes y apoyos, necesidades PIAR sin nombres).
 - Se usa en: planeación de clase, malla, plan de área, planes de apoyo, observaciones del boletín, preguntas de pruebas, fichas y retroalimentación de trabajos.
 - **No se envían nombres de estudiantes.** En la retroalimentación de trabajos, si el nombre está escrito en el trabajo, la IA lo verá.
 - **Revisa siempre** lo que propone la IA antes de usarlo.
