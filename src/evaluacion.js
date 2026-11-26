@@ -188,6 +188,7 @@ function ponerRecuperacion(grupoId, areaId, periodoId, alumnoId, input) {
   const txt = input.value.replace(',', '.').trim();
   const k = claveRecuperacion(grupoId, areaId, periodoId);
   const reg = ((S.recuperaciones ||= {})[k] ||= {});
+  if (entradaInvalida(input)) { aviso('Nota no válida: escribe un número, por ejemplo 3.5.', 'error'); input.value = reg[alumnoId]?.nota ?? ''; return; }
   if (txt === '') delete reg[alumnoId];
   else {
     let v = +txt;
@@ -280,21 +281,26 @@ function vistaPlanilla(c) {
     : '<div class="tarjeta vacio">Este grupo no tiene estudiantes.</div>'}`;
 }
 
+// Si el campo tiene texto que no es un número (o una coma en un Windows en inglés), se conserva la nota anterior
+function entradaInvalida(input) { return !!input.validity?.badInput; }
 function ponerNota(actId, alumnoId, input) {
   const txt = input.value.replace(',', '.').trim();
   S.notas[actId] ||= {};
+  const anterior = S.notas[actId][alumnoId];
+  if (entradaInvalida(input) || (txt !== '' && isNaN(+txt))) {
+    aviso('Nota no válida: escribe un número, por ejemplo 3.5. Se conserva la nota anterior.', 'error');
+    input.value = anterior ?? '';
+    return;
+  }
   if (txt === '') delete S.notas[actId][alumnoId];
   else {
     let v = +txt;
-    if (isNaN(v)) { aviso('Nota no válida', 'error'); input.value = ''; delete S.notas[actId][alumnoId]; }
-    else {
-      if (v < +S.config.escalaMin || v > +S.config.escalaMax) {
-        aviso(`La nota debe estar entre ${S.config.escalaMin} y ${S.config.escalaMax}`, 'error');
-        v = Math.min(+S.config.escalaMax, Math.max(+S.config.escalaMin, v));
-        input.value = v;
-      }
-      S.notas[actId][alumnoId] = v;
+    if (v < +S.config.escalaMin || v > +S.config.escalaMax) {
+      aviso(`La nota debe estar entre ${S.config.escalaMin} y ${S.config.escalaMax}`, 'error');
+      v = Math.min(+S.config.escalaMax, Math.max(+S.config.escalaMin, v));
+      input.value = v;
     }
+    S.notas[actId][alumnoId] = v;
   }
   guardar();
   input.className = claseNota(nota(actId, alumnoId));
@@ -302,6 +308,7 @@ function ponerNota(actId, alumnoId, input) {
 }
 function actualizarFilaPlanilla(alumnoId) {
   const c = ui.cal;
+  if (!c) return;
   const pl = buscarPlanilla(c.grupoId, c.areaId, c.periodoId);
   const tr = document.querySelector(`tr[data-al="${alumnoId}"]`);
   if (!pl || !tr) return;

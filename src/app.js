@@ -135,9 +135,13 @@ function fmtNota(n) { return n == null || isNaN(n) ? '—' : redondear(n).toFixe
 function desempeno(n) {
   if (n == null || isNaN(n)) return null;
   const r = redondear(n);
-  const d = S.config.desempenos.find((x) => r >= x.desde && r <= x.hasta);
-  if (d) return d.nombre;
-  return r < S.config.desempenos[0].desde ? S.config.desempenos[0].nombre : S.config.desempenos[S.config.desempenos.length - 1].nombre;
+  const lista = [...(S.config.desempenos || [])].sort((a, b) => +a.desde - +b.desde);
+  if (!lista.length) return null;
+  // El desempeño es el del rango que empieza más arriba sin pasarse de la nota. Así una nota que cae entre dos
+  // rangos (2,95 con escala 1,0–2,9 y 3,0–3,9, si se usan dos decimales) queda en el rango de abajo.
+  let d = lista[0];
+  for (const x of lista) if (r >= +x.desde) d = x;
+  return d.nombre;
 }
 function chipDesempeno(n) { const d = desempeno(n); return d ? `<span class="chip ${esc(d)}">${esc(d)}</span>` : ''; }
 

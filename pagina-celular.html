@@ -83,7 +83,11 @@ async function procesarCola() {
     while (cola.length) {
       const x = cola[0];
       try { await api(x.accion, x.cuerpo); cola.shift(); guardarCola(); }
-      catch (e) { if (e.red) { setTimeout(procesarCola, 5000); break; } cola.shift(); guardarCola(); aviso(e.message, 4000); }
+      catch (e) {
+        // Sin conexión, computador ocupado o bloqueado, o permiso vencido: lo marcado se conserva y se envía después
+        if (e.red || [401, 409, 423, 429].includes(e.codigo)) { if (e.codigo !== 401) setTimeout(procesarCola, 5000); break; }
+        cola.shift(); guardarCola(); aviso(e.message, 4000);
+      }
     }
   } finally { enviando = false; }
 }
@@ -109,6 +113,7 @@ async function vincular() {
     const d = await api('vincular', { pin: $('#pin').value, nombre: $('#nombre').value });
     token = d.token; localStorage.setItem(LS.token, token);
     aviso('Celular vinculado ✔');
+    procesarCola(); // lo que quedó pendiente con el permiso anterior se envía ahora
     cargarInicio();
   } catch (e) { $('#err').textContent = e.message; }
 }

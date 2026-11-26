@@ -57,7 +57,9 @@ function textoComunicado(c, a, conFirma = true) {
   return conFirma ? `${cuerpo}\n\nAtentamente,\n${S.config.docente || ''}\nDocente de ${nombreArea(c.areaId)}${S.config.institucion ? ' – ' + S.config.institucion : ''}` : cuerpo;
 }
 function telefonoWhatsApp(cel) {
-  let d = String(cel || '').replace(/\D/g, '');
+  // Si hay varios números ("300 123 4567 / 310 987 6543"), se usa el primero
+  const primero = String(cel || '').split(/[\/,;|]|\s+(?:y|o)\s+/i).find((x) => /\d{7,}/.test(x.replace(/\D/g, ''))) || '';
+  let d = primero.replace(/\D/g, '');
   if (d.length === 10 && d.startsWith('3')) d = '57' + d; // celular colombiano
   return d.length >= 11 ? d : '';
 }

@@ -247,6 +247,17 @@ El docente pidió el registro de cambios de notas, más personalización y una c
 ### Versión 1.17.1 — Logo de Tiza (25 de noviembre)
 El logo anterior (un cuaderno con un lápiz) no concordaba con el nombre. Entre varias propuestas, el docente eligió un tablero verde con una **p minúscula de "planear"** trazada con tiza blanca y una tiza amarilla. El logo está en el ícono del programa y del instalador, el acceso directo, el menú lateral, la pantalla de bloqueo, el "Acerca de" y la página del celular.
 
+### Versión 1.17.2 — Rastreo de correcciones (25 de noviembre)
+Rastreo completo solo de errores. Primero, un robot activó 2 426 botones, listas y casillas en todas las pantallas y pestañas con un año completo de datos, y generó las 42 exportaciones (Word, Excel, PDF, paquete), todas válidas. Después se metió código malicioso en 1 920 textos y se probaron 7 casos límite (sin periodos, grupo sin áreas, estudiante sin nombre, pesos en cero, textos muy largos, sin grupos, escala de 0 a 10). Se corrigió:
+- **Desempeño con dos decimales:** una nota entre dos rangos (2,95, 3,95, 4,55) salía como "Superior". Ahora queda en el rango de abajo (Bajo, Básico, Alto).
+- **Notas no válidas:** escribir una letra, o "3,5" con coma en un Windows en inglés, **borraba** la nota que ya estaba. Ahora se avisa y se conserva.
+- **Seguridad:** el nombre de un desempeño editado en Configuración se mostraba sin protección en dos lugares de Seguimiento y Pruebas.
+- **Año lectivo y escala:** el año aceptaba cualquier número (3,5) y la escala permitía mínima mayor que máxima. Ahora se validan.
+- **Periodos:** aviso si un periodo termina antes de empezar o si dos periodos se cruzan.
+- **Celular:** si el permiso vencía o el computador estaba bloqueado, lo marcado sin señal se descartaba. Ahora se conserva y se envía al volver a vincular.
+- **WhatsApp:** con dos números en el campo del celular, el enlace salía mal; ahora usa el primero.
+- Nuevas pruebas: los 1 920 textos maliciosos, las correcciones de este rastreo y el robot (`npm run test:robot`).
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo
