@@ -46,7 +46,9 @@ function errorBloqueo(r) {
 async function desbloquear() {
   const i = document.getElementById('bloqueo-clave');
   const r = await api.accesoDesbloquear(i.value);
-  if (r.ok) ocultarBloqueo(); else { errorBloqueo(r); i.select(); }
+  if (!r.ok) { errorBloqueo(r); i.select(); return; }
+  ocultarBloqueo();
+  if (r.codigoNuevo) setTimeout(() => mostrarCodigoRecuperacion(r.codigoNuevo, 'Tiza 2.0 ahora cifra todos tus datos con tu clave. Tu código de recuperación anterior ya no sirve: guarda este nuevo.'), 400);
 }
 function formularioRecuperacion() {
   document.querySelector('#bloqueo .bloqueo-caja').innerHTML = `<h1>Recuperar el acceso</h1>
@@ -102,7 +104,7 @@ function tarjetaAcceso() {
       <button class="btn primario" onclick="dialogoActivarClave()">🔒 Activar clave de acceso</button>`;
   }, 0);
   return `<div class="tarjeta" id="tarjeta-acceso"><h2>🔒 Clave de acceso</h2><div id="tarjeta-acceso-cuerpo"><p class="ayuda">Cargando…</p></div>
-    <p class="ayuda">La clave impide abrir el programa y lo bloquea cuando no lo usas. Los archivos de datos del disco no quedan cifrados: para eso, usa también una contraseña en tu usuario de Windows.</p></div>`;
+    <p class="ayuda">La clave impide abrir el programa y lo bloquea cuando no lo usas. Además, con la clave activa, la llave que cifra tus datos solo se abre con tu clave o con el código de recuperación: sin ellos nadie puede leer la base de datos, ni siquiera desde tu usuario de Windows.</p></div>`;
 }
 async function cambiarMinutosBloqueo(m) { await api.accesoMinutos(+m); BLOQUEO.minutos = +m; aviso('Guardado', 'ok'); }
 function dialogoActivarClave() {

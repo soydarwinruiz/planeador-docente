@@ -90,7 +90,7 @@ RENDERS.configuracion = () => {
 
   ${seccionConfig('ia', '✨', 'Inteligencia artificial y dictado', 'Proveedor, clave y modelo de IA; dictado por voz', `${tarjetaIA()}${tarjetaVoz()}`)}
 
-  ${seccionConfig('seguridad', '🔒', 'Seguridad y celular', 'Clave de acceso y celular del docente', `${tarjetaAcceso()}${tarjetaCelular()}`)}
+  ${seccionConfig('seguridad', '🔒', 'Seguridad, datos y celular', 'Clave de acceso, base de datos cifrada y celular del docente', `${tarjetaAcceso()}${tarjetaAlmacen()}${tarjetaCelular()}`)}
 
   ${seccionConfig('respaldos', '💾', 'Respaldos, actualizaciones y compartir', 'Respaldos, carpeta en la nube, actualizaciones y paquetes para otros docentes', `
   <div class="tarjeta"><h2>💾 Respaldo de datos</h2>
@@ -202,6 +202,26 @@ async function restaurarAuto(nombre) {
   aplicarRespaldo(r.datos);
   aviso('Respaldo restaurado', 'ok');
 }
+// ---------- Almacenamiento (base de datos SQLite cifrada) ----------
+function tarjetaAlmacen() {
+  setTimeout(async () => {
+    const i = await api.infoAlmacen(), el = document.getElementById('tarjeta-almacen-cuerpo');
+    if (!el) return;
+    const mb = (b) => (b / 1e6).toFixed(b < 1e7 ? 2 : 1) + ' MB';
+    const prot = { clave: '🔐 con tu clave de acceso: sin la clave o el código de recuperación nadie puede leerlos', windows: '🛡️ por Windows: solo tu usuario de este computador puede leerlos', plano: '⚠️ sin protección (modo de prueba)' }[i.proteccion] || '—';
+    el.innerHTML = `<p>Tus datos están en una <b>base de datos SQLite</b> y cada registro va <b>cifrado (AES-256)</b>. La llave está protegida ${prot}.</p>
+      <p class="ayuda">Base de datos: ${mb(i.bd)} · Respaldos automáticos: ${mb(i.respaldos)} · Cambios de notas registrados: ${i.registro}</p>
+      ${i.antes2 ? `<div class="alerta info">Al pasar a la versión 2.0 se guardó una copia <b>sin cifrar</b> de tus datos anteriores (carpeta "antes-de-2.0"). Cuando compruebes que todo está bien, bórrala para que tus datos solo queden cifrados.
+        <div style="margin-top:8px"><button class="btn peligro" onclick="borrarCopiaAntes2()">Borrar la copia sin cifrar de la versión 1.x</button></div></div>` : ''}`;
+  }, 0);
+  return `<div class="tarjeta" id="tarjeta-almacen"><h2>🗄️ Almacenamiento</h2><div id="tarjeta-almacen-cuerpo"><p class="ayuda">Cargando…</p></div></div>`;
+}
+async function borrarCopiaAntes2() {
+  if (!(await confirmar('¿Borrar la copia sin cifrar de la versión 1.x? Tus datos actuales, cifrados en la base de datos, y sus respaldos automáticos no se tocan.', { boton: 'Borrar copia', papelera: false }))) return;
+  await api.borrarCopiaAntes2();
+  aviso('Copia sin cifrar borrada', 'ok'); render();
+}
+
 // ---------- Nuevo año lectivo: el docente elige qué conservar ----------
 // [clave, título, detalle, marcado por defecto, requiere (otra clave)]
 const OPCIONES_NUEVO_ANIO = [

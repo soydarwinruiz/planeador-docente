@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { escribirSeguro } = require('./almacen');
+const bd = require('./basedatos');
 
 const ARCHIVO = () => path.join(app.getPath('userData'), 'acceso.json');
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -45,7 +46,17 @@ function iniciarAcceso() {
     const f = frenar(); if (f) return f;
     if (!activa()) { bloqueado = false; return { ok: true }; }
     if (!comprobarClave(clave)) return fallo('Clave incorrecta.');
+    // La clave también abre la llave de los datos cifrados
+    if (!bd.abrirLlaveConClave(clave)) return { ok: false, error: 'La clave es correcta, pero no se pudo abrir la llave de los datos. Usa el código de recuperación.' };
     fallos = 0; bloqueado = false;
+    // Datos de la versión 1.x: desde ahora se cifran con la clave. Como el código de recuperación anterior solo se
+    // guardó como huella, se entrega uno nuevo que también abre la llave de los datos.
+    if (!bd.llaveConClave()) {
+      const codigo = nuevoCodigo();
+      bd.protegerLlaveConClave(clave, normalizarCodigo(codigo));
+      guardarAcceso(clave, codigo, leer()?.minutos);
+      return { ok: true, codigoNuevo: codigo };
+    }
     return { ok: true };
   });
   ipcMain.handle('acceso:bloquear', () => { if (activa()) bloqueado = true; return { ok: true, bloqueado: estaBloqueado() }; });
@@ -55,6 +66,7 @@ function iniciarAcceso() {
       if (activa()) throw new Error('Ya hay una clave. Usa "Cambiar clave".');
       validarNueva(clave);
       const codigo = nuevoCodigo();
+      bd.protegerLlaveConClave(clave, normalizarCodigo(codigo)); // desde ahora los datos solo se abren con la clave o el código
       guardarAcceso(clave, codigo, minutos);
       bloqueado = false;
       return { ok: true, codigo };
@@ -67,6 +79,7 @@ function iniciarAcceso() {
       validarNueva(nueva);
       fallos = 0;
       const codigo = nuevoCodigo();
+      bd.protegerLlaveConClave(nueva, normalizarCodigo(codigo));
       guardarAcceso(nueva, codigo, leer()?.minutos);
       return { ok: true, codigo };
     } catch (e) { return { ok: false, error: e.message }; }
@@ -74,6 +87,7 @@ function iniciarAcceso() {
   ipcMain.handle('acceso:desactivar', (_e, actual) => {
     const f = frenar(); if (f) return f;
     if (!comprobarClave(actual)) return fallo('La clave no es correcta.');
+    bd.protegerLlaveSinClave(); // la llave vuelve a quedar protegida por Windows
     fallos = 0; fs.rmSync(ARCHIVO(), { force: true }); bloqueado = false;
     return { ok: true };
   });
@@ -85,8 +99,10 @@ function iniciarAcceso() {
       if (!a) return { ok: false, error: 'No hay clave configurada.' };
       if (!igual(resumen(normalizarCodigo(codigo), a.salRec), a.hashRec)) return fallo('El código de recuperación no es correcto.');
       validarNueva(nueva);
+      if (!bd.abrirLlaveConCodigo(normalizarCodigo(codigo))) return { ok: false, error: 'El código es correcto, pero no abre la llave de los datos.' };
       fallos = 0;
       const nuevo = nuevoCodigo();
+      bd.protegerLlaveConClave(nueva, normalizarCodigo(nuevo));
       guardarAcceso(nueva, nuevo, a.minutos);
       bloqueado = false;
       return { ok: true, codigo: nuevo };

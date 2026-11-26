@@ -200,5 +200,22 @@ if (require.main === module) (async () => {
     assert.deepStrictEqual(errores, []);
   });
 
+  await prueba('Un año completo se guarda en SQLite y al volver a abrir todo es idéntico', async () => {
+    const dir = nuevaCarpeta();
+    let { app, w } = await abrir(dir);
+    await sembrar(w);
+    await sembrarAnio(w);
+    await w.evaluate(async () => { guardar(); await new Promise((r) => setTimeout(r, 450)); await cadenaGuardado; });
+    await esperarGuardado(w);
+    const antes = await w.evaluate(() => textoEstado());
+    await app.close();
+    ({ app, w } = await abrir(dir));
+    const despues = await w.evaluate(() => textoEstado());
+    await app.close();
+    const A = JSON.parse(antes), D = JSON.parse(despues);
+    const distintas = Object.keys({ ...A, ...D }).filter((k) => JSON.stringify(A[k]) !== JSON.stringify(D[k]));
+    assert.deepStrictEqual(distintas, [], 'cambiaron al volver a abrir: ' + distintas.join(', '));
+  });
+
   terminar();
 })();

@@ -18,21 +18,21 @@ iniciarAcceso();
 function exigirDesbloqueo() { if (estaBloqueado()) throw new Error('El programa está bloqueado.'); }
 
 let ventana;
-let ultimoEstado = null; // último estado recibido (texto JSON), para guardar al cerrar
-let ultimoEscrito = null; // último texto escrito en disco (evita escrituras repetidas)
+let version = 0; // aumenta con cada guardado (para saber si hay algo nuevo que respaldar en la nube)
 
 function nombreSeguro(n, defecto) { return String(n || defecto).replace(/[\\/:*?"<>|]+/g, '-').trim().slice(0, 150) || defecto; }
 function errorArchivo(e, programa) {
   return /EBUSY|EPERM|EACCES/.test(e.code || e.message) ? `El archivo está abierto en ${programa} o no se tiene permiso. Ciérralo e inténtalo de nuevo.` : e.message;
 }
-// El renderer envía el estado ya convertido a texto (más rápido que clonar el objeto entre procesos)
-function escribirEstado(texto) {
-  if (typeof texto !== 'string' || texto[0] !== '{') throw new Error('Estado no válido');
-  ultimoEstado = texto;
-  if (texto === ultimoEscrito) return;
-  escribirSeguro(DATA_FILE(), texto);
-  ultimoEscrito = texto;
+// La interfaz envía las partes del estado que cambiaron ({ cambios: { clave: textoJSON }, quitar: [clave] });
+// también se acepta el estado completo como texto (respaldos y pruebas)
+function escribirEstado(dato) {
+  if (typeof dato === 'string') { if (dato[0] !== '{') throw new Error('Estado no válido'); almacen.guardarEstado(dato); }
+  else if (dato && typeof dato === 'object' && dato.cambios) almacen.guardarPartes(dato.cambios, dato.quitar || []);
+  else throw new Error('Estado no válido');
+  version++;
 }
+const estadoTexto = () => almacen.estadoTexto();
 
 function crearVentana() {
   ventana = new BrowserWindow({
@@ -115,13 +115,11 @@ app.whenReady().then(() => {
 });
 
 app.on('before-quit', () => {
-  if (ultimoEstado) {
-    try { escribirEstado(ultimoEstado); } catch (e) { console.error(e); }
-  }
   respaldarEnCarpeta();
 });
 
 app.on('window-all-closed', () => { detenerAplicacionMovil(); app.quit(); });
+app.on('will-quit', () => { try { require('./basedatos').cerrar(); } catch (e) { console.error(e); } });
 
 // ---------- Datos ----------
 ipcMain.handle('datos:cargar', () => {
@@ -171,6 +169,8 @@ ipcMain.handle('registro:reemplazar', (_e, lista) => { exigirDesbloqueo(); retur
 ipcMain.handle('tablero:limpiar', (_e, ids) => almacen.limpiarRecursosTableros(ids));
 
 ipcMain.handle('datos:ubicacion', () => DATA_DIR());
+ipcMain.handle('almacen:info', () => almacen.infoAlmacen());
+ipcMain.handle('almacen:borrarAntes2', () => { exigirDesbloqueo(); return almacen.borrarAntes2(); });
 ipcMain.handle('ortografia:activar', (_e, activo) => { ventana?.webContents.session.setSpellCheckerEnabled(!!activo); return true; });
 ipcMain.handle('datos:abrirCarpeta', () => shell.openPath(DATA_DIR()));
 
@@ -217,7 +217,7 @@ ipcMain.handle('respaldo:listarAuto', () => almacen.listarRespaldos());
 ipcMain.handle('respaldo:restaurarAuto', (_e, nombre) => {
   try {
     exigirDesbloqueo();
-    const datos = validarRespaldo(almacen.leerJSON(path.join(BACKUP_DIR(), path.basename(String(nombre)))));
+    const datos = validarRespaldo(almacen.leerRespaldoAuto(nombre));
     respaldoAutomatico({ forzar: true });
     return { ok: true, datos };
   } catch (e) { return { ok: false, error: 'No se pudo leer ese respaldo: ' + e.message }; }
@@ -317,17 +317,17 @@ ipcMain.handle('csv:guardar', async (_e, { nombre, contenido }) => {
 let carpetaNube = '';
 let ultimoEnNube = null;
 function respaldarEnCarpeta({ forzar = false } = {}) {
-  if (!carpetaNube || !ultimoEstado) return { ok: false };
-  if (!forzar && ultimoEstado === ultimoEnNube) return { ok: true, sinCambios: true };
+  if (!carpetaNube || !estadoTexto()) return { ok: false };
+  if (!forzar && version === ultimoEnNube) return { ok: true, sinCambios: true };
   try {
     if (!fs.existsSync(carpetaNube)) return { ok: false, error: 'La carpeta no existe o no está disponible.' };
     const dir = path.join(carpetaNube, 'Respaldos Planeador Docente');
-    const contenido = almacen.textoRespaldoCompleto(ultimoEstado);
+    const contenido = almacen.textoRespaldoCompleto(estadoTexto());
     escribirSeguro(path.join(dir, 'planeador-ultimo.json'), contenido);
     escribirSeguro(path.join(dir, `planeador-${fechaArchivo().slice(0, 10)}.json`), contenido);
     const viejos = fs.readdirSync(dir).filter((f) => /^planeador-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
     while (viejos.length > 14) fs.rmSync(path.join(dir, viejos.shift()), { force: true });
-    ultimoEnNube = ultimoEstado;
+    ultimoEnNube = version;
     return { ok: true, ruta: dir };
   } catch (e) { return { ok: false, error: e.message }; }
 }
