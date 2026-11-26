@@ -282,6 +282,7 @@ Rastreo de errores y funcionamiento de la beta, y lanzamiento como versión defi
 - **Nunca se crea una llave nueva encima de datos cifrados.** Antes, si faltaba `llave.dat`, se creaba otra y los datos quedaban ilegibles. Ahora el programa avisa, no toca la base ni los respaldos, y todo vuelve si la llave regresa. Restaurar un respaldo `.json` aparta la base vieja (no la borra) y empieza una nueva con todo, incluidos los años archivados.
 - Los respaldos automáticos solo se hacen si la base se puede leer: una base dañada no reemplaza a los respaldos buenos.
 - Si un guardado falla (antivirus, sincronización, disco lleno), se **reintenta solo** cada pocos segundos y el aviso aparece una sola vez.
+- **IA saturada (error 503 "high demand"):** Gemini, ChatGPT y los compatibles reintentan solos dos veces (2 s y 6 s); con Gemini, si el modelo escrito sigue saturado se prueba el modelo por defecto. El mensaje explica que es temporal (`tests/ia-reintentos.js`).
 - Nueva batería `tests/e2e-solidez.js`.
 
 ---

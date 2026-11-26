@@ -54,7 +54,9 @@ const PROVEEDORES = {
   compatible: { nombre: 'Compatible con OpenAI', modelo: '' },
 };
 
-class ErrorIA extends Error {}
+class ErrorIA extends Error { constructor(m, estado) { super(m); this.estado = estado; } }
+const PASAJERO = new Set([500, 502, 503, 504, 529]); // saturación o falla momentánea del servicio: vale la pena reintentar
+const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 const RESPUESTA_LARGA = 'La respuesta de la IA fue demasiado larga y quedó incompleta. Pide menos sesiones, ítems o secciones a la vez.';
 
 async function llamarAnthropic({ clave, modelo }, sistema, prompt, imagenes = []) {
@@ -83,12 +85,18 @@ async function llamarAnthropic({ clave, modelo }, sistema, prompt, imagenes = []
   }
 }
 
-async function pedirJSON(url, opciones) {
+// Si el servicio está saturado (503 y similares) se reintenta dos veces, esperando un poco más cada vez
+async function pedirJSON(url, opciones, esperas = [2000, 6000]) {
   let r;
-  try {
-    r = await fetch(url, { ...opciones, signal: AbortSignal.timeout(180000) });
-  } catch (e) {
-    throw new ErrorIA(e.name === 'TimeoutError' ? 'El servicio tardó demasiado en responder.' : 'No hay conexión a internet o no se pudo contactar el servicio (' + (e.cause?.code || e.message) + ').');
+  for (let intento = 0; ; intento++) {
+    try {
+      r = await fetch(url, { ...opciones, signal: AbortSignal.timeout(180000) });
+    } catch (e) {
+      throw new ErrorIA(e.name === 'TimeoutError' ? 'El servicio tardó demasiado en responder.' : 'No hay conexión a internet o no se pudo contactar el servicio (' + (e.cause?.code || e.message) + ').');
+    }
+    if (!PASAJERO.has(r.status) || intento >= esperas.length) break;
+    await r.text().catch(() => '');
+    await pausa(esperas[intento]);
   }
   const texto = await r.text();
   let datos = null;
@@ -98,7 +106,8 @@ async function pedirJSON(url, opciones) {
     if (r.status === 401 || r.status === 403) throw new ErrorIA('La clave de API no es válida o no tiene permisos. ' + msg);
     if (r.status === 404) throw new ErrorIA('No se encontró el modelo o la dirección del servicio. ' + msg);
     if (r.status === 429) throw new ErrorIA('Se alcanzó el límite de uso o no hay saldo en la cuenta. ' + msg);
-    throw new ErrorIA(`Error del servicio de IA (${r.status}): ${msg}`);
+    if (PASAJERO.has(r.status)) throw new ErrorIA(`El servicio de IA está saturado o con fallas en este momento (${r.status}); se reintentó varias veces. Suele pasar en minutos: vuelve a intentarlo o prueba otro modelo. (${msg})`, r.status);
+    throw new ErrorIA(`Error del servicio de IA (${r.status}): ${msg}`, r.status);
   }
   return datos;
 }
@@ -141,7 +150,14 @@ async function llamarModelo(ia, sistema, prompt, imagenes = []) {
   if (p !== 'compatible' && !cfg.clave) throw new ErrorIA(`Falta la clave de API de ${PROVEEDORES[p]?.nombre || p}. Configúrala en Configuración > Inteligencia artificial.`);
   if (p === 'compatible' && (!cfg.url || !cfg.modelo)) throw new ErrorIA('Para un servicio compatible con OpenAI indica la dirección (URL) y el nombre del modelo.');
   if (p === 'anthropic') return llamarAnthropic(cfg, sistema, prompt, imagenes);
-  if (p === 'gemini') return llamarGemini(cfg, sistema, prompt, imagenes);
+  if (p === 'gemini') {
+    try { return await llamarGemini(cfg, sistema, prompt, imagenes); } catch (e) {
+      // El modelo elegido está saturado: se prueba una vez con el modelo por defecto
+      const defecto = PROVEEDORES.gemini.modelo;
+      if (!(e instanceof ErrorIA) || !PASAJERO.has(e.estado) || !cfg.modelo || cfg.modelo === defecto) throw e;
+      try { return await llamarGemini({ ...cfg, modelo: defecto }, sistema, prompt, imagenes); } catch { throw e; }
+    }
+  }
   if (p === 'openai') return llamarCompatibleOpenAI({ ...cfg, url: 'https://api.openai.com/v1' }, sistema, prompt, imagenes);
   return llamarCompatibleOpenAI(cfg, sistema, prompt, imagenes);
 }
