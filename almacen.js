@@ -67,7 +67,7 @@ function respaldoAutomatico({ forzar = false } = {}) {
     bd.legible(); // una base dañada o ilegible no reemplaza a los respaldos buenos
     fs.mkdirSync(RESPALDOS(), { recursive: true });
     const reciente = path.join(RESPALDOS(), `respaldo_${fechaArchivo()}.db`);
-    bd.copiarA(reciente);
+    try { bd.copiarA(reciente); } catch (e) { fs.rmSync(reciente, { force: true }); throw e; } // sin copias a medias (disco lleno)
     fs.copyFileSync(reciente, path.join(RESPALDOS(), `diario_${fechaArchivo().slice(0, 10)}.db`)); // el último del día queda como respaldo de ese día
     hayCambios = false;
     const podar = (prefijo, max) => {
@@ -93,7 +93,14 @@ function migrarDesde1x() {
     // Si hay un datos.json más reciente que la base de datos, el docente volvió a trabajar con la 1.x:
     // se guarda una copia de la base de datos y se migra otra vez desde ese datos.json
     if (fs.statSync(DATOS()).mtimeMs <= fs.statSync(bd.BD()).mtimeMs) return false;
-    try { leerJSON(DATOS()); } catch { return false; }
+    let d1; try { d1 = leerJSON(DATOS()); } catch { return false; }
+    // Una 1.x instalada después de la 2.0 empieza vacía: ese datos.json no reemplaza a la base de datos (se aparta)
+    const conContenido = ['grupos', 'alumnos', 'planeaciones', 'planillas', 'mallas'].some((k) => Array.isArray(d1[k]) && d1[k].length) || ['notas', 'asistencia'].some((k) => d1[k] && Object.keys(d1[k]).length);
+    if (!conContenido) {
+      fs.mkdirSync(ANTES_2(), { recursive: true });
+      fs.renameSync(DATOS(), path.join(ANTES_2(), `datos-1x-sin-contenido_${fechaArchivo()}.json`));
+      return false;
+    }
     fs.mkdirSync(RESPALDOS(), { recursive: true });
     bd.copiarA(path.join(RESPALDOS(), `respaldo_${fechaArchivo()}_antes-de-volver-a-2.0.db`));
     bd.reiniciar();

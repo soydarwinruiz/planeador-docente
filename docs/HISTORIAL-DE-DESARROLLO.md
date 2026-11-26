@@ -290,6 +290,12 @@ Rastreo de errores y funcionamiento de la beta, y lanzamiento como versión defi
 - **Modelo local:** botón *Usar Ollama en este equipo*, espera de hasta 15 minutos para modelos locales, mensaje claro si Ollama no está abierto y limpieza del "pensamiento" (`<think>`) de modelos como qwen3.
 - Nueva batería `tests/e2e-ia-malla.js`.
 
+### Versión 2.1.1 — Fortalecimiento (26 de noviembre)
+- **Clave de acceso a prueba de archivos dañados:** si `acceso.json` se borra, se daña o queda desfasado (por ejemplo, un apagón justo al cambiar la clave), el programa sigue pidiendo la clave: decide la llave de los datos, que está encerrada con ella. La clave correcta repara `acceso.json`, y el código de recuperación funciona aunque falte. Antes, el programa dejaba de pedir la clave y podía terminar reiniciando la base.
+- **Volver de una 1.x vacía:** si se instala una 1.x después de la 2.x (empieza sin datos) y luego se vuelve a la 2.x, ese `datos.json` sin contenido ya no reemplaza la base de datos; se aparta en `antes-de-2.0`.
+- Un respaldo automático que falla a medias (disco lleno) ya no deja un archivo incompleto.
+- Pruebas nuevas en `tests/e2e-solidez.js`.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo
