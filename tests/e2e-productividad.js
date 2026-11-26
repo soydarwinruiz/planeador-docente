@@ -1,8 +1,7 @@
 // Pruebas de la versión 1.16: registro de cambios de notas, personalización, configuración por secciones,
 // frases rápidas, "Mi clase ahora", entregas, resumen semanal, banco de preguntas, material con IA y cámara del celular.
-const { fs, path, assert, abrir, esperarGuardado, datos, nuevaCarpeta, prueba, sembrar, terminar } = require('./util');
+const { fs, path, assert, abrir, esperarGuardado, datos, registroDe, nuevaCarpeta, prueba, sembrar, terminar } = require('./util');
 
-const registroDe = (dir) => { const f = path.join(dir, 'registro-notas.jsonl'); return fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []; };
 async function sembrarPlanilla(w) {
   return w.evaluate(() => {
     const per = periodoDeFecha(hoyISO()) || S.config.periodos[0];
@@ -48,7 +47,7 @@ if (require.main === module) (async () => {
     assert.deepStrictEqual(errores, []);
   });
 
-  await prueba('El registro de notas va en su propio archivo: no hace crecer datos.json y viaja en respaldos y años archivados', async () => {
+  await prueba('El registro de notas va en su propia tabla y viaja en respaldos y años archivados', async () => {
     const dir = nuevaCarpeta();
     const nube = nuevaCarpeta();
     let { app, w } = await abrir(dir);
@@ -60,14 +59,12 @@ if (require.main === module) (async () => {
       guardar(); await new Promise((r) => setTimeout(r, 450)); await cadenaGuardado;
     });
     await esperarGuardado(w);
-    const tamDatos = fs.statSync(path.join(dir, 'datos.json')).size, tamReg = fs.statSync(path.join(dir, 'registro-notas.jsonl')).size;
-    assert.ok(!('registroNotas' in datos(dir)), 'el registro no debe ir en datos.json');
+    assert.ok(!('registroNotas' in datos(dir)), 'el registro no debe ir en el estado principal');
     assert.ok(registroDe(dir).length >= 10000);
     const r = await w.evaluate(async (nube) => { await api.configurarNube(nube); const n = await api.respaldarNube(); const a = await api.aniosArchivar(textoEstado()); return { n: n.ok, a: (await api.aniosLeer(a.meta.id)).registroNotas.length }; }, nube);
     await app.close();
     const enNube = JSON.parse(fs.readFileSync(path.join(nube, 'Respaldos Planeador Docente', 'planeador-ultimo.json'), 'utf8')).registroNotas.length;
     assert.ok(r.n && r.a >= 10000 && enNube >= 10000, JSON.stringify({ r, enNube }));
-    assert.ok(tamReg > 500000 && tamDatos < tamReg, `datos.json ${tamDatos} B, registro ${tamReg} B`);
     // al reabrir, el historial sigue disponible
     ({ app, w } = await abrir(dir));
     const h = await w.evaluate(async () => { await new Promise((r) => setTimeout(r, 300)); return historialNota('x5', 'al3').length; });
@@ -75,7 +72,7 @@ if (require.main === module) (async () => {
     assert.strictEqual(h, 1);
   });
 
-  await prueba('Datos de la 1.16 con el registro dentro de datos.json se pasan solos a su archivo', async () => {
+  await prueba('Datos de la 1.16 con el registro dentro de datos.json se migran a la base de datos', async () => {
     const dir = nuevaCarpeta();
     fs.writeFileSync(path.join(dir, 'datos.json'), JSON.stringify({ version: 1, config: { institucion: 'IE', docente: 'Ana', configurado: true }, areas: [], grupos: [], alumnos: [],
       registroNotas: [{ f: '2026-11-20T10:00:00Z', act: 'a1', al: 'b1', antes: null, despues: 4, o: 'computador' }, { f: '2026-11-21T10:00:00Z', act: 'a1', al: 'b1', antes: 4, despues: 4.5, o: 'celular' }] }));

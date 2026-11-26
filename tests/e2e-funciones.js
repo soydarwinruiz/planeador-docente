@@ -60,6 +60,8 @@ async function sembrarNotas(w) {
     assert.match(codigo, /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
     await app.close();
     assert.ok(!fs.readFileSync(path.join(dir, 'acceso.json'), 'utf8').includes('clave-1234'), 'la clave quedó en texto plano');
+    const llave = JSON.parse(fs.readFileSync(path.join(dir, 'llave.dat'), 'utf8'));
+    assert.ok(llave.modo === 'clave' && !llave.plano && !llave.windows, 'con clave, la llave de los datos solo se abre con la clave o el código');
     // con la app bloqueada S no se carga (abrir() espera S): se abre directamente
     const { _electron } = require('playwright-core');
     const a2 = await _electron.launch({ executablePath: require(path.join(__dirname, '..', 'node_modules', 'electron')), args: [path.join(__dirname, '..'), '--no-sandbox'], env: { ...process.env, PLANEADOR_DATA_DIR: dir } });

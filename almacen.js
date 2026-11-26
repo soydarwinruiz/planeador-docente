@@ -3,6 +3,7 @@
 const { app, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const bd = require('./basedatos');
 
 const DIR = () => app.getPath('userData');
 const DATOS = () => path.join(DIR(), 'datos.json');
@@ -12,8 +13,9 @@ const CLAVES = () => path.join(DIR(), 'claves.dat');
 const ANIOS = () => path.join(DIR(), 'anios-anteriores');
 const REGISTRO = () => path.join(DIR(), 'registro-notas.jsonl');
 const REGISTRO_MAX = 200000;
-const MAX_RECIENTES = 15; // respaldo_AAAA-MM-DD_HHMM.json
-const MAX_DIARIOS = 30; // diario_AAAA-MM-DD.json
+const MAX_RECIENTES = 15; // respaldo_AAAA-MM-DD_HHMM.db
+const MAX_DIARIOS = 30; // diario_AAAA-MM-DD.db
+const ANTES_2 = () => path.join(DIR(), 'antes-de-2.0'); // copia de los archivos de la versión 1.x tras la migración
 
 function fechaArchivo(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
@@ -50,49 +52,126 @@ function leerJSON(ruta) {
 }
 
 // ---------- Respaldos automáticos ----------
+// Copias consistentes de tiza.db (cifradas como la base de datos): al abrir y cada hora si hubo cambios
+// (15 recientes) y una por día durante 30 días. Se listan también los respaldos .json de la versión 1.x.
 function listarRespaldos() {
   if (!fs.existsSync(RESPALDOS())) return [];
-  return fs.readdirSync(RESPALDOS()).filter((f) => /^(respaldo|diario)_.*\.json$/.test(f))
+  return fs.readdirSync(RESPALDOS()).filter((f) => /^(respaldo|diario)_.*\.(db|json)$/.test(f))
     .sort((a, b) => fs.statSync(path.join(RESPALDOS(), b)).mtimeMs - fs.statSync(path.join(RESPALDOS(), a)).mtimeMs);
 }
-let ultimoRespaldado = 0; // mtime de datos.json la última vez que se respaldó
+let hayCambios = true; // desde el último respaldo
+function marcarCambios() { hayCambios = true; }
 function respaldoAutomatico({ forzar = false } = {}) {
   try {
-    if (!fs.existsSync(DATOS())) return;
-    const mtime = fs.statSync(DATOS()).mtimeMs;
-    if (!forzar && mtime === ultimoRespaldado) return; // sin cambios desde el último respaldo
-    leerJSON(DATOS()); // nunca respaldar un archivo dañado
+    if (!bd.existe() || (!forzar && !hayCambios) || !bd.llave()) return;
     fs.mkdirSync(RESPALDOS(), { recursive: true });
-    fs.copyFileSync(DATOS(), path.join(RESPALDOS(), `respaldo_${fechaArchivo()}.json`));
-    const diario = path.join(RESPALDOS(), `diario_${fechaArchivo().slice(0, 10)}.json`);
-    fs.copyFileSync(DATOS(), diario); // el último del día queda como respaldo de ese día
-    ultimoRespaldado = mtime;
+    const reciente = path.join(RESPALDOS(), `respaldo_${fechaArchivo()}.db`);
+    bd.copiarA(reciente);
+    fs.copyFileSync(reciente, path.join(RESPALDOS(), `diario_${fechaArchivo().slice(0, 10)}.db`)); // el último del día queda como respaldo de ese día
+    hayCambios = false;
     const podar = (prefijo, max) => {
-      const l = fs.readdirSync(RESPALDOS()).filter((f) => f.startsWith(prefijo) && f.endsWith('.json')).sort();
+      const l = fs.readdirSync(RESPALDOS()).filter((f) => f.startsWith(prefijo) && /\.(db|json)$/.test(f)).sort();
       while (l.length > max) fs.rmSync(path.join(RESPALDOS(), l.shift()), { force: true });
     };
     podar('respaldo_', MAX_RECIENTES);
     podar('diario_', MAX_DIARIOS);
   } catch (e) { console.error('Error en respaldo automático', e); }
 }
+function leerRespaldoAuto(nombre) {
+  const ruta = path.join(RESPALDOS(), path.basename(String(nombre)));
+  return ruta.endsWith('.db') ? bd.leerEstadoDeArchivo(ruta) : leerJSON(ruta);
+}
 
-// ---------- Carga con recuperación ----------
-// Si datos.json está dañado (corte de luz, disco lleno…), se conserva una copia y se cargan
-// automáticamente los datos del respaldo válido más reciente.
-function cargarDatos() {
-  if (!fs.existsSync(DATOS())) return null;
-  try { return leerJSON(DATOS()); } catch (error) {
-    const danado = path.join(DIR(), `datos-danado_${fechaArchivo()}.json`);
-    try { fs.copyFileSync(DATOS(), danado); } catch { /* sin copia */ }
-    for (const f of listarRespaldos()) {
-      try {
-        const d = leerJSON(path.join(RESPALDOS(), f));
-        d.__recuperado = { desde: f, danado: path.basename(danado) };
-        return d;
-      } catch { /* probar el siguiente */ }
-    }
-    return { __error: `No se pudo leer el archivo de datos (${error.message}) y no hay respaldos automáticos válidos. Se guardó una copia en ${path.basename(danado)}.` };
+// ---------- Carga con migración y recuperación ----------
+// La primera vez con la 2.0 se pasan a la base de datos los archivos de la versión 1.x (datos.json, registro de
+// notas y años anteriores) y se guardan en la carpeta "antes-de-2.0". Si la base de datos está dañada se conserva
+// una copia y se cargan automáticamente los datos del respaldo válido más reciente.
+function migrarDesde1x() {
+  if (!fs.existsSync(DATOS()) || bd.tieneDatos()) return false;
+  let datos;
+  try { datos = leerJSON(DATOS()); } catch { return false; } // dañado: lo resuelve la recuperación con respaldos .json
+  bd.abrir();
+  bd.escribirEstado(datos);
+  if (fs.existsSync(REGISTRO())) {
+    const lineas = fs.readFileSync(REGISTRO(), 'utf8').split('\n').filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    bd.agregarRegistro(lineas);
   }
+  if (fs.existsSync(ANIOS())) {
+    for (const f of fs.readdirSync(ANIOS()).filter((x) => x.endsWith('.meta.json'))) {
+      try { const meta = leerJSON(path.join(ANIOS(), f)); bd.guardarAnioBD(meta, leerJSON(path.join(ANIOS(), `${meta.id}.json`))); } catch (e) { console.error('Año no migrado', f, e); }
+    }
+  }
+  // Verificación: lo que quedó en la base de datos se puede leer
+  bd.cerrar(); bd.leerEstado();
+  fs.mkdirSync(ANTES_2(), { recursive: true });
+  const mover = (origen, nombre) => { if (fs.existsSync(origen)) fs.renameSync(origen, path.join(ANTES_2(), nombre)); };
+  mover(DATOS(), 'datos.json'); mover(REGISTRO(), 'registro-notas.jsonl'); mover(ANIOS(), 'anios-anteriores');
+  return true;
+}
+function cargarDatos() {
+  try { migrarDesde1x(); } catch (e) { console.error('Error al migrar a la base de datos', e); bd.cerrar(); fs.rmSync(bd.BD(), { force: true }); }
+  try {
+    if (!bd.tieneDatos()) {
+      if (!fs.existsSync(DATOS())) return null;
+      try { return leerJSON(DATOS()); } catch (error) { return recuperar(error, DATOS()); }
+    }
+    const E = bd.leerEstado();
+    PARTES.clear();
+    if (E) { for (const k of Object.keys(E)) PARTES.set(k, JSON.stringify(E[k])); E.__enBD = true; } // la interfaz sabe que esto ya está en la base de datos
+    return E;
+  } catch (error) { bd.cerrar(); return recuperar(error, bd.BD()); }
+}
+function recuperar(error, archivo) {
+  const ext = path.extname(archivo);
+  const danado = path.join(DIR(), `datos-danado_${fechaArchivo()}${ext}`);
+  try { fs.copyFileSync(archivo, danado); } catch { /* sin copia */ }
+  for (const f of listarRespaldos()) {
+    try {
+      const d = leerRespaldoAuto(f);
+      if (!d || !d.config) continue;
+      if (ext === '.db') bd.reiniciar(); // la base de datos se vuelve a crear con los datos del respaldo al guardar
+      d.__recuperado = { desde: f, danado: path.basename(danado) };
+      return d;
+    } catch { /* probar el siguiente */ }
+  }
+  return { __error: `No se pudieron leer los datos (${error.message}) y no hay respaldos automáticos válidos. Se guardó una copia en ${path.basename(danado)}.` };
+}
+// Guarda el estado que envía la interfaz. Se lleva en memoria el texto de cada parte (para los respaldos en la nube)
+// y en la base de datos solo cambian las filas modificadas.
+const PARTES = new Map();
+function guardarEstado(texto) {
+  const E = JSON.parse(texto);
+  if (!E || typeof E !== 'object' || !E.config) throw new Error('Estado no válido');
+  PARTES.clear();
+  for (const k of Object.keys(E)) if (!k.startsWith('__')) PARTES.set(k, JSON.stringify(E[k]));
+  if (bd.escribirEstado(E)) marcarCambios();
+}
+function guardarPartes(cambios, quitar) {
+  const E = {};
+  for (const [k, v] of Object.entries(cambios || {})) { if (typeof v !== 'string' || k.startsWith('__')) continue; E[k] = JSON.parse(v); }
+  if (E.config === null || (Object.hasOwn(E, 'config') && typeof E.config !== 'object')) throw new Error('Estado no válido');
+  const q = (quitar || []).filter((k) => typeof k === 'string' && k !== 'config');
+  if (bd.escribirEstado(E, { parcial: true, quitar: q })) marcarCambios();
+  for (const k of Object.keys(E)) PARTES.set(k, cambios[k]);
+  for (const k of q) PARTES.delete(k);
+}
+// Información para la tarjeta "Almacenamiento" de Configuración
+function infoAlmacen() {
+  const tam = (r) => { try { return fs.statSync(r).size; } catch { return 0; } };
+  const llave = (() => { try { return JSON.parse(fs.readFileSync(bd.LLAVE_ARCHIVO(), 'utf8')).modo; } catch { return ''; } })();
+  const carpetaTam = (d) => { try { return fs.readdirSync(d, { withFileTypes: true }).reduce((s, f) => s + (f.isDirectory() ? carpetaTam(path.join(d, f.name)) : tam(path.join(d, f.name))), 0); } catch { return 0; } };
+  return { bd: tam(bd.BD()), respaldos: carpetaTam(RESPALDOS()), proteccion: llave, antes2: fs.existsSync(ANTES_2()), registro: bd.existe() ? bd.abrir().prepare('SELECT COUNT(*) n FROM registro').get().n : 0 };
+}
+// Borra la copia sin cifrar de los archivos de la versión 1.x (y sus respaldos .json)
+function borrarAntes2() {
+  fs.rmSync(ANTES_2(), { recursive: true, force: true });
+  if (fs.existsSync(RESPALDOS())) for (const f of fs.readdirSync(RESPALDOS())) if (f.endsWith('.json')) fs.rmSync(path.join(RESPALDOS(), f), { force: true });
+  return true;
+}
+// El estado completo como texto JSON (para el respaldo en la nube)
+function estadoTexto() {
+  if (!PARTES.size) return '';
+  return '{' + [...PARTES].map(([k, v]) => JSON.stringify(k) + ':' + v).join(',') + '}';
 }
 
 // ---------- Claves de IA cifradas (no van en datos.json ni en los respaldos) ----------
@@ -155,36 +234,13 @@ function quitarClaves(datos) {
   if (datos?.config?.ia) datos.config.ia = { ...datos.config.ia, claves: {} };
   return datos;
 }
-// ---------- Registro de cambios de notas ----------
-// Un archivo aparte, una línea por cambio: solo se le agregan líneas, así no pesa en cada guardado de datos.json.
-function leerRegistro() {
-  if (!fs.existsSync(REGISTRO())) return [];
-  const r = [];
-  for (const linea of fs.readFileSync(REGISTRO(), 'utf8').split('\n')) {
-    if (!linea.trim()) continue;
-    try { const x = JSON.parse(linea); if (x && typeof x === 'object') r.push(x); } catch { /* línea cortada por un apagón: se omite */ }
-  }
-  return r;
-}
-function agregarRegistro(lista) {
-  if (!Array.isArray(lista) || !lista.length) return true;
-  fs.mkdirSync(DIR(), { recursive: true });
-  fs.appendFileSync(REGISTRO(), lista.map((x) => JSON.stringify(x)).join('\n') + '\n', 'utf8');
-  return true;
-}
-function reemplazarRegistro(lista) {
-  const l = Array.isArray(lista) ? lista.slice(-REGISTRO_MAX) : [];
-  if (!l.length) { fs.rmSync(REGISTRO(), { force: true }); return true; }
-  escribirSeguro(REGISTRO(), l.map((x) => JSON.stringify(x)).join('\n') + '\n');
-  return true;
-}
-// Si el registro crece demasiado se conservan los cambios más recientes
-function podarRegistro() {
-  try { if (fs.existsSync(REGISTRO()) && fs.statSync(REGISTRO()).size > 40e6) reemplazarRegistro(leerRegistro()); } catch (e) { console.error(e); }
-}
+// ---------- Registro de cambios de notas (tabla "registro" de la base de datos, cifrada) ----------
+function leerRegistro() { return bd.existe() ? bd.leerRegistro() : []; }
+function agregarRegistro(lista) { bd.agregarRegistro(lista); marcarCambios(); return true; }
+function reemplazarRegistro(lista) { bd.reemplazarRegistro(lista, REGISTRO_MAX); marcarCambios(); return true; }
+function podarRegistro() { try { if (bd.existe() && bd.llave()) bd.podarRegistro(REGISTRO_MAX); } catch (e) { console.error(e); } }
 
-// ---------- Años anteriores (archivo de consulta) ----------
-// Cada año archivado es un archivo con todos los datos de ese año y un archivo pequeño con su resumen.
+// ---------- Años anteriores (tabla "anios" de la base de datos, cifrada) ----------
 function metaAnio(id, d) {
   const activos = (d.alumnos || []).filter((a) => a && a.activo !== false);
   return { id, anio: d.config?.anio || '', institucion: d.config?.institucion || '', docente: d.config?.docente || '', archivado: new Date().toISOString(),
@@ -198,24 +254,16 @@ function guardarAnio(datos, meta, { conRegistroActual = false } = {}) {
   if (conRegistroActual) d.registroNotas = leerRegistro(); // al archivar el año en curso
   const id = meta?.id && idValido(meta.id) ? meta.id : `anio-${String(d.config.anio || 'sin-anio').replace(/[^\w-]/g, '')}-${Date.now().toString(36)}`;
   const m = { ...metaAnio(id, d), ...(meta || {}), id };
-  escribirSeguro(path.join(ANIOS(), `${id}.json`), JSON.stringify(d));
-  escribirSeguro(path.join(ANIOS(), `${id}.meta.json`), JSON.stringify(m));
+  bd.guardarAnioBD(m, d);
+  marcarCambios();
   return m;
 }
 function listarAnios() {
-  if (!fs.existsSync(ANIOS())) return [];
-  return fs.readdirSync(ANIOS()).filter((f) => f.endsWith('.meta.json'))
-    .map((f) => { try { return leerJSON(path.join(ANIOS(), f)); } catch { return null; } })
-    .filter((m) => m && fs.existsSync(path.join(ANIOS(), `${m.id}.json`)))
-    .sort((a, b) => String(b.anio).localeCompare(String(a.anio)) || String(b.archivado).localeCompare(String(a.archivado)));
+  if (!bd.existe()) return [];
+  return bd.listarAniosBD().sort((a, b) => String(b.anio).localeCompare(String(a.anio)) || String(b.archivado).localeCompare(String(a.archivado)));
 }
-function leerAnio(id) { if (!idValido(id)) throw new Error('Año no válido'); return leerJSON(path.join(ANIOS(), `${id}.json`)); }
-function eliminarAnio(id) {
-  if (!idValido(id)) throw new Error('Año no válido');
-  fs.rmSync(path.join(ANIOS(), `${id}.json`), { force: true });
-  fs.rmSync(path.join(ANIOS(), `${id}.meta.json`), { force: true });
-  return true;
-}
+function leerAnio(id) { if (!idValido(id)) throw new Error('Año no válido'); return bd.leerAnioBD(id); }
+function eliminarAnio(id) { if (!idValido(id)) throw new Error('Año no válido'); bd.eliminarAnioBD(id); marcarCambios(); return true; }
 // Los respaldos traen los años archivados: se recuperan los que no estén en este equipo
 function restaurarAniosDeRespaldo(datos) {
   const lista = Array.isArray(datos?.aniosAnteriores) ? datos.aniosAnteriores : [];
@@ -223,7 +271,7 @@ function restaurarAniosDeRespaldo(datos) {
   const existentes = new Set(listarAnios().map((m) => m.id));
   let n = 0;
   for (const a of lista) {
-    if (!a?.meta?.id || !a.datos || existentes.has(a.meta.id)) continue;
+    if (!a?.meta?.id || !a.datos || existentes.has(a.meta.id) || !idValido(a.meta.id)) continue;
     try { guardarAnio(a.datos, a.meta); n++; } catch (e) { console.error(e); }
   }
   return n;
@@ -240,7 +288,7 @@ function textoRespaldoCompleto(textoDatos, sangria) {
 }
 
 module.exports = {
-  DIR, DATOS, RESPALDOS, fechaArchivo, escribirSeguro, leerJSON, respaldoAutomatico, listarRespaldos, cargarDatos,
+  DIR, DATOS, RESPALDOS, fechaArchivo, escribirSeguro, leerJSON, respaldoAutomatico, listarRespaldos, cargarDatos, guardarEstado, guardarPartes, estadoTexto, leerRespaldoAuto, infoAlmacen, borrarAntes2,
   leerClaves, guardarClaves, cifradoDisponible, leerRecursosTablero, guardarRecursosTablero, limpiarRecursosTableros,
   textoRespaldoCompleto, quitarClaves, leerRegistro, agregarRegistro, reemplazarRegistro, podarRegistro, guardarAnio, listarAnios, leerAnio, eliminarAnio, restaurarAniosDeRespaldo,
 };

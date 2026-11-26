@@ -5,10 +5,14 @@ const PAGINA = 'https://github.com/soydarwinruiz/planeador-docente/releases/late
 const API = 'https://api.github.com/repos/soydarwinruiz/planeador-docente/releases/latest';
 
 function esPortable() { return !!process.env.PORTABLE_EXECUTABLE_DIR; }
+// Compara versiones como 2.0.0 y 2.0.0-beta.1 (una versión final es mayor que su beta)
 function mayor(a, b) {
-  const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  const [na, pa = ''] = String(a).split('-'), [nb, pb = ''] = String(b).split('-');
+  const x = na.split('.').map(Number), y = nb.split('.').map(Number);
   for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
-  return false;
+  if (pa === pb) return false;
+  if (!pa) return true; if (!pb) return false;
+  return pa.localeCompare(pb, 'en', { numeric: true }) > 0;
 }
 
 function iniciarActualizaciones(ventana) {
@@ -17,6 +21,7 @@ function iniciarActualizaciones(ventana) {
   if (app.isPackaged && !esPortable()) {
     autoUpdater = require('electron-updater').autoUpdater;
     autoUpdater.autoDownload = false;
+    autoUpdater.allowPrerelease = app.getVersion().includes('-'); // quien instaló una beta recibe las siguientes betas
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on('download-progress', (p) => enviar({ fase: 'descargando', porcentaje: Math.round(p.percent) }));
     autoUpdater.on('update-downloaded', (i) => enviar({ fase: 'lista', version: i.version }));

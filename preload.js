@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('api', {
   registroReemplazar: (lista) => ipcRenderer.invoke('registro:reemplazar', lista),
   limpiarRecursosTableros: (ids) => ipcRenderer.invoke('tablero:limpiar', ids),
   ortografia: (activo) => ipcRenderer.invoke('ortografia:activar', activo),
+  infoAlmacen: () => ipcRenderer.invoke('almacen:info'),
+  borrarCopiaAntes2: () => ipcRenderer.invoke('almacen:borrarAntes2'),
   ubicacionDatos: () => ipcRenderer.invoke('datos:ubicacion'),
   abrirCarpetaDatos: () => ipcRenderer.invoke('datos:abrirCarpeta'),
   exportarRespaldo: (estado) => ipcRenderer.invoke('respaldo:exportar', estado),

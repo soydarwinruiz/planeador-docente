@@ -34,10 +34,11 @@ jobs:
           tag_name: v${{ steps.version.outputs.v }}
           target_commitish: ${{ github.sha }}
           name: Tiza ${{ steps.version.outputs.v }}
+          prerelease: ${{ contains(steps.version.outputs.v, '-') }}
           files: |
             dist/*.exe
             dist/*.blockmap
-            dist/latest.yml
+            dist/*.yml
           body: |
             **Cómo instalar**
             - `Tiza-Setup-...exe`: instalador (crea acceso directo y se actualiza solo).

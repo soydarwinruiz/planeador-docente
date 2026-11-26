@@ -150,7 +150,19 @@ function chipDesempeno(n) { const d = desempeno(n); return d ? `<span class="chi
 // de los tableros se guardan en un archivo por tablero, así guardar sigue siendo rápido aunque haya muchos tableros.
 let temporizadorGuardado = null;
 let cadenaGuardado = Promise.resolve();
-let ultimoTextoGuardado = null;
+let ultimasPartes = new Map(); // parte del estado (clave de primer nivel) → texto JSON guardado
+// El estado dividido por claves de primer nivel (grupos, notas, asistencia…), como texto JSON, sin claves de IA
+function partesEstado(E = estadoActual()) {
+  const ia = E.config?.ia, m = new Map();
+  for (const k of Object.keys(E)) if (!k.startsWith('__') && E[k] !== undefined) m.set(k, k === 'config' ? JSON.stringify(E[k], function (kk, v) { return kk === 'claves' && this === ia ? undefined : v; }) : JSON.stringify(E[k]));
+  return m;
+}
+function cambiosDesde(partes) {
+  const cambios = {}, quitar = [];
+  for (const [k, v] of partes) if (ultimasPartes.get(k) !== v) cambios[k] = v;
+  for (const k of ultimasPartes.keys()) if (!partes.has(k)) quitar.push(k);
+  return Object.keys(cambios).length || quitar.length ? { cambios, quitar } : null;
+}
 let ultimasClaves = null;
 // Estado del año en curso (durante la consulta de un año anterior, S es ese año y no se guarda)
 function estadoActual() { return ui.archivo ? ui.archivo.actual : S; }
@@ -182,8 +194,9 @@ async function pasoGuardado() {
     await externalizarRecursos();
     await externalizarRegistro();
     registrarCambiosNotas();
-    const texto = textoEstado();
-    if (texto !== ultimoTextoGuardado) { await api.guardar(texto); ultimoTextoGuardado = texto; }
+    // Solo viajan y se guardan las partes que cambiaron (en la base de datos, solo sus filas)
+    const partes = partesEstado(), cambios = cambiosDesde(partes);
+    if (cambios) { await api.guardar(cambios); ultimasPartes = partes; }
     await enviarRegistroPendiente();
     const E = estadoActual();
     const claves = JSON.stringify(E.config.ia?.claves || {});
@@ -200,8 +213,8 @@ window.addEventListener('beforeunload', () => {
   clearTimeout(temporizadorGuardado); temporizadorGuardado = null;
   if (typeof cerrarPapelera === 'function') cerrarPapelera();
   registrarCambiosNotas();
-  const texto = textoEstado();
-  if (texto !== ultimoTextoGuardado) { api.guardarAlCerrar(texto); ultimoTextoGuardado = texto; }
+  const partes = partesEstado(), cambios = cambiosDesde(partes);
+  if (cambios) { api.guardarAlCerrar(cambios); ultimasPartes = partes; }
   if (REG.pend.length) api.registroAgregarSync(REG.pend.splice(0));
 });
 function guardar() {
@@ -259,7 +272,7 @@ function migrar(d) {
   for (const k of Object.keys(base)) if (r[k] == null) r[k] = base[k];
   if (!d.config?.ia) r.config.ia = { proveedor: 'anthropic', claves: { anthropic: d.config?.apiKey || '' }, modelos: {}, url: '' };
   delete r.config.apiKey;
-  delete r.__recuperado; delete r.__error;
+  delete r.__recuperado; delete r.__error; delete r.__enBD;
   if (!r.config.ia.claves || typeof r.config.ia.claves !== 'object') r.config.ia.claves = {};
   if (!r.config.componentesPorDefecto) r.config.componentesPorDefecto = structuredClone(COMPONENTES_POR_DEFECTO);
   sanearIds(r);
@@ -523,6 +536,8 @@ async function iniciar() {
     return;
   }
   const recuperado = datos?.__recuperado;
+  // Lo que ya está en la base de datos no se vuelve a enviar; lo que el programa quite o cambie al cargar, sí
+  ultimasPartes = datos?.__enBD ? partesEstado(datos) : new Map();
   S = migrar(datos || estadoInicial());
   ultimasClaves = JSON.stringify(S.config.ia.claves || {});
   reiniciarRegistroNotas();

@@ -258,6 +258,17 @@ Rastreo completo solo de errores. Primero, un robot activó 2 426 botones, lista
 - **WhatsApp:** con dos números en el campo del celular, el enlace salía mal; ahora usa el primero.
 - Nuevas pruebas: los 1 920 textos maliciosos, las correcciones de este rastreo y el robot (`npm run test:robot`).
 
+### Versión 2.0.0 beta 1 — Base de datos SQLite cifrada (26 de noviembre)
+El docente preguntó cómo se guardan los datos y decidió: *"vamos con SQLite para la versión 2.0 beta"*.
+- **SQLite incorporado** (el que trae Electron): el instalador no necesita nada adicional.
+- **Guardado por filas:** cada grupo, estudiante, planeación, las notas de cada actividad o la asistencia de cada día es una fila. Al poner una nota solo cambia esa fila, en una transacción a prueba de apagones. La ventana además envía solo las partes que cambiaron: con un estado de 2 MB, guardar una nota pasó de unos 60 a unos 35 ms.
+- **Cifrado AES-256 de cada registro.** La llave queda protegida por Windows o, con la clave de acceso activa, por la clave y el código de recuperación.
+- **El registro de cambios de notas y los años anteriores** también van dentro de la base de datos, cifrados.
+- **Migración automática** desde la 1.x, con copia de seguridad en "antes-de-2.0"; respaldos automáticos `.db` con recuperación si la base se daña.
+- **Tarjeta "Almacenamiento"** en Configuración.
+- **Versión beta:** se publica como prelanzamiento; solo la reciben quienes la instalen.
+- Errores encontrados durante el desarrollo, antes de publicar: el separador de la asistencia (un carácter nulo) hacía que SQLite juntara varios días en una fila; una base dañada impedía abrir el programa antes de entrar a la recuperación; la tabla inicial ocupaba demasiado espacio con filas grandes. Pruebas nuevas: un año completo se guarda y vuelve idéntico al reabrir; nada se lee en el archivo sin la llave; recuperación de una base dañada; asistencia de varios días al reabrir.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo
