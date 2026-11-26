@@ -6,10 +6,12 @@ const SISTEMA = `Eres un asesor pedagógico experto en educación básica primar
 Conoces los Estándares Básicos de Competencias, los Derechos Básicos de Aprendizaje (DBA), los Lineamientos Curriculares del MEN,
 el Decreto 1290 de 2009 (evaluación) y el Decreto 1421 de 2017 (educación inclusiva, PIAR y ajustes razonables).
 Redactas en español de Colombia, con lenguaje claro, concreto y realizable en un aula pública con recursos limitados.
+Si se describen la identificación (recursos, locativos, duración, número de estudiantes) y la diversidad del aula (estilos de aprendizaje, gustos, características, barreras, ajustes y apoyos, necesidades PIAR), tenlos SIEMPRE presentes: propone actividades, mediaciones, agrupamientos y evaluación realizables con esos recursos y espacios, conectadas con los gustos del grupo, y con los ajustes y apoyos incorporados en la clase (no como un anexo aparte).
 No inventes códigos ni números de DBA: si no estás seguro del número exacto, describe el aprendizaje sin numerarlo.
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y sin bloques de código.`;
 
 function extraerJSON(texto) {
+  texto = String(texto || '').replace(/<think>[\s\S]*?<\/think>/g, ''); // modelos locales que "piensan en voz alta" (qwen3, deepseek-r1)
   const inicio = texto.indexOf('{');
   const fin = texto.lastIndexOf('}');
   if (inicio === -1 || fin === -1) throw new Error('La respuesta de la IA no tuvo el formato esperado.');
@@ -86,12 +88,15 @@ async function llamarAnthropic({ clave, modelo }, sistema, prompt, imagenes = []
 }
 
 // Si el servicio está saturado (503 y similares) se reintenta dos veces, esperando un poco más cada vez
+// Un modelo local (Ollama, LM Studio) en un computador sin tarjeta gráfica puede tardar varios minutos
+const esLocal = (url) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|192\.168\.|10\.)/i.test(url);
 async function pedirJSON(url, opciones, esperas = [2000, 6000]) {
   let r;
   for (let intento = 0; ; intento++) {
     try {
-      r = await fetch(url, { ...opciones, signal: AbortSignal.timeout(180000) });
+      r = await fetch(url, { ...opciones, signal: AbortSignal.timeout(esLocal(url) ? 900000 : 180000) });
     } catch (e) {
+      if (esLocal(url) && e.name !== 'TimeoutError') throw new ErrorIA('No se pudo contactar el modelo local (' + (e.cause?.code || e.message) + '). Verifica que Ollama o LM Studio estén abiertos y que la dirección sea correcta.');
       throw new ErrorIA(e.name === 'TimeoutError' ? 'El servicio tardó demasiado en responder.' : 'No hay conexión a internet o no se pudo contactar el servicio (' + (e.cause?.code || e.message) + ').');
     }
     if (!PASAJERO.has(r.status) || intento >= esperas.length) break;

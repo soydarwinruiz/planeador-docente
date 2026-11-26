@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "test": "node tests/estatico.js && node tests/ia-reintentos.js && node tests/e2e.js && node tests/e2e-funciones.js && node tests/e2e-completo.js && node tests/e2e-productividad.js && node tests/e2e-v2.js && node tests/e2e-solidez.js",
+    "test": "node tests/estatico.js && node tests/ia-reintentos.js && node tests/e2e.js && node tests/e2e-funciones.js && node tests/e2e-completo.js && node tests/e2e-productividad.js && node tests/e2e-v2.js && node tests/e2e-solidez.js && node tests/e2e-ia-malla.js",
     "test:estatico": "node tests/estatico.js",
     "test:robot": "node tests/robot.js",
     "dist:win": "electron-builder --win nsis portable --x64 --publish never",

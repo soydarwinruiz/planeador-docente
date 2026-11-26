@@ -31,6 +31,28 @@ const CAMPOS_DIVERSIDAD = [
   { k: 'ajustes', t: 'Ajustes y apoyos', ph: '• Rutinas claras\n• Instrucciones de una en una\n• Apoyos visuales…' },
 ];
 
+// Identificación y diversidad del aula de una planeación, como contexto para la IA (sin nombres de estudiantes)
+function contextoAulaIA(p) {
+  const g = porId(S.grupos, p.grupoId);
+  const grado = g?.grado || p.gradoOrigen;
+  const piar = p.grupoId ? alumnosDe(p.grupoId).filter((a) => a.piar).map((a) => a.observaciones).filter(Boolean) : [];
+  const n = p.grupoId ? alumnosDe(p.grupoId).length : 0;
+  const ident = [
+    `Área: ${p.areaId ? nombreArea(p.areaId) : 'no indicada'}`,
+    `Grado: ${grado ? grado + '°' : 'no indicado'} (${nivelDeGrado(grado)}, Colombia)${n ? ` · ${n} estudiantes` : ''}`,
+    `Tema: ${p.titulo || 'no indicado'}`,
+    p.periodoId && nombrePeriodo(p.periodoId) ? `Período: ${nombrePeriodo(p.periodoId)}` : '',
+    p.duracion ? `Duración: ${p.duracion}` : '',
+    p.locativos ? `Locativos (espacios disponibles): ${p.locativos}` : '',
+    p.recursos ? `Recursos disponibles: ${p.recursos}` : '',
+  ].filter(Boolean);
+  const div = [
+    ...CAMPOS_DIVERSIDAD.filter((c) => (p[c.k] || '').trim()).map((c) => `- ${c.t}: ${p[c.k].trim()}`),
+    piar.length ? `- Necesidades registradas en PIAR del grupo (sin nombres): ${piar.join('; ')}` : '',
+  ].filter(Boolean);
+  return `IDENTIFICACIÓN DE LA PLANEACIÓN\n${ident.join('\n')}` + (div.length ? `\nDIVERSIDAD DEL AULA (tenla presente en todo lo que propongas)\n${div.join('\n')}` : '');
+}
+
 const MOMENTOS = [
   { k: 'exploracion', t: 'Exploración', ph: 'Saberes previos, motivación, pregunta problematizadora…' },
   { k: 'estructuracion', t: 'Estructuración', ph: 'Explicación, construcción de conceptos, modelación…' },
@@ -548,16 +570,11 @@ async function ejecutarIA(id) {
   const reemplazar = document.getElementById('m-ia-reemplazar').checked;
   if (!campos.length && !conSesiones) return aviso('Selecciona al menos un campo', 'error');
   const g = porId(S.grupos, p.grupoId);
-  const piar = p.grupoId ? alumnosDe(p.grupoId).filter((a) => a.piar).map((a) => a.observaciones).filter(Boolean) : [];
   const contexto = [
-    `Área: ${p.areaId ? nombreArea(p.areaId) : 'no indicada'}`,
-    `Grado: ${g ? g.grado + '°' : (p.gradoOrigen ? p.gradoOrigen + '°' : 'no indicado')} (${nivelDeGrado(g ? g.grado : p.gradoOrigen)}, Colombia)`,
+    contextoAulaIA(p),
     `Tipo de planeación: ${TIPOS_PLAN[p.tipo]} con ${p.sesiones.length} sesión(es) de ${p.sesiones[0]?.duracion || 55} minutos`,
-    `Tema: ${p.titulo || 'no indicado'}`,
     p.sesiones.some((s) => s.titulo) ? `Títulos de sesiones: ${p.sesiones.map((s, i) => `${i + 1}) ${s.titulo || '-'}`).join('; ')}` : '',
     ...CAMPOS_TEXTO.filter((c) => p[c.k] && !campos.includes(c.k)).map((c) => `${c.t} (ya definido): ${p[c.k]}`),
-    ...CAMPOS_DIVERSIDAD.filter((c) => p[c.k]).map((c) => `Diversidad del aula – ${c.t}: ${p[c.k]}`),
-    piar.length ? `Necesidades registradas en PIAR del grupo: ${piar.join('; ')}` : '',
     campos.some((k) => ['estandares', 'dba', 'competencias', 'evidencias'].includes(k)) && textoReferentes(areaReferenteDe(p.areaId), bandaDeGrado(g?.grado || p.gradoOrigen)) ? `Referentes oficiales del MEN para este grado (en "estandares", "dba", "competencias" y "evidencias" copia textualmente solo los pertinentes al tema; no inventes referentes):\n${textoReferentes(areaReferenteDe(p.areaId), bandaDeGrado(g?.grado || p.gradoOrigen))}` : '',
     document.getElementById('m-ia-extra').value.trim() ? `Indicaciones del docente: ${document.getElementById('m-ia-extra').value.trim()}` : '',
   ].filter(Boolean).join('\n');

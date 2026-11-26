@@ -285,6 +285,10 @@ Rastreo de errores y funcionamiento de la beta, y lanzamiento como versión defi
 - **IA saturada (error 503 "high demand"):** Gemini, ChatGPT y los compatibles reintentan solos dos veces (2 s y 6 s); con Gemini, si el modelo escrito sigue saturado se prueba el modelo por defecto. El mensaje explica que es temporal (`tests/ia-reintentos.js`).
 - **Modelo de Gemini al día:** Google retiró `gemini-2.5-flash` para cuentas nuevas (404 "no longer available to new users"). Ahora, sin modelo escrito, se usa `gemini-flash-latest` (alias que Google mantiene en su Flash más reciente). Si el modelo escrito fue retirado o sigue saturado, se consulta la lista de modelos de la cuenta y se usa el Flash estable más reciente (también en el dictado por voz).
 - Nueva batería `tests/e2e-solidez.js`.
+- **La IA tiene presente el aula:** en la planeación de clase y en el material de cada sesión (guía, quiz, rúbrica) se envían la identificación (área, grado, número de estudiantes, período, duración, locativos, recursos) y la diversidad del aula (estilos, gustos, características y barreras, ajustes, necesidades PIAR sin nombres), con la indicación de incorporarlas en actividades, mediaciones y evaluación.
+- **Campos de la malla a la medida de la institución (⚙️ Campos):** ocultar, renombrar y agregar campos propios por eje temático; se guardan en la configuración, la IA llena los propios y el Word usa esas columnas.
+- **Modelo local:** botón *Usar Ollama en este equipo*, espera de hasta 15 minutos para modelos locales, mensaje claro si Ollama no está abierto y limpieza del "pensamiento" (`<think>`) de modelos como qwen3.
+- Nueva batería `tests/e2e-ia-malla.js`.
 
 ---
 

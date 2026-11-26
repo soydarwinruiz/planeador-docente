@@ -356,12 +356,20 @@ function tarjetaIA() {
     </div>
     ${p === 'compatible' ? `<div class="campo"><label>Dirección (URL base) del servicio</label><input value="${esc(ia.url || '')}" placeholder="https://api.deepseek.com/v1   ·   http://localhost:11434/v1 (Ollama)"
         onchange="S.config.ia.url=this.value.trim();guardar()">
-      <div class="ayuda">Cualquier servicio que use el formato de OpenAI (<i>/chat/completions</i>). Con <b>Ollama</b> o <b>LM Studio</b> la IA corre en tu propio computador, sin costo y sin enviar datos a internet (requiere un equipo potente).</div></div>`
+      <div class="ayuda">Cualquier servicio que use el formato de OpenAI (<i>/chat/completions</i>). Con <b>Ollama</b> o <b>LM Studio</b> la IA corre en tu propio computador, sin costo y sin enviar datos a internet.</div>
+      <div class="fila" style="margin-top:6px"><button class="btn pequeno" onclick="usarOllama()">🖥️ Usar Ollama en este equipo</button>
+        <span class="ayuda">Instala Ollama (ollama.com), abre una terminal y escribe <code>ollama pull qwen3:8b</code>. Con 8 GB de RAM usa <code>qwen3:4b</code>; con tarjeta gráfica de 12 GB o más, <code>gemma3:12b</code>.</span></div></div>`
       : `<div class="ayuda" style="margin-top:-4px">Si dejas el modelo vacío se usa <b>${esc(info.modelo)}</b>. Puedes escribir cualquier otro modelo que ofrezca tu proveedor; si está saturado, el programa reintenta solo${p === 'gemini' ? ' y, si el modelo ya no existe o sigue saturado, usa el Gemini Flash más reciente de tu cuenta' : ''}.</div>`}
     <div class="fila" style="margin-top:10px"><button class="btn" id="btn-probar-ia" onclick="probarIA()">🔌 Probar conexión</button>
       ${ia.claves?.[p] ? `<button class="btn peligro" onclick="delete S.config.ia.claves['${p}'];guardar();render()">Quitar clave</button>` : ''}
       <span id="res-probar-ia" class="ayuda"></span></div>
   </div>`;
+}
+function usarOllama() {
+  const ia = S.config.ia;
+  ia.proveedor = 'compatible'; ia.url = 'http://localhost:11434/v1';
+  (ia.modelos ||= {}).compatible = ia.modelos.compatible || 'qwen3:8b';
+  guardar(); render(); aviso('Listo. Usa "Probar conexión" para verificar que Ollama esté abierto.', 'ok');
 }
 async function probarIA() {
   const btn = document.getElementById('btn-probar-ia');
