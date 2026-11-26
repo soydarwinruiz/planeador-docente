@@ -178,6 +178,7 @@ async function restaurarRespaldo() {
   const r = await api.importarRespaldo();
   if (!r.ok) { if (r.error) aviso(r.error, 'error'); return; }
   if (!(await confirmar('Se reemplazarán TODOS los datos actuales por los del respaldo. (Los datos actuales quedan en los respaldos automáticos.) ¿Continuar?', { boton: 'Restaurar' }))) return;
+  await api.confirmarRestauracion();
   aplicarRespaldo(r.datos);
   aviso('Respaldo restaurado', 'ok');
 }

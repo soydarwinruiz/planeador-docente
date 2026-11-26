@@ -277,6 +277,13 @@ Rastreo de errores y funcionamiento de la beta, y lanzamiento como versión defi
 - Recorridos probados (`tests/e2e-v2.js`): pasar de la 1.x con clave (pide la clave, migra, entrega código nuevo y cifra con la clave), respaldo hacia otro computador, restaurar respaldos `.db` y `.json`, nuevo año y consulta del año archivado, cerrar justo después de poner una nota, y volver de la 1.x.
 - La 2.0 se publica como versión normal: a quien tiene la 1.x le llega por actualización automática.
 
+### Versión 2.0.1 — Solidez de la llave y del guardado (26 de noviembre)
+- **Segunda copia de la llave de datos** (`llave-copia.dat`, protegida igual): si `llave.dat` se daña o se borra, los datos se siguen abriendo y el archivo se repara solo.
+- **Nunca se crea una llave nueva encima de datos cifrados.** Antes, si faltaba `llave.dat`, se creaba otra y los datos quedaban ilegibles. Ahora el programa avisa, no toca la base ni los respaldos, y todo vuelve si la llave regresa. Restaurar un respaldo `.json` aparta la base vieja (no la borra) y empieza una nueva con todo, incluidos los años archivados.
+- Los respaldos automáticos solo se hacen si la base se puede leer: una base dañada no reemplaza a los respaldos buenos.
+- Si un guardado falla (antivirus, sincronización, disco lleno), se **reintenta solo** cada pocos segundos y el aviso aparece una sola vez.
+- Nueva batería `tests/e2e-solidez.js`.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo

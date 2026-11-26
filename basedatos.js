@@ -16,15 +16,35 @@ const crypto = require('crypto');
 const DIR = () => app.getPath('userData');
 const BD = () => path.join(DIR(), 'tiza.db');
 const LLAVE_ARCHIVO = () => path.join(DIR(), 'llave.dat');
+const LLAVE_COPIA = () => path.join(DIR(), 'llave-copia.dat'); // segunda copia de la llave (protegida igual que llave.dat)
 const ESQUEMA = 1;
 
 // ---------- Llave de datos ----------
 let LLAVE = null; // Buffer de 32 bytes, solo en memoria
 function windowsDisponible() { try { return !process.env.TIZA_LLAVE_PLANA && safeStorage.isEncryptionAvailable(); } catch { return false; } }
-function leerArchivoLlave() { try { return JSON.parse(fs.readFileSync(LLAVE_ARCHIVO(), 'utf8')); } catch { return null; } }
-function escribirArchivoLlave(obj) {
+const llaveValida = (a) => a && typeof a === 'object' && ['windows', 'plano', 'clave'].includes(a.modo);
+function leerLlaveDe(ruta) { try { const a = JSON.parse(fs.readFileSync(ruta, 'utf8')); return llaveValida(a) ? a : null; } catch { return null; } }
+// Lee llave.dat; si falta o está dañado usa la copia (y lo repara). Sin la llave no se pueden leer los datos.
+function leerArchivoLlave() {
+  const a = leerLlaveDe(LLAVE_ARCHIVO());
+  if (a) { if (!fs.existsSync(LLAVE_COPIA())) { try { escribirArchivoLlave(a, { soloCopia: true }); } catch { /* */ } } return a; }
+  const c = leerLlaveDe(LLAVE_COPIA());
+  if (c) {
+    if (fs.existsSync(LLAVE_ARCHIVO())) { try { fs.copyFileSync(LLAVE_ARCHIVO(), LLAVE_ARCHIVO() + '.danado'); } catch { /* */ } }
+    try { escribirArchivoLlave(c); } catch (e) { console.error(e); }
+  }
+  return c;
+}
+function escribirArchivoLlave(obj, { soloCopia = false } = {}) {
   const { escribirSeguro } = require('./almacen');
-  escribirSeguro(LLAVE_ARCHIVO(), JSON.stringify(obj));
+  const texto = JSON.stringify(obj);
+  if (!soloCopia) escribirSeguro(LLAVE_ARCHIVO(), texto);
+  escribirSeguro(LLAVE_COPIA(), texto);
+}
+// Hay datos guardados con una llave: nunca se crea una llave nueva encima (los datos quedarían ilegibles)
+function hayDatosCifrados() {
+  if (!existe()) return false;
+  try { const b = new DatabaseSync(BD(), { readOnly: true }); try { return b.prepare('SELECT 1 FROM filas LIMIT 1').get() !== undefined || b.prepare('SELECT 1 FROM anios LIMIT 1').get() !== undefined; } finally { b.close(); } } catch { return false; }
 }
 function derivar(secreto, salHex) { return crypto.scryptSync(String(secreto).normalize('NFC'), Buffer.from(salHex, 'hex'), 32, { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }); }
 function encerrar(llave, secreto) {
@@ -47,7 +67,10 @@ function guardarLlaveSinClave(llave) {
 function llave() {
   if (LLAVE) return LLAVE;
   const a = leerArchivoLlave();
-  if (!a) { LLAVE = crypto.randomBytes(32); guardarLlaveSinClave(LLAVE); return LLAVE; }
+  if (!a) {
+    if (fs.existsSync(LLAVE_ARCHIVO()) || hayDatosCifrados()) throw Object.assign(new Error('Falta o está dañado el archivo llave.dat, que abre tus datos cifrados. Si lo tienes en una copia de la carpeta de datos, ponlo de nuevo en su lugar; si no, restaura un respaldo manual (.json).'), { code: 'SIN_LLAVE' });
+    LLAVE = crypto.randomBytes(32); guardarLlaveSinClave(LLAVE); return LLAVE;
+  }
   if (a.modo === 'windows') LLAVE = Buffer.from(safeStorage.decryptString(Buffer.from(a.windows, 'base64')), 'hex');
   else if (a.modo === 'plano') LLAVE = Buffer.from(a.plano, 'hex');
   return LLAVE;
@@ -193,11 +216,32 @@ function escribirEstado(E, { parcial = false, quitar = [] } = {}) {
   for (const [col, v] of nuevo) CACHE.set(col, v);
   return escritas;
 }
+// Se puede leer con la llave actual (antes de un respaldo automático, para no reemplazar respaldos buenos por uno ilegible)
+function legible() {
+  const base = abrir();
+  verificar(base);
+  const f = base.prepare('SELECT datos FROM filas LIMIT 1').get();
+  if (f) descifrar(f.datos);
+  return true;
+}
 // Copia consistente de la base de datos (para respaldos automáticos)
 function copiarA(ruta) {
   const base = abrir();
   fs.rmSync(ruta, { force: true });
   base.exec(`VACUUM INTO '${ruta.replace(/'/g, "''")}'`);
+}
+// Al restaurar un respaldo .json cuando la llave se perdió: la base que no se puede abrir se aparta (no se borra)
+// y se empieza una base nueva con una llave nueva
+function sinLlave() { try { llave(); return false; } catch (e) { if (e.code === 'SIN_LLAVE') return true; throw e; } }
+function apartarSiNoHayLlave() {
+  try { llave(); return false; } catch (e) {
+    if (e.code !== 'SIN_LLAVE') throw e;
+    cerrar();
+    const sello = new Date().toISOString().replace(/[:.]/g, '-');
+    if (existe()) fs.renameSync(BD(), path.join(DIR(), `tiza-sin-llave_${sello}.db`));
+    for (const r of [LLAVE_ARCHIVO(), LLAVE_COPIA()]) if (fs.existsSync(r)) fs.renameSync(r, `${r}.danado-${sello}`);
+    return true;
+  }
 }
 // Empieza de cero (tras una recuperación): la base dañada ya se copió aparte
 function reiniciar() {
@@ -232,7 +276,7 @@ function leerAnioBD(id) { const f = abrir().prepare('SELECT datos FROM anios WHE
 function eliminarAnioBD(id) { abrir().prepare('DELETE FROM anios WHERE id = ?').run(id); return true; }
 
 module.exports = {
-  BD, LLAVE_ARCHIVO, existe, tieneDatos, abrir, cerrar, reiniciar, leerEstado, leerEstadoDeArchivo, escribirEstado, copiarA,
+  BD, LLAVE_ARCHIVO, LLAVE_COPIA, existe, legible, sinLlave, apartarSiNoHayLlave, tieneDatos, abrir, cerrar, reiniciar, leerEstado, leerEstadoDeArchivo, escribirEstado, copiarA,
   llave, llaveConClave, abrirLlaveConClave, abrirLlaveConCodigo, protegerLlaveConClave, protegerLlaveSinClave,
   leerRegistro, agregarRegistro, reemplazarRegistro, podarRegistro, guardarAnioBD, listarAniosBD, leerAnioBD, eliminarAnioBD,
 };
