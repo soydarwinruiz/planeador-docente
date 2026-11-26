@@ -1,7 +1,7 @@
 {
   "name": "planeador-docente",
   "productName": "Tiza",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Tiza: planeador y asistente del docente para educación básica y media (Colombia, grados 1.° a 11.°)",
   "main": "main.js",
   "author": "DocenTech",

@@ -14,7 +14,9 @@ let bloqueado = null; // null = aún no se sabe (se calcula al primer uso)
 let fallos = 0, esperarHasta = 0;
 
 function leer() { try { return JSON.parse(fs.readFileSync(ARCHIVO(), 'utf8')); } catch { return null; } }
-function activa() { const a = leer(); return !!(a && a.hash && a.sal); }
+// La clave está activa si acceso.json lo dice o si la llave de los datos está encerrada con una clave (aunque
+// acceso.json falte o esté dañado: sin la clave los datos no se pueden abrir, así que se sigue pidiendo)
+function activa() { const a = leer(); return !!(a && a.hash && a.sal) || bd.llaveConClave(); }
 function estaBloqueado() { if (bloqueado === null) bloqueado = activa(); return bloqueado && activa(); }
 function resumen(texto, sal) { return crypto.scryptSync(String(texto).normalize('NFC'), Buffer.from(sal, 'hex'), 32, { N: 16384, r: 8, p: 1 }).toString('hex'); }
 function igual(a, b) { const x = Buffer.from(a, 'hex'), y = Buffer.from(b, 'hex'); return x.length === y.length && crypto.timingSafeEqual(x, y); }
@@ -38,7 +40,21 @@ function fallo(msg) {
   if (fallos >= 5) esperarHasta = Date.now() + Math.min(300, 30 * 2 ** (fallos - 5)) * 1000;
   return { ok: false, error: msg, espera: Date.now() < esperarHasta ? Math.ceil((esperarHasta - Date.now()) / 1000) : 0 };
 }
-function comprobarClave(clave) { const a = leer(); return !!a && igual(resumen(clave, a.sal), a.hash); }
+function comprobarClave(clave) {
+  const a = leer();
+  if (a?.hash && a?.sal && igual(resumen(clave, a.sal), a.hash)) return true;
+  // acceso.json falta, está dañado o quedó desfasado (un apagón al cambiar la clave): decide la llave de los datos
+  if (typeof clave === 'string' && bd.llaveConClave() && bd.abrirLlaveConClave(clave)) {
+    const sal = crypto.randomBytes(16).toString('hex');
+    escribirSeguro(ARCHIVO(), JSON.stringify({ version: 1, minutos: 10, ...(a && typeof a === 'object' ? a : {}), sal, hash: resumen(clave, sal) }));
+    return true;
+  }
+  return false;
+}
+function comprobarCodigo(codigo, a) {
+  if (a?.hashRec && a?.salRec && igual(resumen(normalizarCodigo(codigo), a.salRec), a.hashRec)) return true;
+  return bd.llaveConClave() && bd.abrirLlaveConCodigo(normalizarCodigo(codigo));
+}
 
 function iniciarAcceso() {
   ipcMain.handle('acceso:estado', () => { const a = leer(); return { activa: activa(), bloqueado: estaBloqueado(), minutos: a?.minutos ?? 10 }; });
@@ -95,9 +111,9 @@ function iniciarAcceso() {
   ipcMain.handle('acceso:recuperar', (_e, { codigo, nueva }) => {
     const f = frenar(); if (f) return f;
     try {
-      const a = leer();
-      if (!a) return { ok: false, error: 'No hay clave configurada.' };
-      if (!igual(resumen(normalizarCodigo(codigo), a.salRec), a.hashRec)) return fallo('El código de recuperación no es correcto.');
+      const a = leer() || {};
+      if (!activa()) return { ok: false, error: 'No hay clave configurada.' };
+      if (!comprobarCodigo(codigo, a)) return fallo('El código de recuperación no es correcto.');
       validarNueva(nueva);
       if (!bd.abrirLlaveConCodigo(normalizarCodigo(codigo))) return { ok: false, error: 'El código es correcto, pero no abre la llave de los datos.' };
       fallos = 0;
@@ -110,7 +126,7 @@ function iniciarAcceso() {
   });
   ipcMain.handle('acceso:minutos', (_e, minutos) => {
     const a = leer();
-    if (!a || estaBloqueado()) return { ok: false };
+    if (!a?.hash || estaBloqueado()) return { ok: false };
     a.minutos = Math.max(0, Math.min(240, +minutos || 0));
     escribirSeguro(ARCHIVO(), JSON.stringify(a));
     return { ok: true };

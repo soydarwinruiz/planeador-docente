@@ -64,5 +64,43 @@ const { fs, path, assert, abrir, esperarGuardado, datos, nuevaCarpeta, prueba, s
     assert.ok(fs.readdirSync(dir).some((f) => /^tiza-sin-llave_.*\.db$/.test(f)), 'la base sin llave no se conservó aparte');
   });
 
+  await prueba('Clave de acceso: si acceso.json se borra o se daña, se sigue pidiendo la clave y la clave lo repara', async () => {
+    const dir = nuevaCarpeta();
+    let { app, w } = await abrir(dir);
+    await sembrar(w);
+    const r0 = await w.evaluate(() => api.accesoActivar('clave-123', 10));
+    assert.ok(r0.ok, r0.error);
+    await app.close();
+    for (const dano of ['borrar', 'desfasado']) {
+      if (dano === 'borrar') fs.rmSync(path.join(dir, 'acceso.json'));
+      else { const a = JSON.parse(fs.readFileSync(path.join(dir, 'acceso.json'), 'utf8')); a.hash = '00'.repeat(32); fs.writeFileSync(path.join(dir, 'acceso.json'), JSON.stringify(a)); }
+      const lanzar = require('playwright-core')._electron.launch({ executablePath: require(path.join(__dirname, '..', 'node_modules', 'electron')), args: [path.join(__dirname, '..'), '--no-sandbox'], env: { ...process.env, PLANEADOR_DATA_DIR: dir, TIZA_LLAVE_PLANA: '1' } });
+      app = await lanzar; w = await app.firstWindow();
+      await w.waitForSelector('#bloqueo-clave', { timeout: 15000 });
+      assert.strictEqual(await w.evaluate(async () => (await api.cargar()).__bloqueado), true, `${dano}: entregó los datos sin clave`);
+      assert.strictEqual((await w.evaluate(() => api.accesoDesbloquear('otra'))).ok, false, `${dano}: aceptó una clave incorrecta`);
+      await w.fill('#bloqueo-clave', 'clave-123'); await w.click('#bloqueo-entrar');
+      await w.waitForFunction(() => S && S.alumnos.length === 25, null, { timeout: 15000 });
+      await app.close();
+      const a = JSON.parse(fs.readFileSync(path.join(dir, 'acceso.json'), 'utf8'));
+      assert.ok(a.hash && a.hash !== '00'.repeat(32), `${dano}: acceso.json no se reparó`);
+    }
+  });
+
+  await prueba('Una 1.x instalada después de la 2.0 (vacía) no reemplaza la base de datos al volver', async () => {
+    const dir = nuevaCarpeta();
+    let { app, w } = await abrir(dir);
+    await sembrar(w);
+    await app.close();
+    await new Promise((r) => setTimeout(r, 50));
+    fs.writeFileSync(path.join(dir, 'datos.json'), JSON.stringify({ version: 1, config: { institucion: '', configurado: false }, grupos: [], alumnos: [], areas: [], planeaciones: [], notas: {}, asistencia: {} }));
+    ({ app, w } = await abrir(dir));
+    const r = await w.evaluate(() => ({ alumnos: S.alumnos.length, inst: S.config.institucion }));
+    await app.close();
+    assert.deepStrictEqual(r, { alumnos: 25, inst: 'IE Prueba' });
+    assert.ok(!fs.existsSync(path.join(dir, 'datos.json')), 'el datos.json vacío quedó en su lugar');
+    assert.ok(fs.readdirSync(path.join(dir, 'antes-de-2.0')).some((f) => f.startsWith('datos-1x-sin-contenido_')), 'no se apartó');
+  });
+
   terminar();
 })();
