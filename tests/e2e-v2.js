@@ -36,7 +36,9 @@ const caso = async (n, fn) => { try { await fn(); res.push('✓ ' + n); } catch 
     await app.close();
     const d2 = nuevaCarpeta(); ({ app, w } = await abrir(d2));
     await app.evaluate(({ dialog }, ruta) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [ruta] }); }, salida);
+    await w.waitForSelector('#modal-fondo:not(.oculto)', { timeout: 15000 }); // el asistente de bienvenida del equipo nuevo
     await w.evaluate(() => { cerrarModal(); restaurarRespaldo(); });
+    await w.waitForFunction(() => document.querySelector('#modal .btn.peligro'), null, { timeout: 15000 });
     await w.click('#modal .btn.peligro');
     await w.waitForFunction(() => S.alumnos.length === 25);
     await esperarGuardado(w);
