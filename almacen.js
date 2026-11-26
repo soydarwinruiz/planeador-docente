@@ -87,7 +87,17 @@ function leerRespaldoAuto(nombre) {
 // notas y años anteriores) y se guardan en la carpeta "antes-de-2.0". Si la base de datos está dañada se conserva
 // una copia y se cargan automáticamente los datos del respaldo válido más reciente.
 function migrarDesde1x() {
-  if (!fs.existsSync(DATOS()) || bd.tieneDatos()) return false;
+  if (!fs.existsSync(DATOS())) return false;
+  if (bd.tieneDatos()) {
+    // Si hay un datos.json más reciente que la base de datos, el docente volvió a trabajar con la 1.x:
+    // se guarda una copia de la base de datos y se migra otra vez desde ese datos.json
+    if (fs.statSync(DATOS()).mtimeMs <= fs.statSync(bd.BD()).mtimeMs) return false;
+    try { leerJSON(DATOS()); } catch { return false; }
+    fs.mkdirSync(RESPALDOS(), { recursive: true });
+    bd.copiarA(path.join(RESPALDOS(), `respaldo_${fechaArchivo()}_antes-de-volver-a-2.0.db`));
+    bd.reiniciar();
+    fs.rmSync(path.join(ANTES_2(), 'datos.json'), { force: true });
+  }
   let datos;
   try { datos = leerJSON(DATOS()); } catch { return false; } // dañado: lo resuelve la recuperación con respaldos .json
   bd.abrir();
@@ -105,6 +115,7 @@ function migrarDesde1x() {
   bd.cerrar(); bd.leerEstado();
   fs.mkdirSync(ANTES_2(), { recursive: true });
   const mover = (origen, nombre) => { if (fs.existsSync(origen)) fs.renameSync(origen, path.join(ANTES_2(), nombre)); };
+  fs.rmSync(path.join(ANTES_2(), 'anios-anteriores'), { recursive: true, force: true });
   mover(DATOS(), 'datos.json'); mover(REGISTRO(), 'registro-notas.jsonl'); mover(ANIOS(), 'anios-anteriores');
   return true;
 }

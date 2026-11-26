@@ -109,5 +109,5 @@ Verificado sin cambios necesarios: el uso de la API de Claude (modelo vigente, r
 | 1.18 | Observador del estudiante y convivencia + comisión de evaluación y promoción |
 | 1.19 | Análisis por pregunta + exportar al formato de la plataforma institucional |
 | 1.20 | IA en vivo con cancelar, perfil institucional y modelo por tarea |
-| 2.0 beta 1 (hecha) | Base de datos SQLite con cada registro cifrado (AES-256), guardado por filas, migración automática |
-| 2.0 (final) | Prueba en el aula, firma digital del instalador, sincronización entre equipos, módulos JavaScript sin `onclick` |
+| 2.0 (hecha) | Base de datos SQLite con cada registro cifrado (AES-256), guardado por filas, migración automática, prueba del programa empaquetado |
+| 2.1 en adelante | Prueba en el aula, firma digital del instalador, sincronización entre equipos, observador del estudiante, módulos JavaScript sin `onclick` |

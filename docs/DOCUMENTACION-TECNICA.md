@@ -1,4 +1,4 @@
-# Documentación técnica – Tiza 2.0 beta (antes Planeador Docente)
+# Documentación técnica – Tiza 2.0 (antes Planeador Docente)
 
 Para quien quiera mantener, modificar o compilar la aplicación.
 
@@ -160,4 +160,6 @@ npm start
 Las pruebas de punta a punta usan Playwright con Electron (`_electron.launch`) y una carpeta de datos aparte (`PLANEADOR_DATA_DIR`); en Linux se ejecutan con `xvfb-run`. Simulan diálogos de guardar/abrir, proveedores de IA (reemplazando el manejador IPC), celulares (Chromium con perfil de teléfono contra el servidor local), micrófono (`--use-fake-device-for-media-stream`) y fotos de hojas de respuestas (generadas, rellenadas y deformadas con Python/PIL).
 
 ## 8. Migración a la 2.0 (SQLite)
-La primera vez que se abre la 2.0, `almacen.migrarDesde1x()` lee `datos.json`, `registro-notas.jsonl` y `anios-anteriores/`, los escribe en `tiza.db`, verifica que se puedan leer y los mueve a la carpeta `antes-de-2.0` (copia sin cifrar, que el docente puede borrar desde *Configuración → Seguridad, datos y celular → Almacenamiento*). Los respaldos automáticos `.json` antiguos siguen apareciendo en la lista y se pueden restaurar. Si `tiza.db` está dañada al abrir, se copia como `datos-danado_*.db`, se cargan los datos del respaldo válido más reciente (`.db` o `.json`) y la base se vuelve a crear. Las actualizaciones de una versión beta solo llegan a quien tiene una beta (`allowPrerelease`, publicación como *prerelease*).
+La primera vez que se abre la 2.0, `almacen.migrarDesde1x()` lee `datos.json`, `registro-notas.jsonl` y `anios-anteriores/`, los escribe en `tiza.db`, verifica que se puedan leer y los mueve a la carpeta `antes-de-2.0` (copia sin cifrar, que el docente puede borrar desde *Configuración → Seguridad, datos y celular → Almacenamiento*). Los respaldos automáticos `.json` antiguos siguen apareciendo en la lista y se pueden restaurar. Si `tiza.db` está dañada al abrir, se copia como `datos-danado_*.db`, se cargan los datos del respaldo válido más reciente (`.db` o `.json`) y la base se vuelve a crear. Si después de migrar aparece un `datos.json` más reciente que `tiza.db` (el docente volvió a la 1.x), se respalda la base de datos (`respaldo_*_antes-de-volver-a-2.0.db`) y se migra otra vez. Las versiones beta (`X.Y.Z-beta.N`) se publican como *prerelease* y solo llegan a quien ya tiene una beta (`allowPrerelease`).
+
+**Empaquetado:** `tests/estatico.js` revisa que todo archivo que carga el programa esté en `build.files`, y `tests/empaquetado.js <ejecutable>` abre el programa empaquetado (lo usan las pruebas de GitHub y el flujo de publicación antes de publicar).
