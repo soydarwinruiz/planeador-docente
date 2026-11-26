@@ -283,6 +283,7 @@ Rastreo de errores y funcionamiento de la beta, y lanzamiento como versión defi
 - Los respaldos automáticos solo se hacen si la base se puede leer: una base dañada no reemplaza a los respaldos buenos.
 - Si un guardado falla (antivirus, sincronización, disco lleno), se **reintenta solo** cada pocos segundos y el aviso aparece una sola vez.
 - **IA saturada (error 503 "high demand"):** Gemini, ChatGPT y los compatibles reintentan solos dos veces (2 s y 6 s); con Gemini, si el modelo escrito sigue saturado se prueba el modelo por defecto. El mensaje explica que es temporal (`tests/ia-reintentos.js`).
+- **Modelo de Gemini al día:** Google retiró `gemini-2.5-flash` para cuentas nuevas (404 "no longer available to new users"). Ahora, sin modelo escrito, se usa `gemini-flash-latest` (alias que Google mantiene en su Flash más reciente). Si el modelo escrito fue retirado o sigue saturado, se consulta la lista de modelos de la cuenta y se usa el Flash estable más reciente (también en el dictado por voz).
 - Nueva batería `tests/e2e-solidez.js`.
 
 ---

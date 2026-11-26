@@ -124,7 +124,7 @@ function tarjetaVoz() {
       <div class="campo"><label><input type="checkbox" ${v.activo !== false ? 'checked' : ''} onchange="S.config.voz={...(S.config.voz||{}),activo:this.checked};guardar()"> Mostrar el botón 🎤</label></div>
       <div class="campo"><label>Servicio de transcripción</label><select onchange="S.config.voz={...(S.config.voz||{}),proveedor:this.value};guardar();render()">
         ${[['auto', 'Automático (según tus claves)'], ['openai', 'OpenAI'], ['gemini', 'Gemini (Google)'], ['compatible', 'Servicio compatible (p. ej. Groq)']].map(([k, t]) => `<option value="${k}" ${(v.proveedor || 'auto') === k ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
-      <div class="campo"><label>Modelo (opcional)</label><input value="${esc(v.modelo || '')}" placeholder="${p === 'gemini' ? 'gemini-2.5-flash' : p === 'compatible' ? 'whisper-large-v3' : 'gpt-4o-mini-transcribe'}" onchange="S.config.voz={...(S.config.voz||{}),modelo:this.value.trim()};guardar()"></div>
+      <div class="campo"><label>Modelo (opcional)</label><input value="${esc(v.modelo || '')}" placeholder="${p === 'gemini' ? 'gemini-flash-latest' : p === 'compatible' ? 'whisper-large-v3' : 'gpt-4o-mini-transcribe'}" onchange="S.config.voz={...(S.config.voz||{}),modelo:this.value.trim()};guardar()"></div>
     </div>
     <p class="ayuda">${p ? `✔ Se usará <b>${{ openai: 'OpenAI', gemini: 'Gemini', compatible: 'el servicio compatible' }[p]}</b>.` : '⚠ No hay una clave de OpenAI ni de Gemini. Agrégala en la tarjeta de Inteligencia artificial (puedes tener varias claves y usar otra para las sugerencias).'}
     Alternativa gratuita: <b>Windows + H</b> (dictado de Windows).</p></div>`;

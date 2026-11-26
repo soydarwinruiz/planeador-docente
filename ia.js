@@ -50,7 +50,7 @@ Devuelve un JSON con solo esas claves (cada valor es texto de uno a tres párraf
 const PROVEEDORES = {
   anthropic: { nombre: 'Claude (Anthropic)', modelo: 'claude-opus-5-5' },
   openai: { nombre: 'ChatGPT (OpenAI)', modelo: 'gpt-5-mini' },
-  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-2.5-flash' },
+  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-flash-latest' }, // alias que Google mantiene apuntando a su Flash más reciente
   compatible: { nombre: 'Compatible con OpenAI', modelo: '' },
 };
 
@@ -103,9 +103,9 @@ async function pedirJSON(url, opciones, esperas = [2000, 6000]) {
   try { datos = JSON.parse(texto); } catch { /* respuesta no JSON */ }
   if (!r.ok) {
     const msg = datos?.error?.message || datos?.message || texto.slice(0, 300);
-    if (r.status === 401 || r.status === 403) throw new ErrorIA('La clave de API no es válida o no tiene permisos. ' + msg);
-    if (r.status === 404) throw new ErrorIA('No se encontró el modelo o la dirección del servicio. ' + msg);
-    if (r.status === 429) throw new ErrorIA('Se alcanzó el límite de uso o no hay saldo en la cuenta. ' + msg);
+    if (r.status === 401 || r.status === 403) throw new ErrorIA('La clave de API no es válida o no tiene permisos. ' + msg, r.status);
+    if (r.status === 404) throw new ErrorIA('No se encontró el modelo o la dirección del servicio. ' + msg, r.status);
+    if (r.status === 429) throw new ErrorIA('Se alcanzó el límite de uso o no hay saldo en la cuenta. ' + msg, r.status);
     if (PASAJERO.has(r.status)) throw new ErrorIA(`El servicio de IA está saturado o con fallas en este momento (${r.status}); se reintentó varias veces. Suele pasar en minutos: vuelve a intentarlo o prueba otro modelo. (${msg})`, r.status);
     throw new ErrorIA(`Error del servicio de IA (${r.status}): ${msg}`, r.status);
   }
@@ -126,16 +126,35 @@ async function llamarCompatibleOpenAI({ clave, modelo, url }, sistema, prompt, i
   return texto;
 }
 
+// Google retira modelos con frecuencia ("no longer available to new users"). Si el modelo no existe o sigue saturado,
+// se consulta la lista de modelos de la cuenta y se usa el Flash estable más reciente.
+let geminiElegido = null;
+async function modeloGeminiDisponible(clave, evitar) {
+  if (geminiElegido && geminiElegido !== evitar) return geminiElegido;
+  const d = await pedirJSON('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', { headers: { 'x-goog-api-key': clave } }, []);
+  const nombres = (d?.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent')).map((m) => String(m.name || '').replace(/^models\//, '')).filter((n) => n && n !== evitar);
+  const version = (n) => parseFloat(n.match(/^gemini-(\d+(?:\.\d+)?)/)?.[1] || 0);
+  const mejor = (re) => nombres.filter((n) => re.test(n)).sort((a, b) => version(b) - version(a))[0];
+  geminiElegido = mejor(/^gemini-\d+(\.\d+)?-flash$/) || (nombres.includes('gemini-flash-latest') && 'gemini-flash-latest') || mejor(/^gemini-\d+(\.\d+)?-flash(-preview)?(-\d{2}-\d{4})?$/) || mejor(/^gemini-.*flash/) || null;
+  return geminiElegido;
+}
+async function pedirGemini(clave, modelo, cuerpo) {
+  const url = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
+  const opciones = { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave }, body: JSON.stringify(cuerpo) };
+  const inicial = modelo || geminiElegido || PROVEEDORES.gemini.modelo;
+  try { return await pedirJSON(url(inicial), opciones); } catch (e) {
+    if (!(e instanceof ErrorIA) || !(e.estado === 404 || PASAJERO.has(e.estado))) throw e;
+    let otro = null;
+    try { otro = await modeloGeminiDisponible(clave, inicial); } catch { /* sin lista: se informa el error original */ }
+    if (!otro) throw e;
+    try { return await pedirJSON(url(otro), opciones); } catch (e2) { throw e.estado === 404 ? e2 : e; }
+  }
+}
 async function llamarGemini({ clave, modelo }, sistema, prompt, imagenes = []) {
-  const m = encodeURIComponent(modelo || PROVEEDORES.gemini.modelo);
-  const datos = await pedirJSON(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: sistema }] },
-      contents: [{ role: 'user', parts: [{ text: prompt }, ...imagenes.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.datos } }))] }],
-      generationConfig: { responseMimeType: 'application/json' },
-    }),
+  const datos = await pedirGemini(clave, modelo, {
+    systemInstruction: { parts: [{ text: sistema }] },
+    contents: [{ role: 'user', parts: [{ text: prompt }, ...imagenes.map((i) => ({ inlineData: { mimeType: i.tipo, data: i.datos } }))] }],
+    generationConfig: { responseMimeType: 'application/json' },
   });
   const cand = datos?.candidates?.[0];
   const texto = (cand?.content?.parts || []).map((p) => p.text || '').join('');
@@ -150,14 +169,7 @@ async function llamarModelo(ia, sistema, prompt, imagenes = []) {
   if (p !== 'compatible' && !cfg.clave) throw new ErrorIA(`Falta la clave de API de ${PROVEEDORES[p]?.nombre || p}. Configúrala en Configuración > Inteligencia artificial.`);
   if (p === 'compatible' && (!cfg.url || !cfg.modelo)) throw new ErrorIA('Para un servicio compatible con OpenAI indica la dirección (URL) y el nombre del modelo.');
   if (p === 'anthropic') return llamarAnthropic(cfg, sistema, prompt, imagenes);
-  if (p === 'gemini') {
-    try { return await llamarGemini(cfg, sistema, prompt, imagenes); } catch (e) {
-      // El modelo elegido está saturado: se prueba una vez con el modelo por defecto
-      const defecto = PROVEEDORES.gemini.modelo;
-      if (!(e instanceof ErrorIA) || !PASAJERO.has(e.estado) || !cfg.modelo || cfg.modelo === defecto) throw e;
-      try { return await llamarGemini({ ...cfg, modelo: defecto }, sistema, prompt, imagenes); } catch { throw e; }
-    }
-  }
+  if (p === 'gemini') return llamarGemini({ ...cfg, modelo: (ia.modelos?.gemini || '').trim() }, sistema, prompt, imagenes);
   if (p === 'openai') return llamarCompatibleOpenAI({ ...cfg, url: 'https://api.openai.com/v1' }, sistema, prompt, imagenes);
   return llamarCompatibleOpenAI(cfg, sistema, prompt, imagenes);
 }
@@ -253,11 +265,7 @@ async function transcribirAudio({ ia, voz = {}, audio }) {
     if (p === 'gemini') {
       const clave = (ia.claves?.gemini || '').trim();
       if (!clave) return { ok: false, error: 'Falta la clave de Gemini.' };
-      const m = encodeURIComponent(voz.modelo || ia.modelos?.gemini || PROVEEDORES.gemini.modelo);
-      const d = await pedirJSON(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave },
-        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Transcribe literalmente este audio en español de Colombia, con puntuación correcta. Responde solo con el texto transcrito, sin comillas ni comentarios.' }, { inlineData: { mimeType: 'audio/wav', data: audio } }] }] }),
-      });
+      const d = await pedirGemini(clave, (voz.modelo || ia.modelos?.gemini || '').trim(), { contents: [{ role: 'user', parts: [{ text: 'Transcribe literalmente este audio en español de Colombia, con puntuación correcta. Responde solo con el texto transcrito, sin comillas ni comentarios.' }, { inlineData: { mimeType: 'audio/wav', data: audio } }] }] });
       return { ok: true, texto: (d?.candidates?.[0]?.content?.parts || []).map((x) => x.text || '').join('').trim() };
     }
     const base = p === 'openai' ? 'https://api.openai.com/v1' : (ia.url || '').replace(/\/+$/, '');
