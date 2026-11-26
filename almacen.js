@@ -64,6 +64,7 @@ function marcarCambios() { hayCambios = true; }
 function respaldoAutomatico({ forzar = false } = {}) {
   try {
     if (!bd.existe() || (!forzar && !hayCambios) || !bd.llave()) return;
+    bd.legible(); // una base dañada o ilegible no reemplaza a los respaldos buenos
     fs.mkdirSync(RESPALDOS(), { recursive: true });
     const reciente = path.join(RESPALDOS(), `respaldo_${fechaArchivo()}.db`);
     bd.copiarA(reciente);
@@ -133,6 +134,8 @@ function cargarDatos() {
   } catch (error) { bd.cerrar(); return recuperar(error, bd.BD()); }
 }
 function recuperar(error, archivo) {
+  // Sin la llave no se toca nada: los datos y sus respaldos siguen ahí y vuelven a leerse cuando la llave regrese
+  if (error?.code === 'SIN_LLAVE') return { __error: error.message };
   const ext = path.extname(archivo);
   const danado = path.join(DIR(), `datos-danado_${fechaArchivo()}${ext}`);
   try { fs.copyFileSync(archivo, danado); } catch { /* sin copia */ }

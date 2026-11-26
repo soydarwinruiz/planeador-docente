@@ -202,11 +202,16 @@ async function pasoGuardado() {
     const claves = JSON.stringify(E.config.ia?.claves || {});
     if (claves !== ultimasClaves) { await api.guardarClaves(E.config.ia?.claves || {}); ultimasClaves = claves; }
     marcarGuardado('Guardado ' + new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }));
+    reintentoGuardado.n = 0;
   } catch (e) {
     marcarGuardado('⚠️ Error al guardar');
-    aviso('No se pudo guardar: ' + (e.message || e) + '. Revisa el espacio en disco y haz un respaldo.', 'error');
+    // Se reintenta solo (un antivirus o una sincronización pueden bloquear el archivo un momento); el aviso solo la primera vez
+    if (!reintentoGuardado.n++) aviso('No se pudo guardar: ' + String(e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '') + '. Se reintentará automáticamente; revisa el espacio en disco y haz un respaldo.', 'error');
+    clearTimeout(reintentoGuardado.t);
+    reintentoGuardado.t = setTimeout(() => { if (!temporizadorGuardado) guardar(); }, Math.min(60000, 5000 * reintentoGuardado.n));
   }
 }
+const reintentoGuardado = { n: 0, t: null };
 // Si quedan cambios pendientes al cerrar la ventana, se guardan de inmediato
 window.addEventListener('beforeunload', () => {
   if (typeof S === 'undefined' || !S) return;

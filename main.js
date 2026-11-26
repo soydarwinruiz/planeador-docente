@@ -157,6 +157,7 @@ ipcMain.handle('anios:importar', async () => {
   if (canceled || !filePaths.length) return { ok: false };
   try {
     exigirDesbloqueo();
+    require('./basedatos').llave(); // sin la llave de los datos no se puede archivar (avisa por qué)
     const datos = validarRespaldo(almacen.leerJSON(filePaths[0]));
     return { ok: true, meta: almacen.guardarAnio(datos) };
   } catch (e) { return { ok: false, error: e instanceof SyntaxError ? 'El archivo está dañado o no es un respaldo del Planeador.' : e.message }; }
@@ -190,12 +191,24 @@ ipcMain.handle('respaldo:exportar', async (_e, texto) => {
   } catch (e) { return { ok: false, error: errorArchivo(e, 'otro programa') }; }
 });
 
-function validarRespaldo(datos) {
+// Si la llave de los datos se perdió, restaurar un respaldo .json empieza una base nueva: la que no se puede abrir
+// se aparta (no se borra). Eso se hace cuando el docente confirma la restauración; mientras tanto los años esperan.
+let aniosPendientes = null;
+function validarRespaldo(datos, { confirmado = true } = {}) {
   if (!datos || typeof datos !== 'object' || !datos.config || !Array.isArray(datos.grupos || [])) throw new Error('El archivo no es un respaldo válido del Planeador.');
   delete datos.__recuperado;
+  if (require('./basedatos').sinLlave()) {
+    if (!confirmado) { aniosPendientes = datos.aniosAnteriores || null; delete datos.aniosAnteriores; return datos; }
+    require('./basedatos').apartarSiNoHayLlave();
+  }
   almacen.restaurarAniosDeRespaldo(datos);
   return datos;
 }
+ipcMain.handle('respaldo:confirmarRestauracion', () => {
+  const pendientes = aniosPendientes; aniosPendientes = null;
+  if (require('./basedatos').apartarSiNoHayLlave() && pendientes) almacen.restaurarAniosDeRespaldo({ aniosAnteriores: pendientes });
+  return true;
+});
 ipcMain.handle('respaldo:importar', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(ventana, {
     title: 'Restaurar respaldo',
@@ -204,7 +217,7 @@ ipcMain.handle('respaldo:importar', async () => {
   });
   if (canceled || !filePaths.length) return { ok: false };
   try {
-    const datos = validarRespaldo(almacen.leerJSON(filePaths[0]));
+    const datos = validarRespaldo(almacen.leerJSON(filePaths[0]), { confirmado: false });
     respaldoAutomatico({ forzar: true }); // guarda lo actual antes de reemplazar
     return { ok: true, datos };
   } catch (e) {
