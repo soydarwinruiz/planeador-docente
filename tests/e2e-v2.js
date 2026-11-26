@@ -83,7 +83,7 @@ const caso = async (n, fn) => { try { await fn(); res.push('✓ ' + n); } catch 
     const d = nuevaCarpeta(); let { app, w } = await abrir(d); await sembrar(w); await app.close();
     await new Promise((r) => setTimeout(r, 50));
     // la 1.x vuelve a escribir datos.json (con un cambio hecho allá)
-    fs.writeFileSync(path.join(d, 'datos.json'), JSON.stringify({ version: 1, config: { institucion: 'Hecho en la 1.x', docente: 'Ana', configurado: true }, areas: [], grupos: [], alumnos: [] }));
+    fs.writeFileSync(path.join(d, 'datos.json'), JSON.stringify({ version: 1, config: { institucion: 'Hecho en la 1.x', docente: 'Ana', configurado: true }, areas: [{ id: 'a1', nombre: 'Matemáticas' }], grupos: [{ id: 'g9', grado: 9, nombre: 'B', areas: [] }], alumnos: [] }));
     ({ app, w } = await abrir(d));
     const inst = await w.evaluate(() => S.config.institucion);
     await app.close();
