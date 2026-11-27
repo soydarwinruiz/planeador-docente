@@ -59,7 +59,12 @@ const PROVEEDORES = {
 // Las solicitudes salen por la red de Chromium (net.fetch): respeta el proxy del colegio configurado en Windows,
 // que el fetch de Node ignora. Fuera de Electron (pruebas) se usa el fetch normal.
 const redElectron = (() => { try { const { net } = require('electron'); return net && typeof net.fetch === 'function' ? net.fetch.bind(net) : null; } catch { return null; } })();
-const pedirRed = (url, opciones) => (redElectron || globalThis.fetch)(url, opciones);
+// Límite de tiempo firme: no depende de que la red respete la señal de cancelación
+function pedirRed(url, opciones = {}, ms = 180000) {
+  let t;
+  const limite = new Promise((_, mal) => { t = setTimeout(() => mal(Object.assign(new Error('Tiempo agotado'), { name: 'TimeoutError' })), ms); });
+  return Promise.race([(redElectron || globalThis.fetch)(url, opciones), limite]).finally(() => clearTimeout(t));
+}
 class ErrorIA extends Error { constructor(m, estado) { super(m); this.estado = estado; } }
 const PASAJERO = new Set([500, 502, 503, 504, 529]); // saturación o falla momentánea del servicio: vale la pena reintentar
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -98,7 +103,8 @@ async function pedirJSON(url, opciones, esperas = [2000, 6000]) {
   let r;
   for (let intento = 0; ; intento++) {
     try {
-      r = await pedirRed(url, { ...opciones, signal: AbortSignal.timeout(esLocal(url) ? 900000 : 180000) });
+      const ms = opciones.limite || (esLocal(url) ? 900000 : 180000);
+      r = await pedirRed(url, { ...opciones, signal: AbortSignal.timeout(ms) }, ms);
     } catch (e) {
       if (esLocal(url) && e.name !== 'TimeoutError') throw new ErrorIA('No se pudo contactar el modelo local (' + (e.cause?.code || e.message) + '). Verifica que Ollama o LM Studio estén abiertos y que la dirección sea correcta.');
       throw new ErrorIA(e.name === 'TimeoutError' ? 'El servicio tardó demasiado en responder.' : 'No hay conexión a internet o no se pudo contactar el servicio (' + (e.cause?.code || e.message) + ').');
@@ -140,9 +146,39 @@ async function llamarCompatibleOpenAI({ clave, modelo, url }, sistema, prompt, i
 // Google retira modelos con frecuencia ("no longer available to new users"). Si el modelo no existe o sigue saturado,
 // se consulta la lista de modelos de la cuenta y se usa el Flash estable más reciente.
 let geminiElegido = null;
+// Claves de Gemini: las clásicas empiezan por "AIza"; AI Studio ahora entrega claves nuevas que empiezan por "AQ.".
+// Según la cuenta, Google acepta estas en el encabezado, en la dirección (?key=) o como "Bearer": se prueban las tres
+// (solo si Google rechaza la autenticación) y se recuerda la que funcionó.
+const AUTH_GEMINI = ['encabezado', 'direccion', 'bearer'];
+let authGemini = null;
+function conClave(url, opciones, clave, modo) {
+  const headers = { ...(opciones.headers || {}) };
+  delete headers['x-goog-api-key'];
+  if (modo === 'encabezado') headers['x-goog-api-key'] = clave;
+  if (modo === 'bearer') headers.Authorization = `Bearer ${clave}`;
+  const u = modo === 'direccion' ? `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(clave)}` : url;
+  return [u, { ...opciones, headers }];
+}
+async function pedirGeminiJSON(url, opciones, clave, esperas) {
+  const nueva = /^AQ\./.test(clave);
+  const modos = nueva ? [...new Set([authGemini || 'encabezado', ...AUTH_GEMINI])] : ['encabezado'];
+  let primero = null;
+  for (const modo of modos) {
+    try {
+      const d = await pedirJSON(...conClave(url, opciones, clave, modo), esperas);
+      if (nueva) authGemini = modo;
+      return d;
+    } catch (e) {
+      if (!(e instanceof ErrorIA) || ![400, 401, 403].includes(e.estado) || /facturación/.test(e.message)) throw e;
+      primero ||= e;
+    }
+  }
+  if (nueva) throw new ErrorIA(`Tu clave es del tipo nuevo de Google (empieza por "AQ.") y Google la rechazó de todas las formas posibles. Muchas cuentas tienen este problema con las claves nuevas. Qué hacer: en console.cloud.google.com → APIs y servicios → Credenciales → "Crear credenciales" → "Clave de API", y restríngela a "Generative Language API"; pega esa clave aquí. (Detalle de Google: ${primero.message})`, primero.estado);
+  throw primero;
+}
 async function modeloGeminiDisponible(clave, evitar) {
   if (geminiElegido && geminiElegido !== evitar) return geminiElegido;
-  const d = await pedirJSON('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', { headers: { 'x-goog-api-key': clave } }, []);
+  const d = await pedirGeminiJSON('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', { limite: 30000 }, clave, []);
   const nombres = (d?.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent')).map((m) => String(m.name || '').replace(/^models\//, '')).filter((n) => n && n !== evitar);
   const version = (n) => parseFloat(n.match(/^gemini-(\d+(?:\.\d+)?)/)?.[1] || 0);
   const mejor = (re) => nombres.filter((n) => re.test(n)).sort((a, b) => version(b) - version(a))[0];
@@ -151,14 +187,14 @@ async function modeloGeminiDisponible(clave, evitar) {
 }
 async function pedirGemini(clave, modelo, cuerpo) {
   const url = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`;
-  const opciones = { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave }, body: JSON.stringify(cuerpo) };
+  const opciones = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) };
   const inicial = modelo || geminiElegido || PROVEEDORES.gemini.modelo;
-  try { return await pedirJSON(url(inicial), opciones); } catch (e) {
+  try { return await pedirGeminiJSON(url(inicial), opciones, clave); } catch (e) {
     if (!(e instanceof ErrorIA) || !(e.estado === 404 || PASAJERO.has(e.estado))) throw e;
     let otro = null;
     try { otro = await modeloGeminiDisponible(clave, inicial); } catch { /* sin lista: se informa el error original */ }
     if (!otro) throw e;
-    try { return await pedirJSON(url(otro), opciones); } catch (e2) { throw e.estado === 404 ? e2 : e; }
+    try { return await pedirGeminiJSON(url(otro), opciones, clave); } catch (e2) { throw e.estado === 404 ? e2 : e; }
   }
 }
 async function llamarGemini({ clave, modelo }, sistema, prompt, imagenes = []) {

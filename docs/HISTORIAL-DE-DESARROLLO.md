@@ -305,6 +305,11 @@ Resultado del análisis de funcionalidad y compatibilidad (`docs/ANALISIS-FUNCIO
 - **Gemini sin nivel gratuito:** cuando Google responde que el proyecto de la clave no tiene uso gratuito y pide facturación, ya no se muestra como "clave no válida": se explica qué pasa y las opciones (clave en un proyecto nuevo de AI Studio, facturación u otro proveedor).
 - Los mensajes largos (errores de la IA, avisos, ayudas) se parten en varias líneas en vez de salirse de la pantalla.
 
+### Versión 2.2.2 — Claves nuevas de Gemini (27 de noviembre)
+- **Claves "AQ." de Google:** AI Studio empezó a entregar claves que empiezan por `AQ.` en lugar de `AIza`, y en muchas cuentas Google no las acepta en el encabezado de siempre. Ahora se prueba la clave en el encabezado, en la dirección (`?key=`) y como `Bearer`, y se recuerda la forma que funcionó. Si Google la rechaza de todas las formas, el mensaje explica cómo crear una clave clásica en Google Cloud restringida a *Generative Language API*.
+- **"Probando…" ya no se queda esperando:** cada solicitud a la IA tiene un límite de tiempo firme, aunque la red no respete la cancelación.
+- **El asistente de bienvenida no tapa lo que el docente abrió** (por ejemplo, *Acerca de* desde el menú justo al arrancar).
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo

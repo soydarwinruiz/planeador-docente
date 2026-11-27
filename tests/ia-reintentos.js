@@ -11,14 +11,16 @@ let ia, llamadas;
 function simular(porModelo) {
   delete require.cache[require.resolve('../ia')]; ia = require('../ia'); // sin el modelo elegido en memoria
   llamadas = [];
-  global.fetch = async (url) => {
+  global.fetch = async (url, op = {}) => {
     const m = decodeURIComponent(url.match(/models\/([^:?]+):/)?.[1] || 'LISTA');
     llamadas.push(m);
+    const modo = /[?&]key=/.test(url) ? 'direccion' : op.headers?.Authorization ? 'bearer' : op.headers?.['x-goog-api-key'] ? 'encabezado' : 'ninguno';
+    if (porModelo.__aceptaSolo && modo !== porModelo.__aceptaSolo) return { ok: false, status: 401, text: async () => JSON.stringify({ error: { message: 'Request had invalid authentication credentials. Expected OAuth 2 access token. ACCESS_TOKEN_TYPE_UNSUPPORTED' } }) };
     const [estado, cuerpo] = m === 'LISTA' ? [200, LISTA] : (porModelo[m] || []).shift() || [200, respuesta];
     return { ok: estado < 400, status: estado, text: async () => JSON.stringify(cuerpo) };
   };
 }
-const pedir = (modelo) => ia.sugerirConIA({ ia: { proveedor: 'gemini', claves: { gemini: 'x' }, modelos: { gemini: modelo } }, contexto: 'Tema: fracciones', campos: ['objetivo'] });
+const pedir = (modelo, clave = 'AIzaPrueba') => ia.sugerirConIA({ ia: { proveedor: 'gemini', claves: { gemini: clave }, modelos: { gemini: modelo } }, contexto: 'Tema: fracciones', campos: ['objetivo'] });
 const t = setTimeout; global.setTimeout = (fn) => t(fn, 0); // sin esperas reales
 (async () => {
   // Sin modelo escrito se usa el alias que Google mantiene al día
@@ -42,5 +44,14 @@ const t = setTimeout; global.setTimeout = (fn) => t(fn, 0); // sin esperas reale
   // Proyecto de Google sin nivel gratuito: mensaje claro con qué hacer, no "clave no válida"
   simular({ 'gemini-flash-latest': [[403, { error: { message: 'The Gemini API free tier is not available for this project. To use the Gemini API, please set up billing to upgrade to a paid tier.' } }]] }); r = await pedir('');
   assert.ok(!r.ok); assert.match(r.error, /facturación/); assert.match(r.error, /proyecto nuevo/); assert.doesNotMatch(r.error, /no es válida/);
-  console.log('✓ IA: reintenta si está saturada y, si Google retira el modelo, usa el Gemini Flash más reciente de la cuenta');
+  // Claves nuevas "AQ.": si Google no la acepta en el encabezado se prueba en la dirección y como Bearer, y se recuerda
+  simular({ __aceptaSolo: 'direccion' }); r = await pedir('', 'AQ.prueba');
+  assert.ok(r.ok, r.error); assert.strictEqual(llamadas.length, 2);
+  r = await pedir('', 'AQ.prueba'); assert.ok(r.ok, r.error); assert.strictEqual(llamadas.length, 3, 'no recordó la forma que funcionó');
+  simular({ __aceptaSolo: 'bearer' }); r = await pedir('', 'AQ.prueba'); assert.ok(r.ok, r.error);
+  simular({ __aceptaSolo: 'ninguna' }); r = await pedir('', 'AQ.prueba');
+  assert.ok(!r.ok); assert.match(r.error, /AQ\./); assert.match(r.error, /Generative Language API/);
+  // Una clave clásica rechazada no se prueba de otras formas
+  simular({ __aceptaSolo: 'direccion' }); r = await pedir('', 'AIzaMala'); assert.ok(!r.ok); assert.strictEqual(llamadas.length, 1);
+  console.log('✓ IA: reintentos, modelo de Gemini al día, claves nuevas "AQ." de Google y mensajes claros');
 })().catch((e) => { console.error('✗ IA reintentos\n', e, llamadas); process.exit(1); });
