@@ -104,7 +104,7 @@ const pedidos = (app) => app.evaluate(() => global.__pedidos);
     await esperarGuardado(w);
     const r = await w.evaluate(() => ({ modelo: S.config.ia.modelos.gemini, info: document.getElementById('cfg-modelos-info').textContent, xss: window.__xss }));
     assert.strictEqual(r.modelo, 'gemini-9.1-flash');
-    assert.match(r.info, /3 modelos de tu cuenta/);
+    assert.match(r.info, /3 modelos disponibles en tu cuenta/);
     assert.strictEqual(r.xss, undefined, 'un nombre de modelo ejecutó código');
     // "Otro…" permite escribir cualquier nombre
     await w.selectOption('#cfg-modelo-sel', '__otro');

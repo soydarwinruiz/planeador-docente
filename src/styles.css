@@ -469,3 +469,9 @@ details.semana[open] > summary::after { content: ' ⌄'; }
 .acerca details { text-align: left; margin: 8px 0; } .acerca summary { cursor: pointer; font-weight: 600; }
 .acerca-autor { display: flex; flex-direction: column; gap: 2px; margin: 12px auto; padding: 10px; border: 1px solid var(--borde); border-radius: 10px; max-width: 360px; }
 .acerca-autor b { font-size: 18px; }
+
+/* Configuración de la IA: proveedor y clave en una fila; el modelo debajo, a todo lo ancho */
+.ia-fila { grid-template-columns: minmax(200px, 1fr) 2fr; align-items: start; }
+.ia-modelo { margin-top: 4px; }
+.ia-modelo select optgroup { font-style: normal; color: var(--texto-suave, #667); }
+@media (max-width: 900px) { .ia-fila { grid-template-columns: 1fr; } }

@@ -319,6 +319,9 @@ Resultado del análisis de funcionalidad y compatibilidad (`docs/ANALISIS-FUNCIO
 - **Windows:** el instalador de Tiza incluye las bibliotecas de Visual C++ que necesita el motor (`vcruntime140`, `vcruntime140_1`, `msvcp140`, distribuibles por licencia de Microsoft), que se copian junto al motor. Si aun así faltaran, el mensaje indica cómo instalar el *Visual C++ Redistributable*.
 - **Pruebas reales** (`tests/e2e-ia-local.js`): en GitHub (Windows y Linux) se descargan el motor y Qwen3 0.6B (en caché entre ejecuciones) y se prueba instalar desde una carpeta, generar el objetivo de una planeación con el motor real, rechazar un archivo alterado y desinstalar. También se probó a mano la descarga real cancelada a mitad y reanudada.
 
+### Versión 2.3.1 — Diseño de la configuración de la IA (27 de noviembre)
+- El bloque de IA se reorganizó: proveedor y clave en una fila; el **modelo** debajo, a todo lo ancho, con el botón **🔄 Actualizar** visible. Cada modelo se muestra con su nombre legible y su identificador (por ejemplo *Gemini 3.8 Flash (gemini-3.8-flash)*), agrupados en *Modelos de tu cuenta*, junto a *⭐ Automático* y *✏️ Otro…*. La ayuda quedó en una sola línea bajo el campo y la vista se adapta a ventanas angostas.
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo
