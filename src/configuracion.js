@@ -362,7 +362,8 @@ function tarjetaIA() {
       : `<div class="ayuda" style="margin-top:-4px">Si dejas el modelo vacío se usa <b>${esc(info.modelo)}</b>. Puedes escribir cualquier otro modelo que ofrezca tu proveedor; si está saturado, el programa reintenta solo${p === 'gemini' ? ' y, si el modelo ya no existe o sigue saturado, usa el Gemini Flash más reciente de tu cuenta' : ''}.</div>`}
     <div class="fila" style="margin-top:10px"><button class="btn" id="btn-probar-ia" onclick="probarIA()">🔌 Probar conexión</button>
       ${ia.claves?.[p] ? `<button class="btn peligro" onclick="delete S.config.ia.claves['${p}'];guardar();render()">Quitar clave</button>` : ''}
-      <span id="res-probar-ia" class="ayuda"></span></div>
+      </div>
+      <div id="res-probar-ia" class="ayuda" style="margin-top:8px;overflow-wrap:anywhere"></div>
   </div>`;
 }
 function usarOllama() {

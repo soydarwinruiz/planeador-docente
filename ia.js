@@ -56,13 +56,17 @@ const PROVEEDORES = {
   compatible: { nombre: 'Compatible con OpenAI', modelo: '' },
 };
 
+// Las solicitudes salen por la red de Chromium (net.fetch): respeta el proxy del colegio configurado en Windows,
+// que el fetch de Node ignora. Fuera de Electron (pruebas) se usa el fetch normal.
+const redElectron = (() => { try { const { net } = require('electron'); return net && typeof net.fetch === 'function' ? net.fetch.bind(net) : null; } catch { return null; } })();
+const pedirRed = (url, opciones) => (redElectron || globalThis.fetch)(url, opciones);
 class ErrorIA extends Error { constructor(m, estado) { super(m); this.estado = estado; } }
 const PASAJERO = new Set([500, 502, 503, 504, 529]); // saturación o falla momentánea del servicio: vale la pena reintentar
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 const RESPUESTA_LARGA = 'La respuesta de la IA fue demasiado larga y quedó incompleta. Pide menos sesiones, ítems o secciones a la vez.';
 
 async function llamarAnthropic({ clave, modelo }, sistema, prompt, imagenes = []) {
-  const client = new Anthropic({ apiKey: clave, maxRetries: 2, timeout: 180000 });
+  const client = new Anthropic({ apiKey: clave, maxRetries: 2, timeout: 180000, ...(redElectron ? { fetch: redElectron } : {}) });
   try {
     const r = await client.beta.messages.create({
       model: modelo || PROVEEDORES.anthropic.modelo,
@@ -94,7 +98,7 @@ async function pedirJSON(url, opciones, esperas = [2000, 6000]) {
   let r;
   for (let intento = 0; ; intento++) {
     try {
-      r = await fetch(url, { ...opciones, signal: AbortSignal.timeout(esLocal(url) ? 900000 : 180000) });
+      r = await pedirRed(url, { ...opciones, signal: AbortSignal.timeout(esLocal(url) ? 900000 : 180000) });
     } catch (e) {
       if (esLocal(url) && e.name !== 'TimeoutError') throw new ErrorIA('No se pudo contactar el modelo local (' + (e.cause?.code || e.message) + '). Verifica que Ollama o LM Studio estén abiertos y que la dirección sea correcta.');
       throw new ErrorIA(e.name === 'TimeoutError' ? 'El servicio tardó demasiado en responder.' : 'No hay conexión a internet o no se pudo contactar el servicio (' + (e.cause?.code || e.message) + ').');
@@ -108,6 +112,8 @@ async function pedirJSON(url, opciones, esperas = [2000, 6000]) {
   try { datos = JSON.parse(texto); } catch { /* respuesta no JSON */ }
   if (!r.ok) {
     const msg = datos?.error?.message || datos?.message || texto.slice(0, 300);
+    // Google: el proyecto de la clave no tiene el nivel gratuito (pide activar la facturación)
+    if (/free tier is not available|set up billing|billing (is )?(not )?enabled|billing account/i.test(msg)) throw new ErrorIA('Google no ofrece el uso gratuito de Gemini para el proyecto de esta clave y pide activar la facturación. Opciones: 1) en aistudio.google.com crea una clave nueva eligiendo "Crear clave en un proyecto nuevo"; 2) activa la facturación de ese proyecto en Google Cloud (se cobra por uso); 3) usa otro proveedor o la IA local con Ollama.', r.status);
     if (r.status === 401 || r.status === 403) throw new ErrorIA('La clave de API no es válida o no tiene permisos. ' + msg, r.status);
     if (r.status === 404) throw new ErrorIA('No se encontró el modelo o la dirección del servicio. ' + msg, r.status);
     if (r.status === 429) throw new ErrorIA('Se alcanzó el límite de uso o no hay saldo en la cuenta. ' + msg, r.status);

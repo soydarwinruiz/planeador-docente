@@ -45,7 +45,8 @@ function leerBD(dir) {
 }
 const datos = (dir) => leerBD(dir).estado;
 const registroDe = (dir) => leerBD(dir).registro;
-const nuevaCarpeta = () => fs.mkdtempSync(path.join(os.tmpdir(), 'planeador-prueba-'));
+// Con tildes, ñ y espacios, como la carpeta de un usuario de Windows llamado "José Muñoz"
+const nuevaCarpeta = () => fs.mkdtempSync(path.join(os.tmpdir(), 'Tiza prueba José Muñoz-'));
 
 async function prueba(nombre, fn) {
   const t0 = Date.now();
