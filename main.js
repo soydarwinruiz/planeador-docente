@@ -459,4 +459,27 @@ ipcMain.handle('tabla:abrir', async () => {
 // ---------- IA ----------
 ipcMain.handle('ia:sugerir', async (_e, payload) => sugerirConIA(payload));
 ipcMain.handle('ia:transcribir', async (_e, payload) => transcribirAudio(payload));
+// IA local (motor y modelo descargados una vez; funciona sin internet)
+const iaLocal = require('./ia-local');
+ipcMain.handle('ialocal:estado', () => iaLocal.estado());
+ipcMain.handle('ialocal:instalar', async (_e, { modelo, desdeCarpeta } = {}) => {
+  try {
+    let carpeta = null;
+    if (desdeCarpeta) {
+      const r = await dialog.showOpenDialog(ventana, { title: 'Carpeta con los archivos de la IA local (por ejemplo, una USB)', properties: ['openDirectory'] });
+      if (r.canceled || !r.filePaths.length) return { ok: false };
+      carpeta = r.filePaths[0];
+    }
+    let ultimo = 0;
+    const est = await iaLocal.instalar({ modelo, carpeta }, (p) => {
+      if (Date.now() - ultimo < 250 && p.hechos < p.total) return;
+      ultimo = Date.now();
+      if (ventana && !ventana.isDestroyed()) ventana.webContents.send('ialocal:progreso', p);
+    });
+    return { ok: true, estado: est };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('ialocal:cancelar', () => iaLocal.cancelar());
+ipcMain.handle('ialocal:quitar', () => iaLocal.quitar());
+ipcMain.handle('ialocal:abrirCarpeta', () => { const d = iaLocal.estado().carpeta; fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });
 ipcMain.handle('ia:modelos', async (_e, payload) => (process.env.TIZA_PRUEBAS ? { ok: false, error: 'Sin red en las pruebas.' } : listarModelos(payload)));

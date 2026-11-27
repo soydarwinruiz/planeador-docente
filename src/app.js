@@ -327,12 +327,13 @@ const PROVEEDORES_IA = {
   anthropic: { nombre: 'Claude (Anthropic)', modelo: 'claude-opus-5-5', donde: 'console.anthropic.com', ph: 'sk-ant-...' },
   openai: { nombre: 'ChatGPT (OpenAI)', modelo: 'gpt-5-mini', donde: 'platform.openai.com', ph: 'sk-...' },
   gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-flash-latest', donde: 'aistudio.google.com', ph: 'AIza...' },
+  local: { nombre: 'IA local (sin internet)', modelo: '', donde: '', ph: '' },
   compatible: { nombre: 'Otro compatible con OpenAI', modelo: '', donde: 'DeepSeek, Groq, OpenRouter, Ollama (local), LM Studio…', ph: '(opcional en servicios locales)' },
 };
 function iaLista() {
   const ia = S.config.ia || {};
   const p = ia.proveedor || 'anthropic';
-  return p === 'compatible' ? !!(ia.url && ia.modelos?.compatible) : !!ia.claves?.[p];
+  return p === 'compatible' ? !!(ia.url && ia.modelos?.compatible) : p === 'local' ? !!ia.local : !!ia.claves?.[p];
 }
 function nombreIA() { return PROVEEDORES_IA[S.config.ia?.proveedor || 'anthropic'].nombre; }
 function sinIA() {

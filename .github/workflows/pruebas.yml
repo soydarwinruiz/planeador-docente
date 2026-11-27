@@ -17,6 +17,19 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # IA local: motor llama.cpp y un modelo pequeño para probarla de verdad (se guardan en caché entre ejecuciones)
+      - uses: actions/cache@v4
+        with:
+          path: ia-local-cache
+          key: ia-local-b12815-qwen3-0.6b-${{ runner.os }}
+      - name: Descargar la IA local de prueba
+        shell: bash
+        run: |
+          mkdir -p ia-local-cache && cd ia-local-cache
+          M=$([ "$RUNNER_OS" = "Windows" ] && echo llama-b12815-bin-win-cpu-x64.zip || echo llama-b12815-bin-ubuntu-x64.tar.gz)
+          [ -f "$M" ] || curl -fsSL -o "$M" "https://github.com/ggml-org/llama.cpp/releases/download/b12815/$M"
+          [ -f Qwen3-0.6B-Q8_0.gguf ] || curl -fsSL -o Qwen3-0.6B-Q8_0.gguf "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/23749fefcc72300e3a2ad315e1317431b06b590a/Qwen3-0.6B-Q8_0.gguf"
+          echo "TIZA_IA_LOCAL_CACHE=$( [ "$RUNNER_OS" = "Windows" ] && cygpath -w "$PWD" || echo "$PWD" )" >> "$GITHUB_ENV"
       - if: runner.os == 'Linux'
         run: xvfb-run -a npm test
       - if: runner.os == 'Windows'
@@ -24,5 +37,12 @@ jobs:
       # El programa empaquetado (como lo instala el docente) también se prueba
       - if: runner.os == 'Linux'
         run: npx electron-builder --linux dir --x64 --publish never && xvfb-run -a node tests/empaquetado.js dist/linux-unpacked/planeador-docente
+      # Bibliotecas de Visual C++ que necesita el motor de la IA local (Microsoft permite distribuirlas junto al programa)
+      - if: runner.os == 'Windows'
+        name: Bibliotecas de Visual C++ para la IA local
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/vcrt | Out-Null
+          foreach ($f in 'vcruntime140.dll','vcruntime140_1.dll','msvcp140.dll') { Copy-Item "$env:SystemRoot\System32\$f" build/vcrt/ }
       - if: runner.os == 'Windows'
         run: npx electron-builder --win dir --x64 --publish never; node tests/empaquetado.js dist/win-unpacked/Tiza.exe

@@ -338,7 +338,7 @@ function aplicarNuevoAnio(op) {
 
 // ---------- Configuración de IA ----------
 function tarjetaIA() {
-  setTimeout(() => actualizarModelosIA(false), 0);
+  if ((S.config.ia.proveedor || 'anthropic') !== 'local') setTimeout(() => actualizarModelosIA(false), 0);
   const ia = S.config.ia;
   const p = ia.proveedor || 'anthropic';
   const info = PROVEEDORES_IA[p];
@@ -347,14 +347,14 @@ function tarjetaIA() {
     y lo escrito en la planeación; <b>no se envían nombres de estudiantes</b>. El costo depende del proveedor y del modelo.</p>
     <div class="rejilla r4" style="align-items:end">
       <div class="campo"><label>Proveedor</label><select onchange="S.config.ia.proveedor=this.value;guardar();render()">
-        ${Object.entries(PROVEEDORES_IA).map(([k, v]) => `<option value="${k}" ${p === k ? 'selected' : ''}>${v.nombre}${(k === 'compatible' ? ia.url : ia.claves?.[k]) ? ' ✔' : ''}</option>`).join('')}</select></div>
-      <div class="campo" style="grid-column: span 2"><label>Clave de API ${p === 'compatible' ? '(opcional)' : ''} <span style="font-weight:normal">· se obtiene en ${esc(info.donde)}</span></label>
+        ${Object.entries(PROVEEDORES_IA).map(([k, v]) => `<option value="${k}" ${p === k ? 'selected' : ''}>${v.nombre}${(k === 'compatible' ? ia.url : k === 'local' ? ia.local : ia.claves?.[k]) ? ' ✔' : ''}</option>`).join('')}</select></div>
+      ${p === 'local' ? '' : `<div class="campo" style="grid-column: span 2"><label>Clave de API ${p === 'compatible' ? '(opcional)' : ''} <span style="font-weight:normal">· se obtiene en ${esc(info.donde)}</span></label>
         <div class="fila" style="flex-wrap:nowrap"><input type="password" id="cfg-key" style="flex:1" value="${esc(ia.claves?.[p] || '')}" placeholder="${esc(info.ph)}"
           onchange="(S.config.ia.claves ||= {})['${p}']=this.value.trim();guardar();aviso('Clave guardada','ok');actualizarModelosIA(false,true)">
         <button class="btn" title="Mostrar u ocultar" onclick="const i=document.getElementById('cfg-key');i.type=i.type==='password'?'text':'password'">👁️</button></div></div>
-      ${campoModeloIA()}
+      ${campoModeloIA()}`}
     </div>
-    ${p === 'compatible' ? `<div class="campo"><label>Dirección (URL base) del servicio</label><input value="${esc(ia.url || '')}" placeholder="https://api.deepseek.com/v1   ·   http://localhost:11434/v1 (Ollama)"
+    ${p === 'local' ? tarjetaIALocal() : p === 'compatible' ? `<div class="campo"><label>Dirección (URL base) del servicio</label><input value="${esc(ia.url || '')}" placeholder="https://api.deepseek.com/v1   ·   http://localhost:11434/v1 (Ollama)"
         onchange="S.config.ia.url=this.value.trim();guardar()">
       <div class="ayuda">Cualquier servicio que use el formato de OpenAI (<i>/chat/completions</i>). Con <b>Ollama</b> o <b>LM Studio</b> la IA corre en tu propio computador, sin costo y sin enviar datos a internet.</div>
       <div class="fila" style="margin-top:6px"><button class="btn pequeno" onclick="usarOllama()">🖥️ Usar Ollama en este equipo</button>
@@ -366,6 +366,83 @@ function tarjetaIA() {
       <div id="res-probar-ia" class="ayuda" style="margin-top:8px;overflow-wrap:anywhere"></div>
   </div>`;
 }
+// ---------- IA local (motor llama.cpp + modelo Qwen3 descargados una vez; funciona sin internet) ----------
+const IA_LOCAL = { estado: null, progreso: null };
+const gb = (n) => (n / 1024 ** 3).toFixed(1).replace('.', ',') + ' GB';
+function tarjetaIALocal() {
+  setTimeout(refrescarIALocal, 0);
+  return `<div id="ia-local" class="tarjeta" style="background:var(--fondo);margin-top:10px">${cuerpoIALocal()}</div>`;
+}
+async function refrescarIALocal() {
+  IA_LOCAL.estado = await api.iaLocalEstado();
+  const e = IA_LOCAL.estado;
+  const antes = S.config.ia.local || '';
+  S.config.ia.local = e.instalado ? e.nombre : '';
+  if (antes !== S.config.ia.local) guardar();
+  const el = document.getElementById('ia-local');
+  if (el) el.innerHTML = cuerpoIALocal();
+}
+function cuerpoIALocal() {
+  const e = IA_LOCAL.estado;
+  if (!e) return '<p class="ayuda">Revisando la IA local…</p>';
+  if (!e.disponible) return '<p class="alerta">La IA local solo está disponible para Windows de 64 bits.</p>';
+  const pr = IA_LOCAL.progreso;
+  if (pr) {
+    const pct = pr.total ? Math.floor((pr.hechos / pr.total) * 100) : 0;
+    const fase = { motor: 'Descargando el motor', modelo: 'Descargando el modelo', preparando: 'Preparando' }[pr.fase] || 'Instalando';
+    return `<h3 style="margin-top:0">🖥️ Instalando la IA local…</h3>
+      <div style="background:var(--borde);border-radius:8px;height:14px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--acento,#2b6cb0)"></div></div>
+      <p class="ayuda">${fase}: ${gb(pr.hechos)} de ${gb(pr.total)} (${pct} %). Puedes seguir usando Tiza mientras tanto. Si se corta el internet, al volver a intentarlo continúa donde quedó.</p>
+      <button class="btn" onclick="api.iaLocalCancelar()">Cancelar</button>`;
+  }
+  if (e.instalado) {
+    return `<h3 style="margin-top:0">🖥️ IA local instalada: ${esc(e.nombre)}</h3>
+      <p class="ayuda">Funciona sin internet y nada sale de este computador. Se enciende sola cuando usas la IA (la primera vez tarda unos segundos en cargar) y se apaga al cerrar Tiza. Sin tarjeta gráfica, una planeación completa puede tardar entre 1 y 3 minutos.</p>
+      <div class="fila"><button class="btn" onclick="api.iaLocalAbrirCarpeta()" title="Para llevar la IA a otro equipo sin descargarla: copia la carpeta «archivos» a una USB">📁 Abrir la carpeta (para copiar a una USB)</button>
+        <button class="btn" onclick="dialogoInstalarIALocal()">Cambiar de modelo</button>
+        <button class="btn peligro" onclick="quitarIALocal()">Quitar la IA local</button></div>`;
+  }
+  return `<h3 style="margin-top:0">🖥️ IA local: gratis, sin internet y privada</h3>
+    <p class="ayuda">Se descarga una sola vez un motor de IA (llama.cpp) y un modelo (Qwen3). Después funciona sin internet y nada sale de este computador. Tu equipo tiene ${e.ramGB} GB de memoria${e.libre != null ? ` y ${gb(e.libre)} libres en el disco` : ''}.</p>
+    <div class="fila"><button class="btn primario" onclick="dialogoInstalarIALocal()">⬇️ Instalar la IA local</button>
+      <button class="btn" onclick="instalarIALocal(IA_LOCAL.estado.recomendado, true)" title="Si otro docente ya la descargó: elige la carpeta (por ejemplo, la USB) donde están sus archivos">📁 Instalar desde una carpeta o USB</button></div>`;
+}
+function dialogoInstalarIALocal() {
+  const e = IA_LOCAL.estado;
+  abrirModal(`<h2>🖥️ Instalar la IA local</h2>
+    <p class="ayuda">Elige el tamaño. Tu equipo tiene <b>${e.ramGB} GB</b> de memoria (RAM)${e.libre != null ? ` y <b>${gb(e.libre)}</b> libres en el disco` : ''}.</p>
+    ${Object.entries(e.modelos).map(([k, m]) => `<label class="tarjeta" style="display:block;cursor:pointer;margin:8px 0;padding:12px">
+      <input type="radio" name="ialocal-modelo" value="${esc(k)}" ${k === e.recomendado ? 'checked' : ''}> <b>${esc(m.nombre)}</b>${k === e.recomendado ? ' <span class="chip terminada">recomendado para tu equipo</span>' : ''}
+      <div class="ayuda">${esc(m.descripcion)} · descarga de ${gb(m.tam)}${e.ramGB < m.ram ? ' · <b>tu equipo tiene menos memoria de la recomendada: puede ir muy lento</b>' : ''}</div></label>`).join('')}
+    <p class="ayuda">Se descarga de las páginas oficiales (GitHub de llama.cpp y Hugging Face de Qwen) y se verifica que los archivos sean exactamente los originales.</p>
+    <div class="botones"><button class="btn" onclick="cerrarModal()">Cancelar</button><button class="btn primario" onclick="instalarIALocal(document.querySelector('[name=ialocal-modelo]:checked').value)">⬇️ Descargar e instalar</button></div>`);
+}
+async function instalarIALocal(modelo, desdeCarpeta = false) {
+  cerrarModal();
+  IA_LOCAL.progreso = { fase: 'motor', hechos: 0, total: 1 };
+  const el = document.getElementById('ia-local'); if (el) el.innerHTML = cuerpoIALocal();
+  const r = await api.iaLocalInstalar({ modelo, desdeCarpeta });
+  IA_LOCAL.progreso = null;
+  if (r.ok) {
+    S.config.ia.proveedor = 'local'; S.config.ia.local = r.estado.nombre; guardar();
+    aviso('IA local instalada. Ya puedes usarla sin internet.', 'ok');
+    if (ui.vista === 'configuracion') render();
+  } else if (r.error) aviso(r.error === 'Cancelado' ? 'Instalación cancelada (lo descargado se conserva para continuar después)' : r.error, r.error === 'Cancelado' ? '' : 'error');
+  await refrescarIALocal();
+}
+async function quitarIALocal() {
+  if (!(await confirmar('Se borrarán el motor y el modelo de la IA local de este equipo (se libera el espacio en el disco). ¿Continuar?', { boton: 'Quitar' }))) return;
+  await api.iaLocalQuitar();
+  S.config.ia.local = '';
+  if (S.config.ia.proveedor === 'local') S.config.ia.proveedor = 'gemini';
+  guardar(); render(); aviso('IA local quitada', 'ok');
+}
+api.alProgresoIALocal((p) => {
+  if (!IA_LOCAL.progreso) return;
+  IA_LOCAL.progreso = p;
+  const el = document.getElementById('ia-local'); if (el) el.innerHTML = cuerpoIALocal();
+});
+
 // Modelo: lista con los modelos de la cuenta del docente (se actualiza con internet; sin internet se ve la última)
 function campoModeloIA() {
   const ia = S.config.ia, p = ia.proveedor || 'anthropic', info = PROVEEDORES_IA[p];

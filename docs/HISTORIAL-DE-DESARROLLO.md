@@ -305,11 +305,19 @@ Resultado del análisis de funcionalidad y compatibilidad (`docs/ANALISIS-FUNCIO
 - **Gemini sin nivel gratuito:** cuando Google responde que el proyecto de la clave no tiene uso gratuito y pide facturación, ya no se muestra como "clave no válida": se explica qué pasa y las opciones (clave en un proyecto nuevo de AI Studio, facturación u otro proveedor).
 - Los mensajes largos (errores de la IA, avisos, ayudas) se parten en varias líneas en vez de salirse de la pantalla.
 
-### Versión 2.2.2 — Claves nuevas de Gemini (27 de noviembre)
+### Versión 2.2.2 — Claves nuevas de Gemini (27 de noviembre; publicada dentro de la 2.3.0)
 - **Claves "AQ." de Google:** AI Studio empezó a entregar claves que empiezan por `AQ.` en lugar de `AIza`, y en muchas cuentas Google no las acepta en el encabezado de siempre. Ahora se prueba la clave en el encabezado, en la dirección (`?key=`) y como `Bearer`, y se recuerda la forma que funcionó. Si Google la rechaza de todas las formas, el mensaje explica cómo crear una clave clásica en Google Cloud restringida a *Generative Language API*.
 - **"Probando…" ya no se queda esperando:** cada solicitud a la IA tiene un límite de tiempo firme, aunque la red no respete la cancelación.
 - **Lista de modelos de tu cuenta:** el campo *Modelo* es ahora una lista con los modelos que tu clave puede usar (Gemini, Claude, ChatGPT, compatibles y Ollama). Se consulta al abrir la configuración si hay internet (como máximo cada 3 días, o con 🔄) y la última lista queda guardada para verla sin conexión. *Automático* sigue siendo la opción recomendada y *Otro…* permite escribir cualquier nombre.
 - **El asistente de bienvenida no tapa lo que el docente abrió** (por ejemplo, *Acerca de* desde el menú justo al arrancar).
+
+### Versión 2.3.0 — IA local (27 de noviembre)
+- **🖥️ IA local con un clic** (`ia-local.js`): nuevo proveedor *IA local (sin internet)*. Descarga una sola vez el motor **llama.cpp** (versión `b12815`, CPU x64, licencia MIT, unos 25 MB) desde las versiones oficiales de GitHub y un modelo **Qwen3** (Apache 2.0) desde Hugging Face, fijado a una revisión exacta: **Qwen3 4B Q4_K_M** (2,5 GB, equipos de 8 GB) o **Qwen3 8B Q4_K_M** (5 GB, 16 GB o más). Se recomienda según la memoria del equipo.
+- **Descarga segura y reanudable:** cada archivo se verifica con su huella SHA-256 fijada en el código (si no coincide, se borra). Si se corta el internet o se cancela, al reintentar continúa donde quedó (encabezado `Range`). Antes de empezar se revisa el espacio en disco.
+- **Instalar desde una carpeta o USB**, para colegios con mala conexión: un docente la descarga, copia la carpeta *archivos* y los demás la instalan sin internet, con la misma verificación.
+- **Motor bajo demanda:** se enciende al usar la IA, solo escucha en `127.0.0.1` y en un puerto libre, se apaga al cerrar Tiza o tras 20 minutos sin uso. Responde en JSON forzado (`response_format`) y sin "pensar en voz alta" (`--reasoning-budget 0`). Contexto de 8.192 tokens.
+- **Windows:** el instalador de Tiza incluye las bibliotecas de Visual C++ que necesita el motor (`vcruntime140`, `vcruntime140_1`, `msvcp140`, distribuibles por licencia de Microsoft), que se copian junto al motor. Si aun así faltaran, el mensaje indica cómo instalar el *Visual C++ Redistributable*.
+- **Pruebas reales** (`tests/e2e-ia-local.js`): en GitHub (Windows y Linux) se descargan el motor y Qwen3 0.6B (en caché entre ejecuciones) y se prueba instalar desde una carpeta, generar el objetivo de una planeación con el motor real, rechazar un archivo alterado y desinstalar. También se probó a mano la descarga real cancelada a mitad y reanudada.
 
 ---
 
