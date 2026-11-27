@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld('api', {
   sugerirIA: (payload) => ipcRenderer.invoke('ia:sugerir', payload),
   abrirTabla: () => ipcRenderer.invoke('tabla:abrir'),
   transcribir: (d) => ipcRenderer.invoke('ia:transcribir', d),
+  modelosIA: (d) => ipcRenderer.invoke('ia:modelos', d),
   guardarPDF: (datos) => ipcRenderer.invoke('pdf:html', datos),
   qrIniciar: (d) => ipcRenderer.invoke('qr:iniciar', d),
   qrCerrar: () => ipcRenderer.invoke('qr:cerrar'),

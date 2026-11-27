@@ -88,5 +88,39 @@ const pedidos = (app) => app.evaluate(() => global.__pedidos);
     assert.deepStrictEqual(errores, []);
   });
 
+  await prueba('IA: la lista de modelos de la cuenta se consulta con internet, se elige de la lista y se conserva sin conexión', async () => {
+    const dir = nuevaCarpeta();
+    let { app, w, errores } = await abrir(dir);
+    await sembrar(w);
+    await app.evaluate(({ ipcMain }) => {
+      global.__consultas = [];
+      ipcMain.removeHandler('ia:modelos');
+      ipcMain.handle('ia:modelos', (_e, p) => { global.__consultas.push(p.proveedor); return { ok: true, modelos: [{ id: 'gemini-9.1-flash', nombre: 'Gemini 9.1 Flash' }, { id: 'gemini-9.1-pro', nombre: '' }, { id: '"><img src=x onerror=window.__xss=1>', nombre: '' }] }; });
+    });
+    await w.evaluate(() => { cerrarModal(); S.config.ia = { ...S.config.ia, proveedor: 'gemini', claves: { gemini: 'AQ.prueba' }, modelos: {} }; irAConfig('ia'); });
+    await w.waitForFunction(() => document.querySelectorAll('#cfg-modelo-sel option').length === 5, null, { timeout: 10000 });
+    assert.strictEqual(await app.evaluate(() => global.__consultas.length), 1, 'no consultó automáticamente al abrir');
+    await w.selectOption('#cfg-modelo-sel', 'gemini-9.1-flash');
+    await esperarGuardado(w);
+    const r = await w.evaluate(() => ({ modelo: S.config.ia.modelos.gemini, info: document.getElementById('cfg-modelos-info').textContent, xss: window.__xss }));
+    assert.strictEqual(r.modelo, 'gemini-9.1-flash');
+    assert.match(r.info, /3 modelos de tu cuenta/);
+    assert.strictEqual(r.xss, undefined, 'un nombre de modelo ejecutó código');
+    // "Otro…" permite escribir cualquier nombre
+    await w.selectOption('#cfg-modelo-sel', '__otro');
+    await w.fill('#cfg-modelo', 'gemini-experimental-x'); await w.dispatchEvent('#cfg-modelo', 'change');
+    await esperarGuardado(w);
+    await app.close();
+    // Sin internet (la consulta falla): se ve la última lista guardada y lo escrito a mano
+    ({ app, w, errores } = await abrir(dir));
+    await w.evaluate(() => { cerrarModal(); ui.modelosPedidos = {}; irAConfig('ia'); return actualizarModelosIA(true); });
+    const s = await w.evaluate(() => ({ opciones: [...document.querySelectorAll('#cfg-modelo-sel option')].map((o) => o.value), otro: !document.getElementById('cfg-modelo').hidden, valor: document.getElementById('cfg-modelo').value, info: document.getElementById('cfg-modelos-info').textContent }));
+    await app.close();
+    assert.ok(s.opciones.includes('gemini-9.1-flash'), 'se perdió la lista sin conexión');
+    assert.ok(s.otro && s.valor === 'gemini-experimental-x', 'no conservó el modelo escrito a mano');
+    assert.match(s.info, /última lista guardada/);
+    assert.deepStrictEqual(errores, []);
+  });
+
   terminar();
 })();

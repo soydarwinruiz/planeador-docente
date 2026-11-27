@@ -338,6 +338,7 @@ function aplicarNuevoAnio(op) {
 
 // ---------- Configuración de IA ----------
 function tarjetaIA() {
+  setTimeout(() => actualizarModelosIA(false), 0);
   const ia = S.config.ia;
   const p = ia.proveedor || 'anthropic';
   const info = PROVEEDORES_IA[p];
@@ -349,10 +350,9 @@ function tarjetaIA() {
         ${Object.entries(PROVEEDORES_IA).map(([k, v]) => `<option value="${k}" ${p === k ? 'selected' : ''}>${v.nombre}${(k === 'compatible' ? ia.url : ia.claves?.[k]) ? ' ✔' : ''}</option>`).join('')}</select></div>
       <div class="campo" style="grid-column: span 2"><label>Clave de API ${p === 'compatible' ? '(opcional)' : ''} <span style="font-weight:normal">· se obtiene en ${esc(info.donde)}</span></label>
         <div class="fila" style="flex-wrap:nowrap"><input type="password" id="cfg-key" style="flex:1" value="${esc(ia.claves?.[p] || '')}" placeholder="${esc(info.ph)}"
-          onchange="(S.config.ia.claves ||= {})['${p}']=this.value.trim();guardar();aviso('Clave guardada','ok')">
+          onchange="(S.config.ia.claves ||= {})['${p}']=this.value.trim();guardar();aviso('Clave guardada','ok');actualizarModelosIA(false,true)">
         <button class="btn" title="Mostrar u ocultar" onclick="const i=document.getElementById('cfg-key');i.type=i.type==='password'?'text':'password'">👁️</button></div></div>
-      <div class="campo"><label>Modelo</label><input value="${esc(ia.modelos?.[p] || '')}" placeholder="${esc(info.modelo || 'ej.: llama3.1, deepseek-chat')}"
-        onchange="(S.config.ia.modelos ||= {})['${p}']=this.value.trim();guardar()"></div>
+      ${campoModeloIA()}
     </div>
     ${p === 'compatible' ? `<div class="campo"><label>Dirección (URL base) del servicio</label><input value="${esc(ia.url || '')}" placeholder="https://api.deepseek.com/v1   ·   http://localhost:11434/v1 (Ollama)"
         onchange="S.config.ia.url=this.value.trim();guardar()">
@@ -365,6 +365,51 @@ function tarjetaIA() {
       </div>
       <div id="res-probar-ia" class="ayuda" style="margin-top:8px;overflow-wrap:anywhere"></div>
   </div>`;
+}
+// Modelo: lista con los modelos de la cuenta del docente (se actualiza con internet; sin internet se ve la última)
+function campoModeloIA() {
+  const ia = S.config.ia, p = ia.proveedor || 'anthropic', info = PROVEEDORES_IA[p];
+  const disp = ia.disponibles?.[p], lista = Array.isArray(disp?.modelos) ? disp.modelos : [];
+  const actual = ia.modelos?.[p] || '';
+  const enLista = !actual || lista.some((m) => m.id === actual);
+  const opcionesM = `<option value="">${info.modelo ? `Automático (${esc(info.modelo)})` : '(elige un modelo)'}</option>`
+    + lista.map((m) => `<option value="${esc(m.id)}" ${m.id === actual ? 'selected' : ''}>${esc(m.id)}${m.nombre && m.nombre !== m.id ? ' · ' + esc(m.nombre) : ''}</option>`).join('')
+    + `<option value="__otro" ${enLista ? '' : 'selected'}>Otro (escribir el nombre)…</option>`;
+  const fecha = disp?.fecha ? new Date(disp.fecha).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '';
+  return `<div class="campo" id="cfg-campo-modelo"><label>Modelo <button class="icono" style="font-size:13px" title="Actualizar la lista con los modelos de tu cuenta (requiere internet)" onclick="actualizarModelosIA(true)">🔄</button></label>
+    <select id="cfg-modelo-sel" onchange="elegirModeloIA(this.value)">${opcionesM}</select>
+    <input id="cfg-modelo" ${enLista ? 'hidden' : ''} style="margin-top:6px" value="${esc(actual)}" placeholder="${esc(info.modelo || 'ej.: llama3.1, deepseek-chat')}" onchange="(S.config.ia.modelos ||= {})['${p}']=this.value.trim();guardar()">
+    <div class="ayuda" id="cfg-modelos-info" style="overflow-wrap:anywhere">${lista.length ? `${lista.length} modelos de tu cuenta · ${esc(fecha)}` : 'Pulsa 🔄 para ver los modelos de tu cuenta'}</div></div>`;
+}
+function elegirModeloIA(v) {
+  const p = S.config.ia.proveedor || 'anthropic', i = document.getElementById('cfg-modelo');
+  if (v === '__otro') { i.hidden = false; i.focus(); return; }
+  i.hidden = true; i.value = v;
+  (S.config.ia.modelos ||= {})[p] = v; guardar();
+}
+// Consulta los modelos al proveedor. Automático: al abrir la tarjeta si hay clave, internet y la lista tiene más de 3 días
+async function actualizarModelosIA(manual, forzar) {
+  const ia = S.config.ia, p = ia.proveedor || 'anthropic';
+  const disp = ia.disponibles?.[p];
+  const pedidos = (ui.modelosPedidos ||= {});
+  if (!manual) {
+    const listo = p === 'compatible' ? ia.url : ia.claves?.[p];
+    if (!listo || !navigator.onLine) return;
+    if (!forzar && (pedidos[p] || (disp?.fecha && Date.now() - Date.parse(disp.fecha) < 3 * 86400000))) return;
+  }
+  pedidos[p] = true;
+  const info = document.getElementById('cfg-modelos-info');
+  if (info) info.textContent = 'Consultando los modelos de tu cuenta…';
+  const r = await api.modelosIA({ ia: S.config.ia, proveedor: p });
+  if ((S.config.ia.proveedor || 'anthropic') !== p) return; // cambió de proveedor mientras tanto
+  if (r.ok) { (S.config.ia.disponibles ||= {})[p] = { fecha: new Date().toISOString(), modelos: r.modelos }; guardar(); }
+  const campo = document.getElementById('cfg-campo-modelo');
+  if (campo) campo.outerHTML = campoModeloIA();
+  if (!r.ok) {
+    const i2 = document.getElementById('cfg-modelos-info');
+    if (i2) i2.textContent = (manual ? '' : 'No se pudo actualizar la lista: ') + r.error + (disp ? ' (se muestra la última lista guardada)' : '');
+    if (manual) aviso('No se pudo obtener la lista de modelos: ' + r.error, 'error');
+  } else if (manual) aviso(`Lista actualizada: ${r.modelos.length} modelos`, 'ok');
 }
 function usarOllama() {
   const ia = S.config.ia;

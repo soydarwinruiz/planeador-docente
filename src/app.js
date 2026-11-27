@@ -556,7 +556,8 @@ async function iniciar() {
   if (S.config.nube?.carpeta) api.configurarNube(S.config.nube.carpeta);
   if (S.config.actualizaciones?.auto !== false) setTimeout(() => buscarActualizaciones(true), 6000);
   guardar();
-  if (!datos || (!S.config.configurado && !S.config.institucion)) setTimeout(abrirAsistente, 300);
+  // El asistente no tapa lo que el docente ya abrió (por ejemplo "Acerca de" desde el menú): saldrá la próxima vez
+  if (!datos || (!S.config.configurado && !S.config.institucion)) setTimeout(() => { if (document.getElementById('modal-fondo').classList.contains('oculto')) abrirAsistente(); }, 300);
   render();
   if (recuperado) {
     abrirModal(`<h2>🛟 Datos recuperados</h2>

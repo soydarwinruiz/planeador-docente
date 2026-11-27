@@ -3,7 +3,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron')
 const path = require('path');
 const fs = require('fs');
 const { generarDocxInforme, generarDocxTabla, generarDocxComunicados, generarDocxPrueba, generarDocxPlaneacion, generarDocxMalla, generarDocxPlanArea, generarDocxPlanPeriodo, generarDocxPlanAula, generarDocxProgramacion, generarDocxApoyo, generarDocxPiar } = require('./exportar-word');
-const { sugerirConIA, transcribirAudio } = require('./ia');
+const { sugerirConIA, transcribirAudio, listarModelos } = require('./ia');
 const { iniciarActualizaciones } = require('./actualizaciones');
 const { iniciarAplicacionMovil, detenerAplicacionMovil } = require('./servidor-aula');
 
@@ -459,3 +459,4 @@ ipcMain.handle('tabla:abrir', async () => {
 // ---------- IA ----------
 ipcMain.handle('ia:sugerir', async (_e, payload) => sugerirConIA(payload));
 ipcMain.handle('ia:transcribir', async (_e, payload) => transcribirAudio(payload));
+ipcMain.handle('ia:modelos', async (_e, payload) => (process.env.TIZA_PRUEBAS ? { ok: false, error: 'Sin red en las pruebas.' } : listarModelos(payload)));

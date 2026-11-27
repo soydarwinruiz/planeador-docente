@@ -10,7 +10,7 @@ const ELECTRON = require(path.join(RAIZ, 'node_modules', 'electron'));
 const estado = { fallas: 0 };
 
 async function abrir(dir) {
-  const app = await _electron.launch({ executablePath: ELECTRON, args: [RAIZ, '--no-sandbox'], env: { ...process.env, PLANEADOR_DATA_DIR: dir, TIZA_LLAVE_PLANA: '1' } });
+  const app = await _electron.launch({ executablePath: ELECTRON, args: [RAIZ, '--no-sandbox'], env: { ...process.env, PLANEADOR_DATA_DIR: dir, TIZA_LLAVE_PLANA: '1', TIZA_PRUEBAS: '1' } });
   const w = await app.firstWindow();
   const errores = [];
   w.on('pageerror', (e) => errores.push(e.message));
