@@ -123,6 +123,8 @@ input[type=checkbox], input[type=radio] { width: auto; }
 .ayuda { font-size: 12px; color: var(--suave); margin-top: 3px; }
 .fila { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .fila > * { flex: 0 0 auto; }
+.fila > .ayuda, .fila > span { flex-shrink: 1; min-width: 0; overflow-wrap: anywhere; } /* los textos largos (errores, ayudas) se parten en vez de salirse */
+.alerta, .aviso { overflow-wrap: anywhere; }
 .filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
 .filtros > div { min-width: 150px; }
 

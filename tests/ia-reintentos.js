@@ -39,5 +39,8 @@ const t = setTimeout; global.setTimeout = (fn) => t(fn, 0); // sin esperas reale
   // Un error que no es pasajero no se reintenta
   simular({ 'gemini-flash-latest': [[400, { error: { message: 'malo' } }]] }); r = await pedir('');
   assert.ok(!r.ok); assert.deepStrictEqual(llamadas, ['gemini-flash-latest']);
+  // Proyecto de Google sin nivel gratuito: mensaje claro con qué hacer, no "clave no válida"
+  simular({ 'gemini-flash-latest': [[403, { error: { message: 'The Gemini API free tier is not available for this project. To use the Gemini API, please set up billing to upgrade to a paid tier.' } }]] }); r = await pedir('');
+  assert.ok(!r.ok); assert.match(r.error, /facturación/); assert.match(r.error, /proyecto nuevo/); assert.doesNotMatch(r.error, /no es válida/);
   console.log('✓ IA: reintenta si está saturada y, si Google retira el modelo, usa el Gemini Flash más reciente de la cuenta');
 })().catch((e) => { console.error('✗ IA reintentos\n', e, llamadas); process.exit(1); });

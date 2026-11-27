@@ -302,6 +302,8 @@ Resultado del análisis de funcionalidad y compatibilidad (`docs/ANALISIS-FUNCIO
 - **Pantallas pequeñas:** la ventana se ajusta al área útil de la pantalla (portátiles de 1366×768 con escalado al 125 %) y se abre maximizada si es pequeña.
 - **Proxy del colegio:** la IA y la búsqueda de actualizaciones de la versión portable salen por la red de Chromium (`net.fetch`), que respeta el proxy de Windows.
 - **Carpetas con tildes y ñ:** todas las pruebas corren en una carpeta como `Tiza prueba José Muñoz…` (también en Windows en GitHub).
+- **Gemini sin nivel gratuito:** cuando Google responde que el proyecto de la clave no tiene uso gratuito y pide facturación, ya no se muestra como "clave no válida": se explica qué pasa y las opciones (clave en un proyecto nuevo de AI Studio, facturación u otro proveedor).
+- Los mensajes largos (errores de la IA, avisos, ayudas) se parten en varias líneas en vez de salirse de la pantalla.
 
 ---
 

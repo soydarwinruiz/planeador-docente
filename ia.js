@@ -112,6 +112,8 @@ async function pedirJSON(url, opciones, esperas = [2000, 6000]) {
   try { datos = JSON.parse(texto); } catch { /* respuesta no JSON */ }
   if (!r.ok) {
     const msg = datos?.error?.message || datos?.message || texto.slice(0, 300);
+    // Google: el proyecto de la clave no tiene el nivel gratuito (pide activar la facturación)
+    if (/free tier is not available|set up billing|billing (is )?(not )?enabled|billing account/i.test(msg)) throw new ErrorIA('Google no ofrece el uso gratuito de Gemini para el proyecto de esta clave y pide activar la facturación. Opciones: 1) en aistudio.google.com crea una clave nueva eligiendo "Crear clave en un proyecto nuevo"; 2) activa la facturación de ese proyecto en Google Cloud (se cobra por uso); 3) usa otro proveedor o la IA local con Ollama.', r.status);
     if (r.status === 401 || r.status === 403) throw new ErrorIA('La clave de API no es válida o no tiene permisos. ' + msg, r.status);
     if (r.status === 404) throw new ErrorIA('No se encontró el modelo o la dirección del servicio. ' + msg, r.status);
     if (r.status === 429) throw new ErrorIA('Se alcanzó el límite de uso o no hay saldo en la cuenta. ' + msg, r.status);
