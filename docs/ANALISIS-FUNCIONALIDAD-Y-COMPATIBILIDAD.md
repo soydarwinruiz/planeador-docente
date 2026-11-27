@@ -94,7 +94,8 @@ Funcionan en el navegador del celular, sin instalar nada, conectados a la **mism
 | Claude (Anthropic) | Clave de pago | Reintentos y respaldo automático de modelo del propio servicio |
 | ChatGPT (OpenAI) | Clave de pago | — |
 | Compatibles (DeepSeek, Groq, OpenRouter) | Clave del servicio | — |
-| Local (Ollama, LM Studio) | Computador con 8–16 GB de RAM | Gratis y sin internet; más lenta. Botón *Usar Ollama en este equipo* |
+| **IA local integrada (2.3)** | Windows 10/11 de 64 bits, 8 GB de RAM (16 GB para el modelo mayor), 3–6 GB de disco | Un clic: descarga verificada del motor llama.cpp y de Qwen3; sin internet después; también desde USB |
+| Local con Ollama o LM Studio | Computador con 8–16 GB de RAM | Gratis y sin internet; más lenta. Botón *Usar Ollama en este equipo* |
 | Red con proxy | ✅ (2.2.1) | La IA sale por la red de Windows y respeta el proxy |
 | Dictado por voz | Clave de OpenAI o Gemini | Alternativa gratuita: Windows + H |
 

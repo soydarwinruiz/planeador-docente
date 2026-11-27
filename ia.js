@@ -52,7 +52,8 @@ Devuelve un JSON con solo esas claves (cada valor es texto de uno a tres párraf
 const PROVEEDORES = {
   anthropic: { nombre: 'Claude (Anthropic)', modelo: 'claude-opus-5-5' },
   openai: { nombre: 'ChatGPT (OpenAI)', modelo: 'gpt-5-mini' },
-  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-flash-latest' }, // alias que Google mantiene apuntando a su Flash más reciente
+  gemini: { nombre: 'Gemini (Google)', modelo: 'gemini-flash-latest' },
+  local: { nombre: 'IA local (en este equipo)', modelo: '' }, // alias que Google mantiene apuntando a su Flash más reciente
   compatible: { nombre: 'Compatible con OpenAI', modelo: '' },
 };
 
@@ -129,13 +130,13 @@ async function pedirJSON(url, opciones, esperas = [2000, 6000]) {
   return datos;
 }
 
-async function llamarCompatibleOpenAI({ clave, modelo, url }, sistema, prompt, imagenes = []) {
+async function llamarCompatibleOpenAI({ clave, modelo, url, json = false }, sistema, prompt, imagenes = []) {
   const base = (url || 'https://api.openai.com/v1').replace(/\/+$/, '');
   const headers = { 'Content-Type': 'application/json' };
   if (clave) headers.Authorization = `Bearer ${clave}`;
   const datos = await pedirJSON(`${base}/chat/completions`, {
     method: 'POST', headers,
-    body: JSON.stringify({ model: modelo, messages: [{ role: 'system', content: sistema }, { role: 'user', content: imagenes.length ? [{ type: 'text', text: prompt }, ...imagenes.map((i) => ({ type: 'image_url', image_url: { url: `data:${i.tipo};base64,${i.datos}` } }))] : prompt }] }),
+    body: JSON.stringify({ model: modelo, messages: [{ role: 'system', content: sistema }, { role: 'user', content: imagenes.length ? [{ type: 'text', text: prompt }, ...imagenes.map((i) => ({ type: 'image_url', image_url: { url: `data:${i.tipo};base64,${i.datos}` } }))] : prompt }], ...(json ? { response_format: { type: 'json_object' } } : {}) }),
   });
   const texto = datos?.choices?.[0]?.message?.content;
   if (datos?.choices?.[0]?.finish_reason === 'length') throw new ErrorIA(RESPUESTA_LARGA);
@@ -213,6 +214,13 @@ async function llamarGemini({ clave, modelo }, sistema, prompt, imagenes = []) {
 async function llamarModelo(ia, sistema, prompt, imagenes = []) {
   const p = ia.proveedor || 'anthropic';
   const cfg = { clave: (ia.claves?.[p] || '').trim(), modelo: (ia.modelos?.[p] || PROVEEDORES[p]?.modelo || '').trim(), url: (ia.url || '').trim() };
+  if (p === 'local') {
+    // IA local: el motor se enciende si hace falta; responde siempre en JSON (no lee imágenes)
+    let url;
+    try { url = await require('./ia-local').asegurar(); } catch (e) { throw new ErrorIA(e.message); }
+    if (imagenes.length) throw new ErrorIA('La IA local no puede leer imágenes. Para esto usa un proveedor en línea (Gemini, Claude o ChatGPT).');
+    return llamarCompatibleOpenAI({ url, modelo: 'local', json: true }, sistema, prompt);
+  }
   if (p !== 'compatible' && !cfg.clave) throw new ErrorIA(`Falta la clave de API de ${PROVEEDORES[p]?.nombre || p}. Configúrala en Configuración > Inteligencia artificial.`);
   if (p === 'compatible' && (!cfg.url || !cfg.modelo)) throw new ErrorIA('Para un servicio compatible con OpenAI indica la dirección (URL) y el nombre del modelo.');
   if (p === 'anthropic') return llamarAnthropic(cfg, sistema, prompt, imagenes);
@@ -337,6 +345,7 @@ async function listarModelos({ ia = {}, proveedor } = {}) {
   try {
     const p = proveedor || ia.proveedor || 'anthropic';
     const clave = (ia.claves?.[p] || '').trim();
+    if (p === 'local') { const e = require('./ia-local').estado(); return e.instalado ? { ok: true, modelos: [{ id: e.nombre, nombre: 'instalado en este equipo' }] } : { ok: false, error: 'La IA local no está instalada.' }; }
     if (p !== 'compatible' && !clave) return { ok: false, error: 'Primero pega la clave de API.' };
     let modelos = [];
     if (p === 'gemini') {

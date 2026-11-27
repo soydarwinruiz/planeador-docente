@@ -15,6 +15,12 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run test:estatico
+      # Bibliotecas de Visual C++ que necesita el motor de la IA local (Microsoft permite distribuirlas junto al programa)
+      - name: Bibliotecas de Visual C++ para la IA local
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/vcrt | Out-Null
+          foreach ($f in 'vcruntime140.dll','vcruntime140_1.dll','msvcp140.dll') { Copy-Item "$env:SystemRoot\System32\$f" build/vcrt/ }
       - run: npm run dist:win
         env:
           # Firma de código: se usa solo si se configuran estos secretos en GitHub

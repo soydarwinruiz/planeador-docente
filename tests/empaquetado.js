@@ -20,10 +20,17 @@ const path = require('path');
     S.config.institucion = 'IE Empaquetada';
     guardar(); await new Promise((ok) => setTimeout(ok, 600)); await cadenaGuardado;
     for (const v of Object.keys(RENDERS).filter((k) => !k.endsWith('_despues'))) ir(v, {});
+    const ial = await api.iaLocalEstado(); // el módulo de la IA local va en el instalador
+    if (!ial || !ial.modelos) throw new Error('La IA local no responde en el programa empaquetado');
     return { version: (await api.infoVersion()).version, empaquetado: !!(await api.infoVersion()).instalada || !!(await api.infoVersion()).portable };
   });
   await app.close();
   if (!fs.existsSync(path.join(dir, 'tiza.db'))) throw new Error('No se creó la base de datos');
+  // Windows: las bibliotecas de Visual C++ para el motor de la IA local van en el instalador
+  if (process.platform === 'win32') {
+    const vc = path.join(path.dirname(exe), 'resources', 'vcrt');
+    for (const f of ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll']) if (!fs.existsSync(path.join(vc, f))) throw new Error('Falta ' + f + ' en el instalador (resources/vcrt)');
+  }
   if (errores.length) throw new Error('Errores en la interfaz: ' + errores.join(' | '));
   console.log(`✓ Programa empaquetado ${r.version}: abre, muestra todas las pantallas y guarda en la base de datos`);
 })().catch((e) => { console.error('✗ El programa empaquetado no funciona: ' + e.message.split('\n')[0]); process.exit(1); });
