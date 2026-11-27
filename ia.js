@@ -330,4 +330,37 @@ async function transcribirAudio({ ia, voz = {}, audio }) {
   }
 }
 
-module.exports = { sugerirConIA, transcribirAudio, PROVEEDORES };
+// ---------- Modelos disponibles para la clave del docente (para elegir de una lista) ----------
+// Se consultan al proveedor cuando hay internet; la interfaz guarda la última lista para verla sin conexión.
+const versionDe = (id) => (String(id).match(/(\d+(?:\.\d+)?)/) || [0, 0])[1] * 1;
+async function listarModelos({ ia = {}, proveedor } = {}) {
+  try {
+    const p = proveedor || ia.proveedor || 'anthropic';
+    const clave = (ia.claves?.[p] || '').trim();
+    if (p !== 'compatible' && !clave) return { ok: false, error: 'Primero pega la clave de API.' };
+    let modelos = [];
+    if (p === 'gemini') {
+      const d = await pedirGeminiJSON('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', { limite: 30000 }, clave, []);
+      modelos = (d?.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map((m) => ({ id: String(m.name || '').replace(/^models\//, ''), nombre: String(m.displayName || '') }))
+        .filter((m) => /^gemini/.test(m.id) && !/(embedding|tts|image|live|audio|aqa|robotics|computer-use|native)/i.test(m.id))
+        .sort((a, b) => versionDe(b.id) - versionDe(a.id) || /pro/.test(a.id) - /pro/.test(b.id) || a.id.localeCompare(b.id));
+    } else if (p === 'anthropic') {
+      const d = await pedirJSON('https://api.anthropic.com/v1/models?limit=100', { headers: { 'x-api-key': clave, 'anthropic-version': '2023-06-01' }, limite: 30000 }, []);
+      modelos = (d?.data || []).map((m) => ({ id: String(m.id || ''), nombre: String(m.display_name || '') })); // ya vienen del más nuevo al más antiguo
+    } else {
+      const base = p === 'openai' ? 'https://api.openai.com/v1' : String(ia.url || '').trim().replace(/\/+$/, '');
+      if (!base) return { ok: false, error: 'Primero escribe la dirección (URL) del servicio.' };
+      const d = await pedirJSON(`${base}/models`, { headers: clave ? { Authorization: `Bearer ${clave}` } : {}, limite: 30000 }, []);
+      modelos = (Array.isArray(d?.data) ? d.data : Array.isArray(d?.models) ? d.models : []).map((m) => ({ id: String(m.id || m.name || ''), nombre: '', creado: +m.created || 0 }));
+      if (p === 'openai') modelos = modelos.filter((m) => /^(gpt|o\d|chatgpt)/.test(m.id) && !/(embedding|whisper|tts|dall-e|image|audio|realtime|transcribe|search|moderation|instruct)/i.test(m.id));
+      modelos.sort((a, b) => b.creado - a.creado || a.id.localeCompare(b.id));
+    }
+    const vistos = new Set();
+    modelos = modelos.filter((m) => m.id && m.id.length <= 120 && !vistos.has(m.id) && vistos.add(m.id)).slice(0, 80).map(({ id, nombre }) => ({ id, nombre: nombre.slice(0, 120) }));
+    if (!modelos.length) return { ok: false, error: 'El proveedor no devolvió modelos para esta clave.' };
+    return { ok: true, modelos };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+module.exports = { sugerirConIA, transcribirAudio, listarModelos, PROVEEDORES };

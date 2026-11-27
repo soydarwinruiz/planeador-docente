@@ -308,6 +308,7 @@ Resultado del análisis de funcionalidad y compatibilidad (`docs/ANALISIS-FUNCIO
 ### Versión 2.2.2 — Claves nuevas de Gemini (27 de noviembre)
 - **Claves "AQ." de Google:** AI Studio empezó a entregar claves que empiezan por `AQ.` en lugar de `AIza`, y en muchas cuentas Google no las acepta en el encabezado de siempre. Ahora se prueba la clave en el encabezado, en la dirección (`?key=`) y como `Bearer`, y se recuerda la forma que funcionó. Si Google la rechaza de todas las formas, el mensaje explica cómo crear una clave clásica en Google Cloud restringida a *Generative Language API*.
 - **"Probando…" ya no se queda esperando:** cada solicitud a la IA tiene un límite de tiempo firme, aunque la red no respete la cancelación.
+- **Lista de modelos de tu cuenta:** el campo *Modelo* es ahora una lista con los modelos que tu clave puede usar (Gemini, Claude, ChatGPT, compatibles y Ollama). Se consulta al abrir la configuración si hay internet (como máximo cada 3 días, o con 🔄) y la última lista queda guardada para verla sin conexión. *Automático* sigue siendo la opción recomendada y *Otro…* permite escribir cualquier nombre.
 - **El asistente de bienvenida no tapa lo que el docente abrió** (por ejemplo, *Acerca de* desde el menú justo al arrancar).
 
 ---

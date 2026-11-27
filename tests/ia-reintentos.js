@@ -53,5 +53,10 @@ const t = setTimeout; global.setTimeout = (fn) => t(fn, 0); // sin esperas reale
   assert.ok(!r.ok); assert.match(r.error, /AQ\./); assert.match(r.error, /Generative Language API/);
   // Una clave clásica rechazada no se prueba de otras formas
   simular({ __aceptaSolo: 'direccion' }); r = await pedir('', 'AIzaMala'); assert.ok(!r.ok); assert.strictEqual(llamadas.length, 1);
+  // Lista de modelos de la cuenta: solo los que generan texto, del más nuevo al más antiguo
+  simular({}); const lm = await ia.listarModelos({ ia: { proveedor: 'gemini', claves: { gemini: 'AIzaPrueba' } } });
+  assert.ok(lm.ok, lm.error); assert.strictEqual(lm.modelos[0].id, 'gemini-3.6-flash-preview');
+  assert.ok(!lm.modelos.some((m) => /embedding/.test(m.id)), 'incluyó modelos que no generan texto');
+  assert.ok(!(await ia.listarModelos({ ia: { proveedor: 'gemini', claves: {} } })).ok, 'sin clave debe avisar');
   console.log('✓ IA: reintentos, modelo de Gemini al día, claves nuevas "AQ." de Google y mensajes claros');
 })().catch((e) => { console.error('✗ IA reintentos\n', e, llamadas); process.exit(1); });
