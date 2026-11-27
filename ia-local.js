@@ -160,17 +160,18 @@ async function instalar({ modelo, carpeta } = {}, progreso = () => {}) {
     progreso({ fase: 'preparando', hechos: total, total });
     if (!fs.existsSync(rutaEjecutable())) descomprimir(zip, MOTOR_DIR());
     if (!fs.existsSync(rutaEjecutable())) throw new Error('No se pudo preparar el motor de la IA local.');
-    // Otros modelos ya no se usan: se borran para liberar espacio
-    for (const [k, o] of Object.entries(MODELOS)) if (k !== modelo) fs.rmSync(path.join(ARCHIVOS(), o.archivo), { force: true });
-    detener();
+    // Otros modelos ya no se usan: se borran para liberar espacio (con el motor apagado)
+    await detener();
+    for (const [k, o] of Object.entries(MODELOS)) if (k !== modelo) borrar(path.join(ARCHIVOS(), o.archivo));
     require('./almacen').escribirSeguro(ESTADO(), JSON.stringify({ modelo, motor: VERSION_MOTOR, instalado: new Date().toISOString() }));
     return estado();
   } finally { tarea = null; }
 }
 function cancelar() { if (tarea) tarea.cancelar.abort(); return true; }
-function quitar() {
-  cancelar(); detener();
-  fs.rmSync(BASE(), { recursive: true, force: true });
+async function quitar() {
+  cancelar();
+  await detener();
+  borrar(BASE(), { recursive: true });
   return estado();
 }
 
@@ -180,19 +181,28 @@ let apagarPorInactividad = null;
 function puertoLibre() {
   return new Promise((ok, mal) => { const s = require('net').createServer(); s.unref(); s.on('error', mal); s.listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => ok(port)); }); });
 }
+// Apaga el motor y espera a que el proceso termine (en Windows sus archivos quedan bloqueados mientras corre)
 function detener() {
   clearTimeout(apagarPorInactividad);
-  if (servidor && !servidor.terminado) { try { servidor.proc.kill(); } catch { /* */ } }
+  const s = servidor;
   servidor = null;
+  if (!s || s.terminado) return Promise.resolve();
+  return new Promise((ok) => {
+    const t = setTimeout(ok, 8000);
+    s.proc.once('exit', () => { clearTimeout(t); ok(); });
+    try { s.proc.kill(); } catch { clearTimeout(t); ok(); }
+  });
 }
+// Borra con reintentos: en Windows el antivirus o un proceso que acaba de cerrarse pueden bloquear un archivo un instante
+const borrar = (r, opciones = {}) => fs.rmSync(r, { force: true, maxRetries: 10, retryDelay: 300, ...opciones });
 // Devuelve la dirección del motor encendido (lo enciende y espera a que cargue el modelo)
 async function asegurar() {
   clearTimeout(apagarPorInactividad);
-  apagarPorInactividad = setTimeout(detener, 20 * 60000); // libera la memoria si no se usa en 20 minutos
+  apagarPorInactividad = setTimeout(() => { detener(); }, 20 * 60000); // libera la memoria si no se usa en 20 minutos
   const e = leerEstado();
   if (!estado().instalado) throw new Error('La IA local no está instalada. Instálala en Configuración → Inteligencia artificial.');
   if (servidor && !servidor.terminado && servidor.modelo === e.modelo) { await servidor.listo; return servidor.url; }
-  detener();
+  await detener();
   const puerto = await puertoLibre();
   const exe = rutaEjecutable();
   const proc = spawn(exe, ['-m', path.join(ARCHIVOS(), MODELOS[e.modelo].archivo), '--host', '127.0.0.1', '--port', String(puerto), '-c', '8192', '--jinja', '--reasoning-budget', '0'],
@@ -215,13 +225,13 @@ async function asegurar() {
       try { const r = await net.fetch(`http://127.0.0.1:${puerto}/health`); if (r.ok) return; } catch { /* aún cargando */ }
       await new Promise((ok) => setTimeout(ok, 500));
     }
-    detener();
+    await detener();
     throw new Error('La IA local tardó demasiado en arrancar.');
   })();
   try { await s.listo; } catch (err) { if (servidor === s) servidor = null; throw err; }
   return s.url;
 }
 
-app.on('will-quit', detener);
+app.on('will-quit', () => { if (servidor && !servidor.terminado) { try { servidor.proc.kill(); } catch { /* */ } } });
 
 module.exports = { estado, instalar, cancelar, quitar, asegurar, detener, MODELOS };
