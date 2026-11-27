@@ -296,6 +296,13 @@ Rastreo de errores y funcionamiento de la beta, y lanzamiento como versión defi
 - Un respaldo automático que falla a medias (disco lleno) ya no deja un archivo incompleto.
 - Pruebas nuevas en `tests/e2e-solidez.js`.
 
+### Versión 2.2.1 — Compatibilidad (27 de noviembre)
+Resultado del análisis de funcionalidad y compatibilidad (`docs/ANALISIS-FUNCIONALIDAD-Y-COMPATIBILIDAD.md`):
+- **Celulares antiguos:** las páginas del celular (docente y estudiantes) ya no usan sintaxis de 2020 (`?.`, `??`, `||=`) y funcionan desde navegadores de 2019 (iOS 13). Una revisión con `acorn` lo verifica siempre.
+- **Pantallas pequeñas:** la ventana se ajusta al área útil de la pantalla (portátiles de 1366×768 con escalado al 125 %) y se abre maximizada si es pequeña.
+- **Proxy del colegio:** la IA y la búsqueda de actualizaciones de la versión portable salen por la red de Chromium (`net.fetch`), que respeta el proxy de Windows.
+- **Carpetas con tildes y ñ:** todas las pruebas corren en una carpeta como `Tiza prueba José Muñoz…` (también en Windows en GitHub).
+
 ---
 
 ## 4. Problemas resueltos durante el desarrollo

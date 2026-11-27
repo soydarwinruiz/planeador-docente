@@ -35,11 +35,16 @@ function escribirEstado(dato) {
 const estadoTexto = () => almacen.estadoTexto();
 
 function crearVentana() {
+  // En portátiles de 1366×768 con el escalado de Windows al 125 % quedan unos 1090×570 útiles: la ventana se
+  // ajusta a la pantalla (y el mínimo también) para que nunca quede una parte por fuera
+  const { width: anchoUtil, height: altoUtil } = require('electron').screen.getPrimaryDisplay().workAreaSize;
+  const pequena = anchoUtil < 1366 || altoUtil < 860;
   ventana = new BrowserWindow({
-    width: 1366,
-    height: 860,
-    minWidth: 1024,
-    minHeight: 640,
+    width: Math.min(1366, anchoUtil),
+    height: Math.min(860, altoUtil),
+    minWidth: Math.min(1024, anchoUtil),
+    minHeight: Math.min(640, altoUtil),
+    show: false,
     title: 'Tiza',
     icon: path.join(__dirname, 'build', 'icon.png'),
     backgroundColor: '#f4f6fb',
@@ -66,6 +71,7 @@ function crearVentana() {
     else if (p.selectionText) items.push({ role: 'copy', label: 'Copiar' });
     if (items.length) Menu.buildFromTemplate(items).popup({ window: ventana });
   });
+  ventana.once('ready-to-show', () => { if (pequena) ventana.maximize(); ventana.show(); });
   ventana.loadFile(path.join(__dirname, 'src', 'index.html'));
   // Exportaciones de los tableros (PNG, SVG, JSON): preguntar siempre dónde guardar
   ventana.webContents.session.on('will-download', (_e, item) => {

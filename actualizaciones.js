@@ -1,5 +1,5 @@
 // Actualizaciones automáticas desde las versiones publicadas en GitHub (solo la versión instalada).
-const { app, ipcMain, shell } = require('electron');
+const { app, ipcMain, shell, net } = require('electron');
 
 const PAGINA = 'https://github.com/soydarwinruiz/planeador-docente/releases/latest';
 const API = 'https://api.github.com/repos/soydarwinruiz/planeador-docente/releases/latest';
@@ -39,7 +39,7 @@ function iniciarActualizaciones(ventana) {
         return { ok: true, hay: false, version: app.getVersion() };
       }
       // Portable o modo desarrollo: solo se consulta la última versión publicada
-      const res = await fetch(API, { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(20000) });
+      const res = await net.fetch(API, { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(20000) });
       if (!res.ok) return { ok: false, error: `No se pudo consultar GitHub (código ${res.status}). Revisa la conexión a internet e inténtalo más tarde.` };
       const d = await res.json();
       const v = String(d.tag_name || '').replace(/^v/, '');

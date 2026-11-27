@@ -35,7 +35,7 @@ button{font-family:inherit;font-size:17px;border:none;border-radius:12px;padding
 <div class="aviso" id="aviso"></div>
 <script>
 const $ = (s) => document.querySelector(s);
-const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let codigo = (new URLSearchParams(location.search).get('c') || '').toUpperCase();
 let info = null, datos = null, actual = 0, alumnoId = '', desfase = 0, pendientes = {}, entregando = false;
 const LETRAS = ['A','B','C','D','E','F'];
@@ -71,7 +71,7 @@ function pantallaNombre(error = '') {
   filtrar();
 }
 function filtrar() {
-  const q = ($('#buscar')?.value || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+  const q = (($('#buscar') && $('#buscar').value) || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
   $('#lista').innerHTML = info.alumnos.filter((a) => a.nombre.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').includes(q))
     .map((a) => '<button class="' + (a.entregado ? 'ok ' : '') + (a.id === alumnoId ? 'elegido' : '') + '" ' + (a.entregado ? 'disabled' : '') + ' onclick="alumnoId=\\'' + a.id + '\\';filtrar();$(\\'#entrar\\').disabled=false;$(\\'#pin\\')&&$(\\'#pin\\').focus()">' + esc(a.nombre) + (a.entregado ? ' ✔ entregó' : '') + '</button>').join('') || '<p class="ayuda">No se encontró. Revisa cómo escribiste tu nombre.</p>';
 }

@@ -51,7 +51,7 @@ nav.pestanas button span{font-size:21px} nav.pestanas button.on{color:#1f4e79;fo
 <script>
 'use strict';
 const $ = (s) => document.querySelector(s);
-const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const LS = { token: 'pd-cel-token', cola: 'pd-cel-cola' };
 let token = localStorage.getItem(LS.token) || '';
 let info = null;          // datos de inicio
@@ -106,7 +106,7 @@ function pantallaVincular(error) {
       <label>Nombre de este celular</label><input id="nombre" value="${esc(nombreSugerido())}" maxlength="40">
       <div class="error" id="err">${esc(error || '')}</div>
       <button class="primario ancho" style="margin-top:10px">Vincular</button></form></div>`;
-  setTimeout(() => $('#pin')?.focus(), 100);
+  setTimeout(() => { if ($('#pin')) $('#pin').focus(); }, 100);
 }
 async function vincular() {
   try {
@@ -142,7 +142,7 @@ async function cargarInicio() {
     <p class="ayuda" style="text-align:center">📱 ${esc(info.dispositivo.nombre)} · ${esc(info.dispositivo.vence)}<br><a href="#" onclick="desvincular();return false">Desvincular este celular</a></p>`;
   dibujarAreas();
 }
-function dibujarAreas() { const g = info.grupos.find((x) => x.id === $('#g')?.value); if ($('#a')) $('#a').innerHTML = (g?.areas || []).map((a) => `<option value="${a.id}">${esc(a.nombre)}</option>`).join(''); }
+function dibujarAreas() { const g = info.grupos.find((x) => x.id === ($('#g') ? $('#g').value : '')); if ($('#a')) $('#a').innerHTML = ((g && g.areas) || []).map((a) => `<option value="${a.id}">${esc(a.nombre)}</option>`).join(''); }
 function nuevoPendiente() { const t = $('#np').value.trim(); if (!t) return; enviar('pendiente', { texto: t }); aviso('Pendiente agregado'); setTimeout(cargarInicio, 600); }
 async function desvincular() {
   if (!confirm('¿Desvincular este celular? Tendrás que pedir un PIN nuevo en el computador.')) return;
@@ -218,8 +218,8 @@ async function vNotas() {
   const esc_ = info.escala;
   $('#lista-notas').innerHTML = act.rubrica ? '<p class="ayuda">Esta actividad se califica con rúbrica: hazlo en el computador.</p>'
     : d.alumnos.map((a, i) => { const n = notasAct[a.id]; return `<div class="est"><div class="n">${i + 1}. ${esc(a.nombre)}</div>${botonEntrega(a.id)}
-      <input class="nota ${n !== '' && n != null && +String(n).replace(',', '.') < esc_.aprobacion ? 'bajo' : ''}" inputmode="decimal" value="${n ?? ''}" data-i="${i}" placeholder="—"
-        onchange="ponerNota('${a.id}',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();document.querySelector('[data-i=&quot;${i + 1}&quot;]')?.focus()}"></div>`; }).join('')
+      <input class="nota ${n !== '' && n != null && +String(n).replace(',', '.') < esc_.aprobacion ? 'bajo' : ''}" inputmode="decimal" value="${n == null ? '' : n}" data-i="${i}" placeholder="—"
+        onchange="ponerNota('${a.id}',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();var s=document.querySelector('[data-i=&quot;${i + 1}&quot;]');if(s)s.focus()}"></div>`; }).join('')
       + `<p class="ayuda">Escala ${esc_.min} a ${esc_.max}. Se guarda al salir de cada casilla. El botón de la izquierda marca la entrega: — sin marcar, ✔ entregó, ⏰ tarde, ✖ no entregó.</p>`;
 }
 const CICLO_ENTREGA = ['', 'E', 'T', 'N'], ICONO_ENTREGA = { '': '—', E: '✔', T: '⏰', N: '✖' };
@@ -228,7 +228,7 @@ function botonEntrega(alumnoId) {
   return `<button class="ent ${e}" title="Entrega" onclick="cambiarEntrega('${alumnoId}',this)">${ICONO_ENTREGA[e]}</button>`;
 }
 function cambiarEntrega(alumnoId, boton) {
-  const m = (ctx.datos.entregas[actividadSel] ||= {});
+  const m = ctx.datos.entregas[actividadSel] || (ctx.datos.entregas[actividadSel] = {});
   const sig = CICLO_ENTREGA[(CICLO_ENTREGA.indexOf(m[alumnoId] || '') + 1) % CICLO_ENTREGA.length];
   if (sig) m[alumnoId] = sig; else delete m[alumnoId];
   boton.className = 'ent ' + sig; boton.textContent = ICONO_ENTREGA[sig];
@@ -268,7 +268,7 @@ async function enviarFoto(input) {
   est.textContent = '⏳ Enviando la foto al computador…';
   try {
     const imagen = await reducirFoto(f, cam.modo === 'omr' ? 1800 : 1600);
-    const cuerpo = cam.modo === 'omr' ? { tipo: 'omr', pruebaId: cam.pruebaId, imagen } : { tipo: 'trabajo', grupoId: ctx.grupoId, alumnoId: cam.alumnoId, actividadId: $('#cam-act')?.value || '', imagen };
+    const cuerpo = cam.modo === 'omr' ? { tipo: 'omr', pruebaId: cam.pruebaId, imagen } : { tipo: 'trabajo', grupoId: ctx.grupoId, alumnoId: cam.alumnoId, actividadId: ($('#cam-act') ? $('#cam-act').value : '') || '', imagen };
     const r = await api('foto', cuerpo);
     if (cam.modo === 'omr') { cam.resultados.unshift(r); vCamara(); $('#cam-estado').innerHTML = `✔ <b>${esc(r.nombre)}</b>: ${esc(r.nota)} (${r.correctas} de ${r.total}). Toma la siguiente.`; if (navigator.vibrate) navigator.vibrate(80); }
     else { est.textContent = '✔ Foto enviada al computador. Abre la retroalimentación con IA allí.'; }
@@ -278,7 +278,7 @@ async function enviarFoto(input) {
 // ---------- Frases rápidas: ";atajo" + espacio ----------
 document.addEventListener('input', (e) => {
   const el = e.target;
-  if (!info?.frases?.length || !(el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type === 'text')) || e.inputType === undefined) return;
+  if (!(info && info.frases && info.frases.length) || !(el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type === 'text')) || e.inputType === undefined) return;
   const fin = el.selectionStart;
   const m = /(^|[\s(¿¡"]);([\p{L}\d_-]{1,30})([ \n])$/u.exec(el.value.slice(Math.max(0, fin - 40), fin));
   if (!m) return;
@@ -288,7 +288,7 @@ document.addEventListener('input', (e) => {
 });
 function ponerNota(alumnoId, input) {
   const v = input.value.replace(',', '.').trim(); const e = info.escala;
-  if (v !== '' && (isNaN(+v) || +v < e.min || +v > e.max)) { aviso(`La nota debe estar entre ${e.min} y ${e.max}`); input.value = notasAct[alumnoId] ?? ''; return; }
+  if (v !== '' && (isNaN(+v) || +v < e.min || +v > e.max)) { aviso(`La nota debe estar entre ${e.min} y ${e.max}`); input.value = notasAct[alumnoId] == null ? '' : notasAct[alumnoId]; return; }
   notasAct[alumnoId] = v; input.classList.toggle('bajo', v !== '' && +v < e.aprobacion);
   enviar('nota', { actividadId: actividadSel, alumnoId, valor: v });
 }

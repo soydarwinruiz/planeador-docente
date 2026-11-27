@@ -48,5 +48,15 @@ while (pendientes.length) {
 }
 for (const r of necesarios) if (!incluido(r)) falla(`"${r}" se usa pero no está en la lista de archivos del instalador (package.json → build.files)`);
 
+// Las páginas que se abren en celulares (del docente y de los estudiantes) deben funcionar en navegadores de 2019
+// (Chrome 76, Safari 13): sin ?., ??, ||= ni nada más nuevo, ni en los scripts ni en los atributos onclick…
+const acorn = require('acorn');
+for (const [nombre, html] of [['pagina-celular.html', fs.readFileSync(path.join(RAIZ, 'pagina-celular.html'), 'utf8')], ['pagina-movil.js', require(path.join(RAIZ, 'pagina-movil.js')).paginaMovil()]]) {
+  const codigos = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  if (!codigos.length) falla(`${nombre}: no se encontró el script`);
+  codigos.forEach((c) => { try { acorn.parse(c, { ecmaVersion: 2019, sourceType: 'script' }); } catch (e) { falla(`${nombre}: sintaxis que no funciona en celulares de 2019 (${e.message})`); } });
+  for (const m of html.matchAll(/\son[a-z]+=\\?"([^"]*)"/g)) if (/\?\.(?!\d)|\?\?|\|\|=|&&=/.test(m[1])) falla(`${nombre}: manejador en línea con sintaxis nueva: ${m[1].slice(0, 80)}`);
+}
+
 if (fallas) { console.error(`\n${fallas} problema(s)`); process.exit(1); }
 console.log(`✓ Revisión estática: ${archivosRaiz.length + scripts.length} archivos, ${declaradoEn.size} nombres globales sin choques`);
