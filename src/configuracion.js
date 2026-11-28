@@ -345,21 +345,21 @@ function tarjetaIA() {
   return `<div class="tarjeta"><h2>✨ Inteligencia artificial (opcional)</h2>
     <p class="ayuda">Puedes usar el proveedor que prefieras. Las claves se guardan cifradas y solo en este equipo (no se copian en los respaldos ni en los paquetes). Para generar sugerencias se envían el tema, el área, el grado
     y lo escrito en la planeación; <b>no se envían nombres de estudiantes</b>. El costo depende del proveedor y del modelo.</p>
-    <div class="rejilla r4" style="align-items:end">
+    <div class="rejilla ia-fila">
       <div class="campo"><label>Proveedor</label><select onchange="S.config.ia.proveedor=this.value;guardar();render()">
         ${Object.entries(PROVEEDORES_IA).map(([k, v]) => `<option value="${k}" ${p === k ? 'selected' : ''}>${v.nombre}${(k === 'compatible' ? ia.url : k === 'local' ? ia.local : ia.claves?.[k]) ? ' ✔' : ''}</option>`).join('')}</select></div>
-      ${p === 'local' ? '' : `<div class="campo" style="grid-column: span 2"><label>Clave de API ${p === 'compatible' ? '(opcional)' : ''} <span style="font-weight:normal">· se obtiene en ${esc(info.donde)}</span></label>
+      ${p === 'local' ? '' : `<div class="campo"><label>Clave de API ${p === 'compatible' ? '(opcional)' : ''} <span style="font-weight:normal">· se obtiene en ${esc(info.donde)}</span></label>
         <div class="fila" style="flex-wrap:nowrap"><input type="password" id="cfg-key" style="flex:1" value="${esc(ia.claves?.[p] || '')}" placeholder="${esc(info.ph)}"
           onchange="(S.config.ia.claves ||= {})['${p}']=this.value.trim();guardar();aviso('Clave guardada','ok');actualizarModelosIA(false,true)">
-        <button class="btn" title="Mostrar u ocultar" onclick="const i=document.getElementById('cfg-key');i.type=i.type==='password'?'text':'password'">👁️</button></div></div>
-      ${campoModeloIA()}`}
+        <button class="btn" title="Mostrar u ocultar la clave" onclick="const i=document.getElementById('cfg-key');i.type=i.type==='password'?'text':'password'">👁️</button></div></div>`}
     </div>
+    ${p === 'local' ? '' : campoModeloIA()}
     ${p === 'local' ? tarjetaIALocal() : p === 'compatible' ? `<div class="campo"><label>Dirección (URL base) del servicio</label><input value="${esc(ia.url || '')}" placeholder="https://api.deepseek.com/v1   ·   http://localhost:11434/v1 (Ollama)"
         onchange="S.config.ia.url=this.value.trim();guardar()">
       <div class="ayuda">Cualquier servicio que use el formato de OpenAI (<i>/chat/completions</i>). Con <b>Ollama</b> o <b>LM Studio</b> la IA corre en tu propio computador, sin costo y sin enviar datos a internet.</div>
       <div class="fila" style="margin-top:6px"><button class="btn pequeno" onclick="usarOllama()">🖥️ Usar Ollama en este equipo</button>
         <span class="ayuda">Instala Ollama (ollama.com), abre una terminal y escribe <code>ollama pull qwen3:8b</code>. Con 8 GB de RAM usa <code>qwen3:4b</code>; con tarjeta gráfica de 12 GB o más, <code>gemma3:12b</code>.</span></div></div>`
-      : `<div class="ayuda" style="margin-top:-4px">Si dejas el modelo vacío se usa <b>${esc(info.modelo)}</b>. Puedes escribir cualquier otro modelo que ofrezca tu proveedor; si está saturado, el programa reintenta solo${p === 'gemini' ? ' y, si el modelo ya no existe o sigue saturado, usa el Gemini Flash más reciente de tu cuenta' : ''}.</div>`}
+      : ''}
     <div class="fila" style="margin-top:10px"><button class="btn" id="btn-probar-ia" onclick="probarIA()">🔌 Probar conexión</button>
       ${ia.claves?.[p] ? `<button class="btn peligro" onclick="delete S.config.ia.claves['${p}'];guardar();render()">Quitar clave</button>` : ''}
       </div>
@@ -449,14 +449,20 @@ function campoModeloIA() {
   const disp = ia.disponibles?.[p], lista = Array.isArray(disp?.modelos) ? disp.modelos : [];
   const actual = ia.modelos?.[p] || '';
   const enLista = !actual || lista.some((m) => m.id === actual);
-  const opcionesM = `<option value="">${info.modelo ? `Automático (${esc(info.modelo)})` : '(elige un modelo)'}</option>`
-    + lista.map((m) => `<option value="${esc(m.id)}" ${m.id === actual ? 'selected' : ''}>${esc(m.id)}${m.nombre && m.nombre !== m.id ? ' · ' + esc(m.nombre) : ''}</option>`).join('')
-    + `<option value="__otro" ${enLista ? '' : 'selected'}>Otro (escribir el nombre)…</option>`;
+  // Cada modelo con su nombre legible y, entre paréntesis, el identificador técnico
+  const texto = (m) => (m.nombre && m.nombre !== m.id ? `${m.nombre} (${m.id})` : m.id);
+  const opcionesM = `<option value="">${info.modelo ? `⭐ Automático: el recomendado (${esc(info.modelo)})` : '(elige un modelo)'}</option>`
+    + (lista.length ? `<optgroup label="Modelos de tu cuenta">${lista.map((m) => `<option value="${esc(m.id)}" ${m.id === actual ? 'selected' : ''}>${esc(texto(m))}</option>`).join('')}</optgroup>` : '')
+    + `<option value="__otro" ${enLista ? '' : 'selected'}>✏️ Otro (escribir el nombre)…</option>`;
   const fecha = disp?.fecha ? new Date(disp.fecha).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '';
-  return `<div class="campo" id="cfg-campo-modelo"><label>Modelo <button class="icono" style="font-size:13px" title="Actualizar la lista con los modelos de tu cuenta (requiere internet)" onclick="actualizarModelosIA(true)">🔄</button></label>
-    <select id="cfg-modelo-sel" onchange="elegirModeloIA(this.value)">${opcionesM}</select>
+  const estadoLista = lista.length ? `${lista.length} modelos disponibles en tu cuenta · lista del ${esc(fecha)}.` : 'Pulsa «Actualizar» para ver los modelos de tu cuenta (requiere internet).';
+  const nota = p === 'compatible' ? '' : ` Si un modelo está saturado, el programa reintenta solo${p === 'gemini' ? '; si dejó de existir, usa el Gemini Flash más reciente de tu cuenta' : ''}.`;
+  return `<div class="campo ia-modelo" id="cfg-campo-modelo"><label for="cfg-modelo-sel">Modelo</label>
+    <div class="fila" style="flex-wrap:nowrap">
+      <select id="cfg-modelo-sel" style="flex:1;min-width:0" onchange="elegirModeloIA(this.value)">${opcionesM}</select>
+      <button class="btn" title="Consultar de nuevo los modelos de tu cuenta (requiere internet)" onclick="actualizarModelosIA(true)">🔄 Actualizar</button></div>
     <input id="cfg-modelo" ${enLista ? 'hidden' : ''} style="margin-top:6px" value="${esc(actual)}" placeholder="${esc(info.modelo || 'ej.: llama3.1, deepseek-chat')}" onchange="(S.config.ia.modelos ||= {})['${p}']=this.value.trim();guardar()">
-    <div class="ayuda" id="cfg-modelos-info" style="overflow-wrap:anywhere">${lista.length ? `${lista.length} modelos de tu cuenta · ${esc(fecha)}` : 'Pulsa 🔄 para ver los modelos de tu cuenta'}</div></div>`;
+    <div class="ayuda" id="cfg-modelos-info" style="overflow-wrap:anywhere">${estadoLista}${nota}</div></div>`;
 }
 function elegirModeloIA(v) {
   const p = S.config.ia.proveedor || 'anthropic', i = document.getElementById('cfg-modelo');
